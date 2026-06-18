@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>راهنمای کامل پیاده‌سازی CRM24 | PRD + Roadmap</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3f5a;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #8b5cf6;
+      --gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #8b5cf6 100%);
+      --shadow: 0 4px 24px rgba(0,0,0,.35);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Vazirmatn', Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.85;
+      font-size: 15px;
+    }
+    .hero {
+      background: var(--gradient);
+      padding: 3rem 2rem 4rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .hero h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: .75rem; position: relative; }
+    .hero p { opacity: .95; max-width: 720px; margin: 0 auto; position: relative; font-size: 1.05rem; }
+    .hero-meta { margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; position: relative; }
+    .hero-meta span {
+      background: rgba(255,255,255,.15);
+      padding: .4rem 1rem;
+      border-radius: 999px;
+      font-size: .85rem;
+      backdrop-filter: blur(8px);
+    }
+    .layout { display: flex; max-width: 1400px; margin: 0 auto; }
+    nav.sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      padding: 1.5rem 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    nav.sidebar h3 {
+      padding: 0 1.25rem .75rem;
+      font-size: .75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    nav.sidebar a {
+      display: block;
+      padding: .45rem 1.25rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: .88rem;
+      border-right: 3px solid transparent;
+      transition: all .2s;
+    }
+    nav.sidebar a:hover, nav.sidebar a.active {
+      color: var(--text);
+      background: rgba(59,130,246,.1);
+      border-right-color: var(--primary);
+    }
+    main { flex: 1; padding: 2rem 2.5rem 4rem; min-width: 0; }
+    section { margin-bottom: 3rem; scroll-margin-top: 1rem; }
+    h2 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      padding-bottom: .6rem;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    h2 .num {
+      background: var(--gradient);
+      color: #fff;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; flex-shrink: 0;
+    }
+    h3 { font-size: 1.15rem; margin: 1.5rem 0 .75rem; color: var(--accent); }
+    h4 { font-size: 1rem; margin: 1rem 0 .5rem; color: var(--text); }
+    p { margin-bottom: .85rem; color: #c5d0de; }
+    ul, ol { margin: .5rem 1.5rem 1rem 0; color: #c5d0de; }
+    li { margin-bottom: .35rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .card h4 { margin-top: 0; }
+    .badge {
+      display: inline-block;
+      padding: .2rem .65rem;
+      border-radius: 6px;
+      font-size: .75rem;
+      font-weight: 600;
+      margin-left: .35rem;
+    }
+    .badge-blue { background: rgba(59,130,246,.2); color: #93c5fd; }
+    .badge-green { background: rgba(16,185,129,.2); color: #6ee7b7; }
+    .badge-yellow { background: rgba(245,158,11,.2); color: #fcd34d; }
+    .badge-purple { background: rgba(139,92,246,.2); color: #c4b5fd; }
+    .badge-red { background: rgba(239,68,68,.2); color: #fca5a5; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: .88rem;
+    }
+    th, td {
+      padding: .65rem .85rem;
+      text-align: right;
+      border: 1px solid var(--border);
+    }
+    th { background: var(--surface2); color: var(--text); font-weight: 600; }
+    td { background: var(--surface); color: #c5d0de; }
+    tr:hover td { background: var(--surface2); }
+    code, pre {
+      font-family: 'Consolas', 'Courier New', monospace;
+      direction: ltr;
+      text-align: left;
+    }
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      font-size: .82rem;
+      line-height: 1.6;
+      margin: 1rem 0;
+      color: #a5d6ff;
+    }
+    .flow-box {
+      background: var(--surface2);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      margin: 1rem 0;
+      font-size: .95rem;
+      line-height: 2.2;
+    }
+    .flow-box .arrow { color: var(--accent); font-weight: bold; margin: 0 .5rem; }
+    .timeline { position: relative; padding-right: 2rem; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      right: 8px; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--border);
+      border-radius: 3px;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.75rem;
+      padding-right: 1.5rem;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      right: -2rem;
+      top: .4rem;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid var(--bg);
+    }
+    .timeline-item.done::before { background: var(--success); }
+    .timeline-item h4 { margin: 0 0 .35rem; }
+    .timeline-item .week { color: var(--muted); font-size: .82rem; }
+    .checklist { list-style: none; margin-right: 0; }
+    .checklist li {
+      padding: .4rem 0 .4rem 1.75rem;
+      position: relative;
+      border-bottom: 1px solid rgba(45,63,90,.5);
+    }
+    .checklist li::before {
+      content: '☐';
+      position: absolute;
+      right: 0;
+      color: var(--primary);
+    }
+    .alert {
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      border-right: 4px solid;
+    }
+    .alert-info { background: rgba(59,130,246,.1); border-color: var(--primary); }
+    .alert-warn { background: rgba(245,158,11,.1); border-color: var(--warning); }
+    .alert-success { background: rgba(16,185,129,.1); border-color: var(--success); }
+    .tech-stack { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0; }
+    .tech-stack span {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: .35rem .85rem;
+      border-radius: 8px;
+      font-size: .82rem;
+    }
+    .module-icon { font-size: 1.5rem; margin-bottom: .5rem; }
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      nav.sidebar { width: 100%; height: auto; position: relative; border-left: none; border-bottom: 1px solid var(--border); }
+      main { padding: 1.5rem; }
+      .hero h1 { font-size: 1.6rem; }
+    }
+    @media print {
+      nav.sidebar { display: none; }
+      body { background: #fff; color: #000; }
+      .card, th, td { border-color: #ccc; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>راهنمای کامل پیاده‌سازی CRM24</h1>
+  <p>سند PRD + معماری + نقشه‌راه + چرخه‌های کاری + زمان‌بندی + فازبندی + استک فنی — آماده برای شروع توسعه</p>
+  <div class="hero-meta">
+    <span>📅 نسخه ۱.۰ — ۱۴۰۵/۰۳/۲۸</span>
+    <span>⚙️ Node.js + TypeScript + React</span>
+    <span>📦 ۱۲ فاز — ~۶ ماه (تیم ۳ نفر)</span>
+    <span>🔌 REST API + Webhook + API Key</span>
+    <span>☁️ Cloud + 🖥️ Local</span>
+    <span>🎯 کلون کامل CRM24</span>
+  </div>
+</header>
+
+<div class="layout">
+<nav class="sidebar">
+  <h3>فهرست</h3>
+  <a href="#overview">۱. نمای کلی</a>
+  <a href="#tech">۲. استک فنی</a>
+  <a href="#architecture">۳. معماری</a>
+  <a href="#database">۴. دیتابیس</a>
+  <a href="#access">۵. دسترسی و امنیت</a>
+  <a href="#modules">۶. ماژول‌ها</a>
+  <a href="#cycles">۷. چرخه‌های کاری</a>
+  <a href="#workflow">۸. گردش‌کار</a>
+  <a href="#api">۹. API عمومی</a>
+  <a href="#deployment">۱۰. Cloud / Local</a>
+  <a href="#frontend">۱۱. فرانت‌اند</a>
+  <a href="#phases">۱۲. فازبندی</a>
+  <a href="#roadmap">۱۳. نقشه‌راه</a>
+  <a href="#day1">۱۴. شروع فردا</a>
+  <a href="#checklist">۱۵. چک‌لیست</a>
+  <a href="#missing">۱۶. ماژول‌های تکمیلی</a>
+  <a href="#erd">۱۷. ERD و روابط</a>
+  <a href="#env">۱۸. Env و DevOps</a>
+  <a href="#matrix">۱۹. ماتریس پوشش</a>
+  <a href="#audit">۲۰. ممیزی نهایی</a>
+</nav>
+
+<main>
+
+<!-- ========== 1. OVERVIEW ========== -->
+<section id="overview">
+  <h2><span class="num">۱</span> نمای کلی محصول</h2>
+  <div class="alert alert-info">
+    <strong>هدف:</strong> ساخت یک CRM سازمانی فارسی، چندکاربره، ماژول‌محور و قابل سفارشی‌سازی — معادل عملکردی CRM24 (بر پایه Vtiger).
+  </div>
+  <p>این محصول یک «CRM ساده» نیست. یک <strong>پلتفرم Enterprise</strong> با موتور متادیتا، RBAC سه‌لایه، موتور اتوماسیون، و ۳۰+ ماژول است.</p>
+
+  <h3>اصول طراحی (حتماً رعایت شود)</h3>
+  <div class="card-grid">
+    <div class="card"><h4>🔧 Metadata-First</h4><p>هیچ ماژولی hard-code نشود. فیلدهای سفارشی، layout و دسترسی از متادیتا خوانده شود.</p></div>
+    <div class="card"><h4>🔐 Row-Level Security</h4><p>فیلتر دسترسی در لایه Query، نه UI. بر اساس مالک، ارجاع، نقش و Sharing Rules.</p></div>
+    <div class="card"><h4>🏢 Multi-Tenant Ready</h4><p>از روز اول <code>tenant_id</code> در همه جداول. هر سازمان داده جدا.</p></div>
+    <div class="card"><h4>🇮🇷 بومی‌سازی کامل</h4><p>RTL، تقویم شمسی، کدملی/موبایل، مالیات، اتصال بله/حسابداری.</p></div>
+    <div class="card"><h4>🔌 API-First</h4><p>REST API v1 برای یکپارچگی مشتریان + Webhook inbound/outbound + Swagger/OpenAPI + API Key با Scope.</p></div>
+  </div>
+
+  <h3>مدل‌های استقرار (Cloud / Local)</h3>
+  <table>
+    <tr><th>مدل</th><th>توضیح</th><th>مخاطب</th></tr>
+    <tr><td><span class="badge badge-blue">Cloud (SaaS)</span></td><td>هاست روی سرور CRM24، multi-tenant، بروزرسانی خودکار</td><td>استارتاپ، SMB</td></tr>
+    <tr><td><span class="badge badge-green">Local (On-Premise)</span></td><td>نصب روی سرور مشتری (Docker)، single-tenant، داده داخل سازمان</td><td>بانک، دولت، enterprise</td></tr>
+    <tr><td><span class="badge badge-purple">Hybrid</span></td><td>Core لوکال + یکپارچگی‌های ابری (SMS، بله)</td><td>سازمان‌های حساس</td></tr>
+  </table>
+  <p>جزئیات کامل پلن‌ها، محدودیت API و تفاوت Cloud/Local در <a href="#deployment">بخش ۱۰</a>.</p>
+
+  <h3>دسته‌بندی ماژول‌ها</h3>
+  <table>
+    <tr><th>دسته</th><th>ماژول‌ها</th><th>اولویت</th></tr>
+    <tr><td>بازاریابی</td><td>سرنخ، فرصت فروش، کمپین، تماس تلفنی، پیام‌رسان</td><td><span class="badge badge-blue">بالا</span></td></tr>
+    <tr><td>فروش</td><td>پیش‌فاکتور، سفارش فروش، فاکتور، مشارکت فروش</td><td><span class="badge badge-blue">بالا</span></td></tr>
+    <tr><td>پشتیبانی</td><td>تیکت، مخاطب، سازمان، قرارداد، پورتال مشتری، FAQ، گارانتی</td><td><span class="badge badge-yellow">متوسط</span></td></tr>
+    <tr><td>تأمین و خرید</td><td>محصول، سرویس، سفارش خرید، دفترچه قیمت، پرداخت</td><td><span class="badge badge-yellow">متوسط</span></td></tr>
+    <tr><td>پروژه</td><td>پروژه، فاز، وظیفه</td><td><span class="badge badge-yellow">متوسط</span></td></tr>
+    <tr><td>ابزار</td><td>وب‌فرم، قالب پیام، نظرسنجی، سطل بازیابی، لیست</td><td><span class="badge badge-purple">پایین</span></td></tr>
+    <tr><td>داشبورد</td><td>داشبورد، گزارش، تقویم، وظایف/رویداد</td><td><span class="badge badge-blue">بالا</span></td></tr>
+    <tr><td>تنظیمات</td><td>نقش، گروه، پروفایل، Sharing، تأییدیه، ایمپورت، مالیات</td><td><span class="badge badge-red">بحرانی</span></td></tr>
+    <tr><td>گردش‌کار</td><td>Workflow Engine + ۱۱ اکشن</td><td><span class="badge badge-blue">بالا</span></td></tr>
+  </table>
+</section>
+
+<!-- ========== 2. TECH STACK ========== -->
+<section id="tech">
+  <h2><span class="num">۲</span> استک فنی</h2>
+  <table>
+    <tr><th>لایه</th><th>تکنولوژی</th><th>دلیل انتخاب</th></tr>
+    <tr><td>Frontend</td><td>React 18 + TypeScript + Vite</td><td>اکوسystem بزرگ، SPA سریع</td></tr>
+    <tr><td>UI</td><td>Ant Design 5 (RTL) + TailwindCSS</td><td>کامپوننت‌های آماده RTL</td></tr>
+    <tr><td>State</td><td>TanStack Query + Zustand</td><td>Server state + client state</td></tr>
+    <tr><td>Backend</td><td>NestJS + TypeScript</td><td>ماژولار، DI، مناسب پروژه بزرگ</td></tr>
+    <tr><td>ORM</td><td>Prisma</td><td>Type-safe، migration آسان</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 16</td><td>JSONB، FTS، reliability</td></tr>
+    <tr><td>Cache/Queue</td><td>Redis + BullMQ</td><td>Workflow، notification، session</td></tr>
+    <tr><td>Search</td><td>Meilisearch (یا PG FTS)</td><td>جستجوی سریع رکوردها</td></tr>
+    <tr><td>File Storage</td><td>MinIO (S3-compatible)</td><td>پیوست‌ها، اسناد</td></tr>
+    <tr><td>Realtime</td><td>Socket.io</td><td>اعلان لحظه‌ای</td></tr>
+    <tr><td>Auth</td><td>JWT + Refresh Token</td><td>Stateless API</td></tr>
+    <tr><td>Calendar</td><td>jalaali-js + dayjs</td><td>تقویم شمسی</td></tr>
+    <tr><td>DevOps</td><td>Docker + Docker Compose</td><td>محیط یکسان dev/prod</td></tr>
+    <tr><td>Test</td><td>Vitest + Playwright</td><td>Unit + E2E</td></tr>
+  </table>
+
+  <h3>ساختار پوشه‌ها</h3>
+  <pre>crm24/
+├── apps/
+│   ├── api/                 # NestJS Backend
+│   │   ├── src/
+│   │   │   ├── core/        # Auth, RBAC, Metadata, Audit
+│   │   │   ├── modules/     # Lead, Contact, Deal, ...
+│   │   │   ├── workflow/    # Automation Engine
+│   │   │   ├── integrations/# Bale, SMS, Accounting
+│   │   │   └── common/      # Guards, Filters, DTOs
+│   │   └── prisma/
+│   └── web/                 # React Frontend
+│       ├── src/
+│       │   ├── pages/
+│       │   ├── components/
+│       │   ├── hooks/
+│       │   ├── stores/
+│       │   └── lib/
+├── packages/
+│   └── shared/              # Types, Constants, Utils
+├── docker-compose.yml
+└── README.md</pre>
+</section>
+
+<!-- ========== 3. ARCHITECTURE ========== -->
+<section id="architecture">
+  <h2><span class="num">۳</span> معماری سیستم</h2>
+  <pre>
+┌─────────────────────────────────────────────────────────────┐
+│                    React SPA (RTL + Persian)                │
+│   Dashboard │ Module Views │ Forms │ Reports │ Settings     │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ REST API + WebSocket
+┌──────────────────────────▼──────────────────────────────────┐
+│                     NestJS API Gateway                       │
+│  Auth Guard │ Tenant Guard │ RBAC Guard │ Rate Limiter       │
+├─────────────┬──────────────┬──────────────┬─────────────────┤
+│  Metadata   │   Module     │  Workflow    │  Integration    │
+│  Engine     │   Services   │  Engine      │  Adapters       │
+│ (fields,    │ (CRUD+List+  │ (triggers,   │ (Bale, SMS,     │
+│  layouts)   │  import)     │  conditions, │  Accounting,    │
+│             │              │  actions)    │  Webhook)       │
+├─────────────┴──────────────┴──────────────┴─────────────────┤
+│              PostgreSQL  │  Redis  │  BullMQ  │  MinIO        │
+└─────────────────────────────────────────────────────────────┘
+  </pre>
+
+  <h3>Metadata Engine (قلب سیستم)</h3>
+  <p>هر ماژول از این موتور استفاده می‌کند:</p>
+  <ul>
+    <li><strong>modules</strong> — تعریف ماژول (name, label, icon, table_name)</li>
+    <li><strong>fields</strong> — فیلدها (type, required, hidden, default, unique)</li>
+    <li><strong>picklist_values</strong> — مقادیر لیست کشویی</li>
+    <li><strong>layouts</strong> — چیدمان فرم (sections, field order)</li>
+    <li><strong>relations</strong> — ارتباط بین ماژول‌ها (lookup, master-detail)</li>
+  </ul>
+  <p>فیلدهای سفارشی در ستون <code>custom_data JSONB</code> هر جدول ذخیره می‌شوند (حداکثر ۱۵ فیلد).</p>
+</section>
+
+<!-- ========== 4. DATABASE ========== -->
+<section id="database">
+  <h2><span class="num">۴</span> طراحی دیتابیس (Prisma Schema خلاصه)</h2>
+  <div class="alert alert-warn"><strong>نکته:</strong> همه جداول باید <code>tenant_id</code>، <code>created_by</code>، <code>assigned_to</code>، <code>created_at</code>، <code>updated_at</code>، <code>deleted_at</code> داشته باشند.</div>
+
+  <h3>جداول هسته (Core)</h3>
+  <pre>// tenants, users, roles, profiles, profile_permissions
+// field_permissions, sharing_rules, custom_sharing_rules
+// modules, fields, picklist_values, layouts, relations
+// audit_logs, attachments, notes, tags, taggables
+// tasks, events, calendars, notifications
+// import_jobs, approval_rules, approval_requests</pre>
+
+  <h3>جداول ماژول‌ها</h3>
+  <table>
+    <tr><th>جدول</th><th>فیلدهای کلیدی</th><th>ارتباطات</th></tr>
+    <tr><td>leads</td><td>first_name, last_name, phone, mobile, email, national_id, company, source, status</td><td>→ opportunities</td></tr>
+    <tr><td>contacts</td><td>first_name, last_name, phone, mobile, email, national_id</td><td>→ organization_id</td></tr>
+    <tr><td>organizations</td><td>name, economic_code, phone, website, industry</td><td>← contacts, deals</td></tr>
+    <tr><td>opportunities</td><td>name, amount, probability, stage, expected_close, status (won/lost)</td><td>→ contact/org, quotes</td></tr>
+    <tr><td>products</td><td>name, code, unit_price, tax_id, stock_qty, type (product/service)</td><td>→ price_books</td></tr>
+    <tr><td>price_books</td><td>name, currency, is_default</td><td>→ price_book_entries</td></tr>
+    <tr><td>quotes</td><td>number, status, subtotal, tax, discount, total</td><td>→ quote_lines, opportunity</td></tr>
+    <tr><td>sales_orders</td><td>number, status, subtotal, tax, total</td><td>→ order_lines, quote</td></tr>
+    <tr><td>invoices</td><td>number, status, due_date, paid_amount</td><td>→ invoice_lines, sales_order</td></tr>
+    <tr><td>purchase_orders</td><td>number, vendor, status, total</td><td>→ po_lines</td></tr>
+    <tr><td>payments</td><td>amount, method, reference, status</td><td>→ invoice</td></tr>
+    <tr><td>tickets</td><td>subject, priority, status, sla_due</td><td>→ contact/org</td></tr>
+    <tr><td>campaigns</td><td>name, type, status, budget, start/end</td><td>→ leads, contacts</td></tr>
+    <tr><td>projects</td><td>name, status, start/end, budget</td><td>→ phases → tasks</td></tr>
+    <tr><td>webforms</td><td>name, module, fields_config, captcha, redirect_url</td><td>→ public endpoint</td></tr>
+    <tr><td>workflows</td><td>name, module, trigger_type, conditions, actions</td><td>→ workflow_logs</td></tr>
+  </table>
+
+  <h3>جداول خط (Line Items)</h3>
+  <p>quote_lines, sales_order_lines, invoice_lines, purchase_order_lines — هر کدام: product_id, quantity, unit_price, discount, tax, total</p>
+</section>
+
+<!-- ========== 5. ACCESS CONTROL ========== -->
+<section id="access">
+  <h2><span class="num">۵</span> سیستم دسترسی (RBAC سه‌لایه)</h2>
+
+  <h3>لایه ۱ — نقش‌ها (Roles)</h3>
+  <ul>
+    <li>ساختار درختی: <code>parent_role_id</code> (مدیرعامل ← مدیر فروش ← کارشناس)</li>
+    <li>تنظیم «قابلیت ارجاع به»: همه کاربران / هم‌سطح و پایین‌تر / فقط پایین‌تر</li>
+    <li>هنگام حذف نقش: انتقال داده به نقش دیگر</li>
+  </ul>
+
+  <h3>لایه ۲ — پروفایل‌ها (Profiles)</h3>
+  <p>دسترسی per-module: <strong>View | Create | Edit | Delete</strong></p>
+  <p>دسترسی per-field: <strong>Hidden | ReadOnly | Editable</strong></p>
+  <p>امکانات اضافی: Import | Export | Merge | Duplicate Detection</p>
+
+  <h3>لایه ۳ — Sharing Rules</h3>
+  <table>
+    <tr><th>حالت</th><th>توضیح</th></tr>
+    <tr><td>Private</td><td>فقط مالک + زیرمجموعه نقش + ارجاع‌شده</td></tr>
+    <tr><td>Public Read Only</td><td>همه می‌بینند، فقط مالک ویرایش</td></tr>
+    <tr><td>Public Read/Write</td><td>همه می‌بینند و ویرایش، فقط مالک حذف</td></tr>
+    <tr><td>Public Full</td><td>همه دسترسی کامل</td></tr>
+    <tr><td>Sharing Rules</td><td>Private / Public-RO / Public-RW / Public-Full + Custom</td></tr>
+    <tr><td>Sharing Rules — Calendar</td><td>همان ۴ حالت، جداگانه per-calendar module</td></tr>
+  </table>
+
+  <h3>الگوریتم فیلتر Query</h3>
+  <pre>WHERE tenant_id = :tenant
+  AND deleted_at IS NULL
+  AND (
+    is_admin = true
+    OR created_by = :userId
+    OR assigned_to = :userId
+    OR created_by IN (subordinate_user_ids)
+    OR id IN (sharing_rule_granted_ids)
+  )</pre>
+</section>
+
+<!-- ========== 6. MODULES ========== -->
+<section id="modules">
+  <h2><span class="num">۶</span> جزئیات کامل ماژول‌ها</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="module-icon">🎯</div>
+      <h4>سرنخ‌های فروش (Leads)</h4>
+      <p><span class="badge badge-blue">بازاریابی</span></p>
+      <ul>
+        <li>فیلدها: نام، نام‌خانوادگی، تلفن، موبایل، ایمیل، کدملی، شرکت، منبع، وضعیت، ارجاع</li>
+        <li>وضعیت‌ها: تماس گرفته، بی‌تمایل، واجد شرایط، مشتاق، بی‌ارزش</li>
+        <li>فیلد «عدم ارسال ایمیل» (do_not_email) برای opt-out</li>
+        <li>منبع سرنخ (source): وب‌سایت، نمایشگاه، معرفی، تبلیغات…</li>
+        <li>ایجاد تکی + گروهی (Excel/CSV) + وب‌فرم</li>
+        <li>مدیریت تکراری: ثبت‌نکن / بازنویسی / ادغام</li>
+        <li>تبدیل → مخاطب + سازمان + فرصت فروش</li>
+        <li>یادداشت، وظیفه، رویداد، فعالیت</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">💰</div>
+      <h4>فرصت‌های فروش (Opportunities)</h4>
+      <p><span class="badge badge-blue">بازاریابی/فروش</span></p>
+      <ul>
+        <li>مراحل کاریز (Pipeline): قابل تنظیم per-tenant</li>
+        <li>مبلغ، احتمال، تاریخ بسته‌شدن</li>
+        <li>وضعیت: Open / Won / Lost</li>
+        <li>تبدیل → پیش‌فاکتور / پروژه</li>
+        <li>نمای کاریز (Kanban drag-drop)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">👤</div>
+      <h4>مخاطبین و سازمان‌ها</h4>
+      <p><span class="badge badge-yellow">پشتیبانی</span></p>
+      <ul>
+        <li>Contact: شخص حقیقی</li>
+        <li>Organization: شخص حقوقی + کد اقتصادی</li>
+        <li>ارتباط Contact ↔ Organization</li>
+        <li>تاریخچه فاکتور، تیکت، قرارداد</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">📄</div>
+      <h4>پیش‌فاکتور / سفارش / فاکتور</h4>
+      <p><span class="badge badge-blue">فروش</span></p>
+      <ul>
+        <li>Quote → SalesOrder → Invoice</li>
+        <li>خطوط: محصول، تعداد، قیمت، تخفیف، مالیات</li>
+        <li>محاسبه خودکار subtotal, tax, total</li>
+        <li>واحد پولی، مالیات، تخفیف درصدی/مبلغی</li>
+        <li>PDF خروجی + ارسال به حسابداری</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">📦</div>
+      <h4>محصولات و انبار</h4>
+      <p><span class="badge badge-yellow">تأمین</span></p>
+      <ul>
+        <li>Product / Service</li>
+        <li>دفترچه قیمت (PriceBook) چندگانه</li>
+        <li>موجودی انبار، کد محصول</li>
+        <li>سفارش خرید (PurchaseOrder)</li>
+        <li>پرداخت‌ها (Payment)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">🎫</div>
+      <h4>تیکت‌ها و پشتیبانی</h4>
+      <p><span class="badge badge-yellow">پشتیبانی</span></p>
+      <ul>
+        <li>اولویت، وضعیت، SLA</li>
+        <li>پورتال مشتری (Customer Portal)</li>
+        <li>FAQ، قرارداد خدمات</li>
+        <li>گارانتی و وارانتی</li>
+        <li>پرونده فروش محصول</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">📊</div>
+      <h4>کمپین و بازاریابی</h4>
+      <p><span class="badge badge-purple">بازاریابی</span></p>
+      <ul>
+        <li>کمپین: بودجه، تاریخ، نوع</li>
+        <li>ارتباط با Lead/Contact</li>
+        <li>تماس تلفنی (Call Log)</li>
+        <li>پیام‌رسان: بله + پنل SMS + واتساپ/تلگرام (Autochat)</li>
+        <li>ارسال گروهی پیام (دستی + Workflow)</li>
+        <li>ROI کمپین</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">📁</div>
+      <h4>پروژه‌ها</h4>
+      <p><span class="badge badge-yellow">پروژه</span></p>
+      <ul>
+        <li>Project → Phase → Task</li>
+        <li>تبدیل از Opportunity</li>
+        <li>Gantt / Timeline view</li>
+        <li>بودجه، پیشرفت، مسئول</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">📝</div>
+      <h4>وب‌فرم‌ها</h4>
+      <p><span class="badge badge-purple">ابزار</span></p>
+      <ul>
+        <li>سازنده فرم drag-drop</li>
+        <li>خروجی: لینک + iFrame</li>
+        <li>Captcha، ارجاع خودکار، گروه</li>
+        <li>مدیریت تکراری</li>
+        <li>ثبت مستقیم در ماژول</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">📈</div>
+      <h4>داشبورد و گزارش</h4>
+      <p><span class="badge badge-blue">داشبورد</span></p>
+      <ul>
+        <li>ویجت‌های قابل تنظیم</li>
+        <li>گزارش ساز (Report Builder)</li>
+        <li>فیلتر، گروه‌بندی، نمودار</li>
+        <li>Export PDF/Excel</li>
+        <li>تقویم شمسی + وظایف/رویداد</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">⚙️</div>
+      <h4>تنظیمات سیستم</h4>
+      <p><span class="badge badge-red">بحرانی</span></p>
+      <ul>
+        <li>نقش‌ها، گروه‌ها، پروفایل‌ها</li>
+        <li>Sharing Rules</li>
+        <li>تأییدیه‌ها (Approval)</li>
+        <li>ایمپورت/اکسپورت Excel/CSV</li>
+        <li>واحد پولی، مالیات</li>
+        <li>شخصی‌سازی منو</li>
+        <li>معادل‌سازی تبدیل (Conversion Mapping)</li>
+        <li>سطل بازیابی</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="module-icon">🔄</div>
+      <h4>گردش‌کار (Workflow)</h4>
+      <p><span class="badge badge-blue">اتوماسیون</span></p>
+      <ul>
+        <li>Trigger: Create / Update / Scheduled</li>
+        <li>Conditions: AND/OR روی فیلدها</li>
+        <li>۱۱ اکشن (جزئیات بخش ۸)</li>
+        <li>Workflowهای سیستمی (غیرفعال نکن!)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 7. BUSINESS CYCLES ========== -->
+<section id="cycles">
+  <h2><span class="num">۷</span> چرخه‌های کاری (Business Flows)</h2>
+
+  <h3>چرخه ۱ — فروش (Sales Pipeline)</h3>
+  <div class="flow-box">
+    سرنخ (Lead) <span class="arrow">←</span> وب‌فرم / اکسل / دستی / کمپین
+    <br><span class="arrow">↓</span> پیگیری (یادداشت + وظیفه + تماس)
+    <br><span class="arrow">↓</span> <strong>تبدیل سرنخ</strong>
+    <br>مخاطب + سازمان + فرصت فروش (Opportunity)
+    <br><span class="arrow">↓</span> مراحل کاریز (Qualification → Proposal → Negotiation → Closed)
+    <br><span class="arrow">↓</span> پیش‌فاکتور (Quote) <span class="arrow">→</span> سفارش فروش <span class="arrow">→</span> فاکتور
+    <br><span class="arrow">↓</span> پرداخت + ارسال به حسابداری
+  </div>
+
+  <h3>چرخه ۲ — تبدیل به پروژه</h3>
+  <div class="flow-box">
+    فرصت فروش (Won) <span class="arrow">→</span> تبدیل به پروژه <span class="arrow">→</span> فازها <span class="arrow">→</span> وظایف
+  </div>
+
+  <h3>چرخه ۳ — پشتیبانی</h3>
+  <div class="flow-box">
+    مشتری (Contact/Org) <span class="arrow">→</span> تیکت / پورتال مشتری
+    <br><span class="arrow">↓</span> SLA + ارجاع + پیگیری
+    <br><span class="arrow">↓</span> حل‌شده / بسته‌شده
+    <br>گارانتی ← پرونده فروش محصول ← فاکتور
+  </div>
+
+  <h3>چرخه ۴ — تأمین و خرید</h3>
+  <div class="flow-box">
+    محصول/سرویس <span class="arrow">→</span> دفترچه قیمت <span class="arrow">→</span> سفارش خرید <span class="arrow">→</span> پرداخت
+  </div>
+
+  <h3>چرخه ۵ — بازاریابی</h3>
+  <div class="flow-box">
+    کمپین <span class="arrow">→</span> سرنخ/مخاطب <span class="arrow">→</span> ROI گزارش
+    <br>تماس تلفنی + پیام‌رسان (بله/SMS)
+  </div>
+
+  <h3>معادل‌سازی تبدیل (Conversion Mapping)</h3>
+  <p>هنگام تبدیل Lead → Contact/Org/Opportunity، نگاشت فیلدها قابل تنظیم است:</p>
+  <table>
+    <tr><th>فیلد مبدأ (Lead)</th><th>فیلد مقصد</th></tr>
+    <tr><td>first_name</td><td>contacts.first_name</td></tr>
+    <tr><td>company</td><td>organizations.name</td></tr>
+    <tr><td>mobile</td><td>contacts.mobile + opportunities (copy)</td></tr>
+    <tr><td>source</td><td>opportunities.lead_source</td></tr>
+    <tr><td>custom fields</td><td>mapped via conversion_rules table</td></tr>
+  </table>
+</section>
+
+<!-- ========== 8. WORKFLOW ========== -->
+<section id="workflow">
+  <h2><span class="num">۸</span> موتور گردش‌کار (Workflow Engine)</h2>
+
+  <h3>ساختار Workflow</h3>
+  <table>
+    <tr><th>بخش</th><th>گزینه‌ها</th></tr>
+    <tr><td>اطلاعات پایه</td><td>نام، توضیح، ماژول، وضعیت (فعال/غیرفعال)</td></tr>
+    <tr><td>زمان اجرا</td><td>ایجاد شد | بروزرسانی شد (شامل ایجاد) | دوره زمانی</td></tr>
+    <tr><td>تکرار در</td><td>اولین بار محقق شد | هر بار محقق شد</td></tr>
+    <tr><td>دوره زمانی</td><td>ساعتی، روزانه، هفتگی، ماهانه، سالانه، تاریخ مشخص</td></tr>
+    <tr><td>انتخاب رکورد</td><td>عادی | تصادفی (مثلاً ۱۰۰ نفر در روز)</td></tr>
+    <tr><td>شرایط</td><td>AND (همه) | OR (حداقل یکی) — روی فیلدهای ماژول</td></tr>
+  </table>
+
+  <h3>۱۱ اکشن گردش‌کار</h3>
+  <table>
+    <tr><th>#</th><th>اکشن</th><th>پیاده‌سازی</th></tr>
+    <tr><td>1</td><td>ارسال ایمیل</td><td>SMTP + template engine</td></tr>
+    <tr><td>2</td><td>ارسال پیام پیام‌رسان</td><td>Bale/SMS adapter</td></tr>
+    <tr><td>3</td><td>ایجاد وظیفه</td><td>INSERT tasks + notification</td></tr>
+    <tr><td>4</td><td>ایجاد رویداد</td><td>INSERT events + calendar</td></tr>
+    <tr><td>5</td><td>بروزرسانی فیلد</td><td>UPDATE record field(s)</td></tr>
+    <tr><td>6</td><td>ایجاد رکورد</td><td>INSERT in target module</td></tr>
+    <tr><td>7</td><td>ایجاد اعلان</td><td>INSERT notification + WebSocket</td></tr>
+    <tr><td>8</td><td>تابع سفارشی</td><td>JS sandbox یا plugin hook</td></tr>
+    <tr><td>9</td><td>وب‌هوک</td><td>HTTP POST to external URL</td></tr>
+    <tr><td>10</td><td>افزودن/حذف برچسب</td><td>taggables pivot</td></tr>
+    <tr><td>11</td><td>ارسال به حسابداری</td><td>Accounting adapter</td></tr>
+  </table>
+
+  <h3>معماری اجرا</h3>
+  <pre>Record Created/Updated
+    → Domain Event emitted
+    → WorkflowMatcher (find active workflows for module + trigger)
+    → ConditionEvaluator (check AND/OR rules)
+    → ActionExecutor (queue each action in BullMQ)
+    → Worker processes action
+    → Log result in workflow_logs</pre>
+</section>
+
+<!-- ========== 9. PUBLIC API ========== -->
+<section id="api">
+  <h2><span class="num">۹</span> API عمومی — دسترسی برای مشتریان و یکپارچگی</h2>
+  <div class="alert alert-info">
+    <strong>هدف:</strong> مشتریان و تیم فنی آن‌ها بتوانند CRM را با سایت، ERP، حسابداری، ویپ و اتوماسیون‌های خود یکپارچه کنند — بدون ورود به UI.
+  </div>
+
+  <h3>آدرس‌ها و مستندات</h3>
+  <table>
+    <tr><th>محیط</th><th>Base URL</th></tr>
+    <tr><td>Cloud Production</td><td><code>https://api.yourcrm.ir/v1</code></td></tr>
+    <tr><td>Cloud Staging</td><td><code>https://staging-api.yourcrm.ir/v1</code></td></tr>
+    <tr><td>Local On-Premise</td><td><code>https://crm.customer.local/api/v1</code></td></tr>
+    <tr><td>Swagger UI</td><td><code>/api/docs</code></td></tr>
+    <tr><td>OpenAPI JSON</td><td><code>/api/openapi.json</code></td></tr>
+  </table>
+
+  <h3>روش‌های احراز هویت</h3>
+  <table>
+    <tr><th>روش</th><th>کاربرد</th><th>Header</th></tr>
+    <tr><td>JWT (User)</td><td>اپ React / موبایل داخلی</td><td><code>Authorization: Bearer {access_token}</code></td></tr>
+    <tr><td>API Key (Machine)</td><td>یکپارچه سرور-به-سرور مشتری</td><td><code>X-API-Key: crm_live_xxx</code></td></tr>
+    <tr><td>Refresh Token</td><td>تمدید JWT</td><td><code>POST /auth/refresh</code></td></tr>
+    <tr><td>Webhook Signature</td><td>تأیید inbound webhook</td><td><code>X-Webhook-Signature: sha256=...</code></td></tr>
+  </table>
+
+  <h3>مدیریت API Key (پنل تنظیمات مشتری)</h3>
+  <pre>GET    /settings/api-keys              # لیست کلیدها
+POST   /settings/api-keys              # ایجاد (name, scopes, expires_at)
+DELETE /settings/api-keys/:id          # لغو
+POST   /settings/api-keys/:id/rotate   # چرخش کلید
+
+# Scopes نمونه:
+leads:read | leads:write | contacts:* | invoices:read
+webhooks:manage | reports:run | * (admin only)</pre>
+
+  <h3>قرارداد API (Convention)</h3>
+  <pre># Headers استاندارد (همه درخواست‌ها)
+Authorization: Bearer {token}   # یا X-API-Key
+X-Tenant-Id: {uuid}             # Cloud SaaS — در Local اختیاری
+Accept: application/json
+Accept-Language: fa
+X-Request-Id: {uuid}            # برای trace
+Content-Type: application/json
+
+# Pagination
+GET /leads?page=1&limit=50
+# یا cursor: ?cursor=eyJ...&limit=50
+
+# Filter (operators: eq, ne, gt, lt, in, like)
+GET /leads?filter[status][eq]=qualified
+GET /leads?filter[created_at][gte]=1404-01-01
+
+# Sort
+GET /leads?sort=-created_at,name
+
+# Sparse fieldsets
+GET /leads?fields=id,first_name,mobile,status
+
+# Include relations
+GET /opportunities/:id?include=contact,organization,quotes</pre>
+
+  <h3>فرمت پاسخ و خطا</h3>
+  <pre>// Success (200/201)
+{ "data": { ... }, "meta": { "page": 1, "total": 150 } }
+
+// Error (4xx/5xx)
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "شماره موبایل نامعتبر است",
+    "details": [{ "field": "mobile", "message": "..." }],
+    "request_id": "uuid"
+  }
+}
+
+// Rate limit headers
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 847
+X-RateLimit-Reset: 1718712000</pre>
+
+  <h3>Auth Endpoints</h3>
+  <pre>POST   /auth/register              # Cloud: tenant + admin
+POST   /auth/login                 # email + password → JWT
+POST   /auth/refresh               # refresh_token → new JWT
+POST   /auth/logout
+GET    /auth/me
+POST   /auth/forgot-password
+POST   /auth/reset-password
+POST   /auth/token                 # Client Credentials (API Key flow)</pre>
+
+  <h3>Core / Settings API</h3>
+  <pre>CRUD   /users, /roles, /profiles, /groups
+GET/PUT /sharing-rules/:module
+CRUD   /modules, /fields, /layouts
+CRUD   /workflows, /approvals
+POST   /import/:module             # multipart/form-data
+GET    /export/:module             # ?format=xlsx|csv
+GET    /recycle-bin/:module
+POST   /recycle-bin/:module/:id/restore
+DELETE /recycle-bin/:module/:id    # purge permanent</pre>
+
+  <h3>Module CRUD (همه ماژول‌ها — الگوی یکسان)</h3>
+  <pre>GET    /{module}                   # leads, contacts, opportunities, ...
+POST   /{module}
+GET    /{module}/:id
+PATCH  /{module}/:id               # partial update
+PUT    /{module}/:id               # full replace
+DELETE /{module}/:id               # soft delete
+POST   /{module}/:id/convert       # lead, opportunity
+GET    /{module}/:id/activities
+POST   /{module}/:id/notes
+POST   /{module}/:id/tasks
+POST   /{module}/:id/events
+POST   /{module}/:id/tags
+POST   /{module}/:id/attachments    # multipart
+POST   /{module}/merge
+GET    /{module}/duplicates        # find duplicates
+POST   /{module}/bulk-update       # bulk edit
+POST   /{module}/bulk-delete</pre>
+
+  <h3>Sales & Finance API</h3>
+  <pre>GET    /opportunities/pipeline
+PATCH  /opportunities/:id/stage
+POST   /quotes                     # + lines[]
+POST   /quotes/:id/convert-to-order
+POST   /sales-orders/:id/convert-to-invoice
+GET    /invoices/:id/pdf
+POST   /payments
+GET    /products, /price-books, /taxes, /currencies
+GET    /sales-partnerships         # پورسانت
+GET    /sales-partnerships/calculate</pre>
+
+  <h3>Support & Project API</h3>
+  <pre>CRUD   /tickets, /service-contracts, /faqs
+CRUD   /projects, /projects/:id/phases, /phases/:id/tasks
+GET    /warranties, /product-sales-cases
+CRUD   /leave-requests             # مرخصی/مأموریت</pre>
+
+  <h3>Marketing & Tools API</h3>
+  <pre>CRUD   /campaigns, /calls
+CRUD   /surveys, /surveys/:id/questions
+GET    /surveys/:id/responses
+POST   /surveys/:id/publish
+CRUD   /webforms
+CRUD   /message-templates
+CRUD   /saved-lists
+CRUD   /documents</pre>
+
+  <h3>Public Endpoints (بدون Auth — با rate limit سخت‌تر)</h3>
+  <pre>POST   /public/webforms/:id/submit
+GET    /public/webforms/:id        # preview schema
+POST   /public/surveys/:id/submit
+POST   /public/portal/auth/login
+POST   /public/portal/auth/register
+GET    /public/portal/tickets      # با portal JWT</pre>
+
+  <h3>Inbound Webhooks (سیستم‌های خارجی → CRM)</h3>
+  <p>این endpointها توسط SMS panel، بله، Autochat، VoIP، درگاه پرداخت فراخوانی می‌شوند:</p>
+  <pre>POST   /webhooks/inbound/sms/:channelId
+POST   /webhooks/inbound/bale/:botId
+POST   /webhooks/inbound/autochat/:channelId
+POST   /webhooks/inbound/voip/call       # رویداد تماس از PBX
+POST   /webhooks/inbound/payment/:gateway # تأیید پرداخت
+POST   /webhooks/inbound/accounting       # sync از حسابداری
+
+# VoIP Call payload نمونه:
+{
+  "direction": "inbound|outbound",
+  "caller": "09121234567",
+  "callee": "02191017324",
+  "status": "answered|missed|busy",
+  "duration_sec": 120,
+  "recording_url": "https://...",
+  "started_at": "1404-03-28T10:30:00+03:30"
+}</pre>
+
+  <h3>Outbound Webhooks (CRM → سیستم مشتری)</h3>
+  <p>از Workflow یا Subscription API — تفاوت با REST: Push خودکار پس از رویداد (مطابق crm24.txt)</p>
+  <pre>POST   /webhooks/subscriptions       # ثبت URL مقصد
+GET    /webhooks/subscriptions
+DELETE /webhooks/subscriptions/:id
+
+# Event types:
+lead.created | lead.converted | opportunity.stage_changed
+quote.approved | invoice.created | invoice.paid
+ticket.created | ticket.resolved | contact.updated
+
+# Payload config (از Workflow):
+Method: POST | PUT
+Content-Type: JSON | FORM | JSON_ARRAY | XML
+Auth: none | bearer | basic
+Parameters: static + dynamic field mapping
+
+# Retry: 3 بار با backoff — log در webhook_deliveries</pre>
+
+  <h3>VoIP / تماس تلفنی API</h3>
+  <pre>GET    /calls                      # لیست تماس‌ها
+GET    /calls/:id
+GET    /calls/:id/recording         # stream/download
+POST   /calls                       # ثبت دستی
+PATCH  /calls/:id                   # یادداشت، link to contact
+
+# Popup تماس: WebSocket event call.incoming
+# Fields: direction, status, duration, recording, handled_by</pre>
+
+  <h3>Realtime (WebSocket)</h3>
+  <pre>WS     /ws?token={jwt}
+Events: notification.new | call.incoming | ticket.updated
+        workflow.completed | import.finished</pre>
+
+  <h3>Rate Limiting (بر اساس پلن — بخش ۱۰)</h3>
+  <table>
+    <tr><th>پلن</th><th>REST req/day</th><th>Webhook req/day</th><th>API Keys</th></tr>
+    <tr><td>Free Cloud</td><td>۱٬۰۰۰</td><td>۱۰۰</td><td>۱</td></tr>
+    <tr><td>Pro Cloud</td><td>۵۰٬۰۰۰</td><td>۵٬۰۰۰</td><td>۵</td></tr>
+    <tr><td>Enterprise Cloud</td><td>نامحدود*</td><td>نامحدود*</td><td>نامحدود</td></tr>
+    <tr><td>Local License</td><td>بدون محدودیت داخلی</td><td>بر اساس قرارداد</td><td>نامحدود</td></tr>
+  </table>
+  <p>* با fair-use policy</p>
+
+  <h3>فاز پیاده‌سازی API</h3>
+  <ul>
+    <li><strong>فاز ۰:</strong> Auth + OpenAPI/Swagger + error format + pagination</li>
+    <li><strong>فاز ۱:</strong> Module CRUD + RBAC scope check per endpoint</li>
+    <li><strong>فاز ۲:</strong> API Key management + rate limiter (Redis)</li>
+    <li><strong>فاز ۴:</strong> Outbound webhooks + workflow integration</li>
+    <li><strong>فاز ۹:</strong> Inbound webhooks (SMS/Bale/Autochat)</li>
+    <li><strong>فاز ۱۱:</strong> VoIP inbound + accounting/payment webhooks</li>
+    <li><strong>فاز ۱۳:</strong> Developer portal (مستندات + sandbox + Postman)</li>
+  </ul>
+</section>
+
+<!-- ========== 10. DEPLOYMENT PLANS ========== -->
+<section id="deployment">
+  <h2><span class="num">۱۰</span> پلن استقرار — Cloud vs Local</h2>
+
+  <div class="alert alert-warn">
+    <strong>تصمیم معماری:</strong> از روز اول multi-tenant طراحی کن، ولی Local را با <code>DEPLOYMENT_MODE=local</code> + single tenant اجرا کن — یک codebase، دو مدل فروش.
+  </div>
+
+  <h3>مقایسه Cloud و Local</h3>
+  <table>
+    <tr><th>معیار</th><th>☁️ Cloud (SaaS)</th><th>🖥️ Local (On-Premise)</th></tr>
+    <tr><td>محل داده</td><td>سرور CRM24 (ایران)</td><td>سرور مشتری</td></tr>
+    <tr><td>Tenant model</td><td>Multi-tenant (tenant_id)</td><td>Single-tenant</td></tr>
+    <tr><td>نصب</td><td>ثبت‌نام آنلاین — ۵ دقیقه</td><td>Docker Compose / K8s — ۱-۲ روز</td></tr>
+    <tr><td>بروزرسانی</td><td>خودکار (zero-downtime)</td><td>Patch دستی یا قرارداد پشتیبانی</td></tr>
+    <tr><td>Backup</td><td>CRM24 مسئول</td><td>مشتری مسئول (راهنما + ابزار)</td></tr>
+    <tr><td>Custom domain</td><td>Pro+ (crm.company.ir)</td><td>کامل (داخلی)</td></tr>
+    <tr><td>API Base URL</td><td>api.yourcrm.ir</td><td>crm.company.local/api</td></tr>
+    <tr><td>محدودیت API</td><td>بر اساس پلن</td><td>بدون محدودیت داخلی</td></tr>
+    <tr><td>VoIP / SMS</td><td>یکپارچه ابری</td><td>اتصال به PBX/SMS داخلی</td></tr>
+    <tr><td>هزینه</td><td>اشتراک ماهانه</td><td>لایسنس یکبار + پشتیبانی سالانه</td></tr>
+  </table>
+
+  <h3>پلن‌های Cloud (تعرفه SaaS)</h3>
+  <table>
+    <tr><th>پلن</th><th>کاربر</th><th>ماژول‌ها</th><th>API</th><th>Storage</th><th>قیمت پیشنهادی</th></tr>
+    <tr><td><span class="badge badge-green">رایگان</span></td><td>۲</td><td>Lead, Contact, Task</td><td>Basic (۱K/day)</td><td>۱ GB</td><td>۰</td></tr>
+    <tr><td><span class="badge badge-blue">حرفه‌ای</span></td><td>۱۰</td><td>+ Opportunity, Quote, Invoice</td><td>Full (50K/day)</td><td>۱۰ GB</td><td>ماهانه</td></tr>
+    <tr><td><span class="badge badge-purple">سازمانی</span></td><td>نامحدود</td><td>همه ماژول‌ها</td><td>Full + Webhook</td><td>۱۰۰ GB</td><td>ماهانه</td></tr>
+    <tr><td><span class="badge badge-yellow">Enterprise Cloud</span></td><td>نامحدود</td><td>همه + SLA 99.9%</td><td>Unlimited</td><td>Custom</td><td>قراردادی</td></tr>
+  </table>
+
+  <h3>پلن Local (لایسنس On-Premise)</h3>
+  <table>
+    <tr><th>پلن</th><th>کاربر</th><th>شامل</th><th>پشتیبانی</th></tr>
+    <tr><td>Local Standard</td><td>تا ۲۵</td><td>Core + Sales + Support</td><td>۱ سال</td></tr>
+    <tr><td>Local Enterprise</td><td>نامحدود</td><td>همه ماژول‌ها + API + VoIP</td><td>قرارداد SLA</td></tr>
+    <tr><td>Local + Source</td><td>نامحدود</td><td>Enterprise + سورس کد</td><td>اختصاصی</td></tr>
+  </table>
+
+  <h3>معماری استقرار</h3>
+  <pre>
+┌─── CLOUD (SaaS) ───────────────────────────────────────┐
+│  Load Balancer → API (NestJS) × N → PostgreSQL (RLS)    │
+│  Redis Cluster | MinIO S3 | Meilisearch | BullMQ        │
+│  Tenant isolation: tenant_id + Row-Level Security       │
+│  Billing: subscription_plans + usage_metering           │
+└─────────────────────────────────────────────────────────┘
+
+┌─── LOCAL (On-Premise) ──────────────────────────────────┐
+│  Docker Compose on customer server:                     │
+│  api + web + postgres + redis + minio                   │
+│  DEPLOYMENT_MODE=local  TENANT_ID=single                │
+│  Optional: air-gapped (no external internet)            │
+│  Customer manages: backup, SSL, firewall, updates       │
+└─────────────────────────────────────────────────────────┘
+  </pre>
+
+  <h3>متغیر محیطی تفکیک Cloud/Local</h3>
+  <pre>DEPLOYMENT_MODE=cloud|local
+ENABLE_BILLING=true          # false for local
+ENABLE_MULTI_TENANT=true     # false for local
+API_RATE_LIMIT_ENABLED=true  # false for local optional
+DEFAULT_LOCALE=fa
+DATA_REGION=IR</pre>
+
+  <h3>چک‌لیست تحویل Local به مشتری</h3>
+  <ul class="checklist">
+    <li>Docker Compose + .env.example سفارشی</li>
+    <li>راهنمای نصب PDF (Linux/Windows Server)</li>
+    <li>SSL certificate setup (Let's Encrypt or internal CA)</li>
+    <li>Backup script (pg_dump + minio sync)</li>
+    <li>Migration guide برای بروزرسانی نسخه</li>
+    <li>API documentation offline (Swagger export)</li>
+    <li>License key validator (optional)</li>
+  </ul>
+</section>
+
+<!-- ========== 11. FRONTEND ========== -->
+<section id="frontend">
+  <h2><span class="num">۱۱</span> فرانت‌اند (صفحات و کامپوننت‌ها)</h2>
+
+  <h3>صفحات اصلی</h3>
+  <table>
+    <tr><th>مسیر</th><th>صفحه</th><th>اولویت</th></tr>
+    <tr><td>/login, /register</td><td>ورود و ثبت‌نام</td><td>فاز ۰</td></tr>
+    <tr><td>/dashboard</td><td>داشبورد + ویجت‌ها</td><td>فاز ۱</td></tr>
+    <tr><td>/leads</td><td>لیست + فرم + تبدیل</td><td>فاز ۱</td></tr>
+    <tr><td>/contacts, /organizations</td><td>CRUD + detail view</td><td>فاز ۱</td></tr>
+    <tr><td>/opportunities</td><td>لیست + کاریز Kanban</td><td>فاز ۱</td></tr>
+    <tr><td>/quotes, /orders, /invoices</td><td>فرم خطی (line items)</td><td>فاز ۲</td></tr>
+    <tr><td>/products, /price-books</td><td>کاتالوگ محصول</td><td>فاز ۲</td></tr>
+    <tr><td>/tickets</td><td>تیکت + SLA</td><td>فاز ۴</td></tr>
+    <tr><td>/projects</td><td>پروژه + Gantt</td><td>فاز ۴</td></tr>
+    <tr><td>/campaigns</td><td>کمپین</td><td>فاز ۵</td></tr>
+    <tr><td>/calendar</td><td>تقویم شمسی</td><td>فاز ۱</td></tr>
+    <tr><td>/reports</td><td>گزارش‌ساز</td><td>فاز ۵</td></tr>
+    <tr><td>/settings/*</td><td>تنظیمات (نقش، workflow، ...)</td><td>فاز ۰-۳</td></tr>
+    <tr><td>/portal</td><td>پورتال مشتری</td><td>فاز ۴</td></tr>
+  </table>
+
+  <h3>کامپوننت‌های مشترک (بساز یکبار، همه جا استفاده)</h3>
+  <ul>
+    <li><strong>ModuleListView</strong> — جدول + فیلتر + sort + pagination + bulk actions</li>
+    <li><strong>ModuleFormView</strong> — فرم داینامیک از metadata</li>
+    <li><strong>ModuleDetailView</strong> — تب‌ها: جزئیات، فعالیت، یادداشت، فایل</li>
+    <li><strong>DynamicField</strong> — رندر فیلد بر اساس type</li>
+    <li><strong>ImportWizard</strong> — ۳ مرحله: آپلود، تکراری، mapping</li>
+    <li><strong>ConvertModal</strong> — تبدیل Lead/Opportunity</li>
+    <li><strong>PipelineBoard</strong> — Kanban drag-drop</li>
+    <li><strong>LineItemsEditor</strong> — خطوط فاکتور</li>
+    <li><strong>CalendarView</strong> — تقویم شمسی</li>
+    <li><strong>NotificationBell</strong> — اعلان realtime</li>
+  </ul>
+</section>
+
+<!-- ========== 11. PHASES ========== -->
+<section id="phases">
+  <h2><span class="num">۱۱</span> فازبندی توسعه (۱۲ فاز)</h2>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <h4>فاز ۰ — زیرساخت و هسته <span class="badge badge-red">هفته ۱-۳</span></h4>
+      <p class="week">پایه‌ای‌ترین فاز — بدون این هیچ ماژولی نمی‌سازید</p>
+      <ul>
+        <li>Monorepo setup (NestJS + React + Prisma + Docker Compose)</li>
+        <li>Auth (register tenant, login, JWT, refresh)</li>
+        <li>Users CRUD + tenant isolation middleware</li>
+        <li>Metadata Engine (modules, fields, layouts tables + API)</li>
+        <li>Generic CRUD service (create/read/update/delete/list/filter)</li>
+        <li>Soft delete + Recycle Bin</li>
+        <li>Audit log (created_by, updated_by, history)</li>
+        <li>File upload (MinIO)</li>
+        <li>Notes + Tags (polymorphic)</li>
+        <li>RTL layout + Persian date picker</li>
+        <li>OpenAPI 3.0 + Swagger UI (/api/docs)</li>
+        <li>Standard API response/error format + pagination</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۱ — RBAC و دسترسی <span class="badge badge-red">هفته ۴-۵</span></h4>
+      <ul>
+        <li>Roles (tree structure) + Profiles + Groups</li>
+        <li>Module permissions (view/create/edit/delete)</li>
+        <li>Field permissions (hidden/readonly/editable)</li>
+        <li>Sharing Rules (private/public/custom)</li>
+        <li>Query filter middleware (row-level security)</li>
+        <li>Assign-to logic + hierarchy</li>
+        <li>API Key CRUD + scopes + rate limiter (Redis)</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۲ — ماژول‌های فروش پایه <span class="badge badge-blue">هفته ۶-۸</span></h4>
+      <ul>
+        <li>Leads (CRUD + status + source + custom fields)</li>
+        <li>Contacts + Organizations</li>
+        <li>Opportunities + Pipeline stages + Kanban view</li>
+        <li>Lead Conversion (→ Contact + Org + Opportunity)</li>
+        <li>Conversion mapping settings</li>
+        <li>Import/Export Excel/CSV + duplicate handling</li>
+        <li>Tasks + Events + Calendar (Jalali)</li>
+        <li>Activities timeline on record detail</li>
+        <li>Saved Lists (فیلتر، ستون، اشتراک، bulk edit)</li>
+        <li>B2B/B2C flag on conversion</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۳ — محصول و فاکتور <span class="badge badge-blue">هفته ۹-۱۱</span></h4>
+      <ul>
+        <li>Products + Services</li>
+        <li>PriceBooks + entries</li>
+        <li>Taxes + Currencies</li>
+        <li>Quotes (with line items)</li>
+        <li>Sales Orders (convert from quote)</li>
+        <li>Invoices (convert from order)</li>
+        <li>Auto calculation (subtotal, tax, discount, total)</li>
+        <li>PDF generation</li>
+        <li>Auto numbering (QUO/SO/INV prefixes)</li>
+        <li>Sales Commission / پورسانت (basic rules)</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۴ — Workflow Engine <span class="badge badge-blue">هفته ۱۲-۱۴</span></h4>
+      <ul>
+        <li>Workflow CRUD (trigger, conditions, actions)</li>
+        <li>Condition evaluator (AND/OR on fields)</li>
+        <li>Action executors (all 11 actions)</li>
+        <li>BullMQ queue + scheduled triggers (cron)</li>
+        <li>Workflow logs + retry on failure</li>
+        <li>System workflows (pre-built, don't disable)</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۵ — داشبورد و گزارش <span class="badge badge-yellow">هفته ۱۵-۱۶</span></h4>
+      <ul>
+        <li>Dashboard widgets (configurable)</li>
+        <li>Report builder (filter, group, chart)</li>
+        <li>Export report PDF/Excel</li>
+        <li>Notification system + WebSocket</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۶ — پشتیبانی <span class="badge badge-yellow">هفته ۱۷-۱۹</span></h4>
+      <ul>
+        <li>Tickets (priority, status, SLA)</li>
+        <li>Service Contracts + Warranty</li>
+        <li>FAQ module</li>
+        <li>Customer Portal (login, submit ticket, view status)</li>
+        <li>Product sales cases + Warranty/Warranty extension</li>
+        <li>Leave & Mission requests (HR) + approval chain</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۷ — پروژه <span class="badge badge-yellow">هفته ۲۰-۲۱</span></h4>
+      <ul>
+        <li>Projects + Phases + Tasks</li>
+        <li>Convert Opportunity → Project</li>
+        <li>Gantt/Timeline view</li>
+        <li>Project budget tracking</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۸ — تأمین و خرید <span class="badge badge-yellow">هفته ۲۲-۲۳</span></h4>
+      <ul>
+        <li>Purchase Orders + Vendors (تأمین‌کننده)</li>
+        <li>Payments</li>
+        <li>Inventory/stock tracking + stock_movements</li>
+        <li>Low-stock alerts (Workflow)</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۹ — بازاریابی <span class="badge badge-purple">هفته ۲۴-۲۵</span></h4>
+      <ul>
+        <li>Campaigns + ROI</li>
+        <li>Call logs</li>
+        <li>Messenger integration (Bale, SMS)</li>
+        <li>Email templates</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۱۰ — ابزارها <span class="badge badge-purple">هفته ۲۶-۲۷</span></h4>
+      <ul>
+        <li>Web Forms (builder + public submit + captcha)</li>
+        <li>Surveys (نظرسنجی)</li>
+        <li>Approval rules</li>
+        <li>Menu customization</li>
+        <li>Lists (static/dynamic) — see section 15</li>
+        <li>Documents module + cloud sync (Drive/Dropbox)</li>
+        <li>Opportunity → Project conversion mapping</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item">
+      <h4>فاز ۱۱ — یکپارچگی <span class="badge badge-purple">هفته ۲۸-۲۹</span></h4>
+      <ul>
+        <li>Accounting software adapter</li>
+        <li>Payment gateway</li>
+        <li>Webhook inbound/outbound</li>
+        <li>Bale bot full integration</li>
+      </ul>
+    </div>
+
+    <div class="timeline-item done">
+      <h4>فاز ۱۲ — QA و Production <span class="badge badge-green">هفته ۳۰-۳۲</span></h4>
+      <ul>
+        <li>E2E tests (Playwright) for critical flows</li>
+        <li>Performance optimization (indexes, caching)</li>
+        <li>Security audit (RBAC, SQL injection, XSS)</li>
+        <li>Documentation</li>
+        <li>Docker production deploy + CI/CD</li>
+        <li>Backup strategy</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 12. ROADMAP ========== -->
+<section id="roadmap">
+  <h2><span class="num">۱۲</span> نقشه‌راه زمانی (Gantt خلاصه)</h2>
+
+  <table>
+    <tr><th>ماه</th><th>فازها</th><th>خروجی قابل Demo</th><th>تیم</th></tr>
+    <tr><td>ماه ۱</td><td>فاز ۰ + ۱</td><td>Login + RBAC + Metadata + Generic CRUD</td><td>Backend-heavy</td></tr>
+    <tr><td>ماه ۲</td><td>فاز ۲</td><td>Lead → Contact → Opportunity + Calendar</td><td>Full-stack</td></tr>
+    <tr><td>ماه ۳</td><td>فاز ۳ + ۴</td><td>Quote → Invoice + Workflow basics</td><td>Full-stack</td></tr>
+    <tr><td>ماه ۴</td><td>فاز ۵ + ۶</td><td>Dashboard + Tickets + Portal</td><td>Full-stack</td></tr>
+    <tr><td>ماه ۵</td><td>فاز ۷ + ۸ + ۹</td><td>Projects + Purchase + Campaigns</td><td>Full-stack</td></tr>
+    <tr><td>ماه ۶</td><td>فاز ۱۰ + ۱۱ + ۱۲</td><td>WebForms + Integrations + Production</td><td>DevOps + QA</td></tr>
+  </table>
+
+  <div class="alert alert-success">
+    <strong>MVP (حداقل محصول قابل فروش):</strong> پایان ماه ۲ — Lead + Opportunity + Contact + Calendar + RBAC. این را می‌توانید به مشتری اولی Demo بدهید.
+  </div>
+
+  <h3>تخمین نفر-ساعت (تیم ۳ نفر: ۱ Backend + ۱ Frontend + ۱ Full-stack/DevOps)</h3>
+  <table>
+    <tr><th>فاز</th><th>ساعت</th><th>هفته</th></tr>
+    <tr><td>فاز ۰ — هسته</td><td>~360</td><td>3</td></tr>
+    <tr><td>فاز ۱ — RBAC</td><td>~240</td><td>2</td></tr>
+    <tr><td>فاز ۲ — فروش پایه</td><td>~360</td><td>3</td></tr>
+    <tr><td>فاز ۳ — فاکتور</td><td>~360</td><td>3</td></tr>
+    <tr><td>فاز ۴ — Workflow</td><td>~360</td><td>3</td></tr>
+    <tr><td>فاز ۵-۱۲</td><td>~1200</td><td>18</td></tr>
+    <tr><td><strong>جمع</strong></td><td><strong>~2880</strong></td><td><strong>~32</strong></td></tr>
+  </table>
+</section>
+
+<!-- ========== 13. DAY 1 ========== -->
+<section id="day1">
+  <h2><span class="num">۱۳</span> راهنمای شروع فردا (Day 1 Action Plan)</h2>
+
+  <div class="alert alert-info">
+    <strong>هدف روز اول:</strong> Monorepo آماده + Docker + Auth + اولین ماژول Generic CRUD
+  </div>
+
+  <h3>صبح — Setup (۳-۴ ساعت)</h3>
+  <pre># 1. ساخت monorepo
+mkdir crm24 && cd crm24
+npm init -y
+
+# 2. Backend
+npx @nestjs/cli new api --package-manager npm
+cd api && npm install @nestjs/jwt @nestjs/passport passport passport-jwt
+npm install @prisma/client bcrypt class-validator class-transformer
+npm install -D prisma
+
+# 3. Frontend
+cd .. && npm create vite@latest web -- --template react-ts
+cd web && npm install antd @ant-design/icons @tanstack/react-query axios zustand dayjs jalaali-js
+
+# 4. Docker
+# docker-compose.yml: postgres:16, redis:7, minio</pre>
+
+  <h3>ظهر — Prisma Schema (۲-۳ ساعت)</h3>
+  <pre>// prisma/schema.prisma — شروع با این جداول:
+model Tenant { id, name, slug, createdAt }
+model User { id, tenantId, email, password, roleId, isAdmin }
+model Role { id, tenantId, name, parentId }
+model Profile { id, tenantId, name }
+model Module { id, tenantId, name, label, tableName }
+model Field { id, moduleId, name, label, type, required, hidden }
+model Lead { id, tenantId, firstName, lastName, mobile, email, status, assignedTo, customData Json, ... }</pre>
+
+  <h3>بعدازظهر — Auth + Generic Module (۳-۴ ساعت)</h3>
+  <ol>
+    <li>AuthModule: register (tenant+admin), login, JWT guard</li>
+    <li>TenantGuard: extract tenant_id from JWT</li>
+    <li>GenericModuleService: list/create/update/delete با metadata</li>
+    <li>LeadModule: اولین ماژول واقعی روی GenericService</li>
+    <li>Frontend: Login page + Layout RTL + Lead list page</li>
+  </ol>
+
+  <h3>پایان روز — تست</h3>
+  <ul>
+    <li>✅ Register → Login → Create Lead → List Leads → Edit → Delete</li>
+    <li>✅ Docker compose up → همه سرویس‌ها running</li>
+  </ul>
+
+  <h3>دستورات Docker Compose</h3>
+  <pre>version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: crm24
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: crm123
+    ports: ['5432:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports: ['9000:9000', '9001:9001']
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+volumes:
+  pgdata:</pre>
+</section>
+
+<!-- ========== 14. CHECKLIST ========== -->
+<section id="checklist">
+  <h2><span class="num">۱۴</span> چک‌لیست پیاده‌سازی (Print & Check)</h2>
+
+  <h3>فاز ۰ — هسته</h3>
+  <ul class="checklist">
+    <li>Monorepo + Docker Compose</li>
+    <li>Prisma schema + migrations</li>
+    <li>Auth (register/login/JWT/refresh)</li>
+    <li>Tenant middleware + DEPLOYMENT_MODE env</li>
+    <li>Metadata Engine (modules, fields API)</li>
+    <li>Generic CRUD service</li>
+    <li>Soft delete + Recycle bin</li>
+    <li>Audit log</li>
+    <li>File upload (MinIO)</li>
+    <li>Notes + Tags</li>
+    <li>React RTL layout + Login page</li>
+    <li>OpenAPI/Swagger + API error format</li>
+  </ul>
+
+  <h3>Cloud / Local / API</h3>
+  <ul class="checklist">
+    <li>Cloud multi-tenant SaaS + billing (فاز ۱۳)</li>
+    <li>Local Docker Compose single-tenant</li>
+    <li>API Key management + scopes</li>
+    <li>Rate limiting per plan</li>
+    <li>Inbound webhooks (SMS, Bale, VoIP, Payment)</li>
+    <li>Outbound webhooks + subscriptions</li>
+    <li>Developer portal + Postman collection</li>
+    <li>Local install guide + license validator</li>
+  </ul>
+
+  <h3>فاز ۱ — RBAC</h3>
+  <ul class="checklist">
+    <li>Roles tree CRUD</li>
+    <li>Profiles + permissions matrix</li>
+    <li>Field-level permissions</li>
+    <li>Sharing rules (4 modes + custom)</li>
+    <li>Row-level query filter</li>
+    <li>Assign-to with hierarchy</li>
+  </ul>
+
+  <h3>فاز ۲ — فروش</h3>
+  <ul class="checklist">
+    <li>Leads module (full CRUD)</li>
+    <li>Contacts + Organizations</li>
+    <li>Opportunities + Pipeline/Kanban</li>
+    <li>Lead conversion flow</li>
+    <li>Conversion field mapping</li>
+    <li>Import/Export Excel</li>
+    <li>Duplicate detection (skip/overwrite/merge)</li>
+    <li>Tasks + Events + Jalali Calendar</li>
+    <li>Activity timeline</li>
+  </ul>
+
+  <h3>فاز ۳ — مالی</h3>
+  <ul class="checklist">
+    <li>Products + Services</li>
+    <li>PriceBooks</li>
+    <li>Taxes + Currencies</li>
+    <li>Quotes with line items</li>
+    <li>Sales Orders</li>
+    <li>Invoices</li>
+    <li>Quote → Order → Invoice conversion</li>
+    <li>Auto totals calculation</li>
+    <li>PDF export</li>
+  </ul>
+
+  <h3>فاز ۴ — Workflow</h3>
+  <ul class="checklist">
+    <li>Workflow CRUD UI</li>
+    <li>Triggers (create/update/scheduled)</li>
+    <li>Condition builder (AND/OR)</li>
+    <li>11 action types</li>
+    <li>BullMQ queue</li>
+    <li>Workflow logs</li>
+  </ul>
+
+  <h3>فاز ۵-۱۲ — بقیه</h3>
+  <ul class="checklist">
+    <li>Dashboard widgets</li>
+    <li>Report builder</li>
+    <li>Notifications + WebSocket</li>
+    <li>Tickets + SLA + Portal</li>
+    <li>Projects + Phases + Tasks</li>
+    <li>Purchase Orders + Payments</li>
+    <li>Campaigns + Call logs</li>
+    <li>Web Forms (public)</li>
+    <li>Surveys + Approvals</li>
+    <li>Bale/SMS integration</li>
+    <li>Accounting integration</li>
+    <li>Payment gateway</li>
+    <li>E2E tests</li>
+    <li>Production deploy + CI/CD</li>
+  </ul>
+
+  <h3>فاز ۵-۱۲ — موارد تکمیلی (قبلاً کم‌رنگ بود)</h3>
+  <ul class="checklist">
+    <li>ماژول اسناد + پوشه + Google Drive/Dropbox</li>
+    <li>مرخصی و مأموریت (HR) + تأیید مدیر</li>
+    <li>مشارکت در فروش / پورسانت</li>
+    <li>لیست‌های ذخیره‌شده + فیلتر پیشرفته + ویرایش گروهی</li>
+    <li>قالب‌های پیام آماده (SMS/Email/پیام‌رسان)</li>
+    <li>کاریز قابل تنظیم روی هر فیلد picklist</li>
+    <li>معادل‌سازی تبدیل Opportunity → Project</li>
+    <li>Sharing Rules تقویم</li>
+    <li>شماره‌گذاری خودکار Quote/Invoice/Order</li>
+    <li>تأمین‌کننده (Vendor) + انبار کامل</li>
+    <li>گارانتی/وارانتی + پرونده فروش محصول</li>
+    <li>B2B/B2C تفکیک در Contact/Org</li>
+  </ul>
+
+  <div class="alert alert-warn" style="margin-top: 2rem;">
+    <strong>⚠️ خطاهای رایج — حتماً از اول درست بساز:</strong>
+    <ul style="margin-top: .5rem;">
+      <li>RBAC را بعداً اضافه نکن — از فاز ۱ باید در query filter باشد</li>
+      <li>tenant_id را فراموش نکن — migration بعدی دردناک است</li>
+      <li>فیلدهای سفارشی را hard-code نکن — Metadata Engine</li>
+      <li>Workflow را sync اجرا نکن — حتماً Queue (BullMQ)</li>
+      <li>تاریخ میلادی در UI نشان نده — همه‌جا شمسی</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ========== 15. SUPPLEMENTARY MODULES ========== -->
+<section id="missing">
+  <h2><span class="num">۱۵</span> ماژول‌های تکمیلی (مواردی که در نسخه اول کم‌رنگ بودند)</h2>
+  <div class="alert alert-info">این بخش بر اساس مقایسه با <code>crm24.txt</code> (۹۶ مقاله آموزشی) اضافه شده تا چیزی از قلم نیفتد.</div>
+
+  <div class="card-grid">
+    <div class="card">
+      <h4>📁 ماژول اسناد (Documents)</h4>
+      <ul>
+        <li>آپلود مستقیم + ثبت به‌عنوان سند رسمی</li>
+        <li>پوشه‌بندی (folders) + برچسب + جستجوی پیشرفته</li>
+        <li>اتصال به Google Drive و Dropbox (OAuth adapter)</li>
+        <li>لینک به Contact, Org, Deal, Invoice, Project</li>
+        <li>سطح دسترسی per-document</li>
+        <li>جدول: <code>documents</code>, <code>document_folders</code>, <code>document_links</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🏖️ مرخصی و مأموریت (HR)</h4>
+      <ul>
+        <li>نوع: مرخصی | مأموریت</li>
+        <li>وضعیت: در انتظار تأیید | تأیید | رد</li>
+        <li>تاریخ شروع/پایان، تعداد روز/ساعت/دقیقه</li>
+        <li>Workflow تأیید مدیر (Approval)</li>
+        <li>اعلان به مدیر و کاربر</li>
+        <li>فیلتر بر اساس وضعیت، تاریخ، کاربر</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>💵 مشارکت در فروش (Sales Commission)</h4>
+      <ul>
+        <li>محاسبه پورسانت بر اساس: SalesOrder | Invoice | Payment</li>
+        <li>نوع: درصدی از محصول | درصدی از فاکتور | مبلغ ثابت</li>
+        <li>فیلد commission در Product</li>
+        <li>قوانین tier (مثلاً فروش ۱۰-۵۰ میلیون → ۳٪)</li>
+        <li>انتخاب بازاریاب: assigned_to یا created_by</li>
+        <li>جدول: <code>sales_partnerships</code>, <code>commission_rules</code>, <code>commission_records</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📋 لیست‌ها و نمای سفارشی (Saved Views)</h4>
+      <ul>
+        <li>لیست‌های من / لیست‌های اشتراکی / لیست «همه»</li>
+        <li>فیلتر پیشرفته (AND/OR روی همه فیلدها)</li>
+        <li>انتخاب و ترتیب ستون‌ها (حداکثر ۱۵ ستون)</li>
+        <li>مرتب‌سازی + لیست پیش‌فرض per-user</li>
+        <li>ویرایش گروهی (Bulk Edit)</li>
+        <li>افزودن لیست به داشبورد (Key Metrics)</li>
+        <li>جدول: <code>saved_lists</code>, <code>list_columns</code>, <code>list_filters</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>✉️ قالب‌های پیام آماده</h4>
+      <ul>
+        <li>قالب Email / SMS / پیام‌رسان</li>
+        <li>متغیرهای merge: {contact.name}, {deal.amount}</li>
+        <li>استفاده در Workflow و ارسال دستی</li>
+        <li>جدول: <code>message_templates</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📊 نمای کاریز (Kanban) — تنظیمات</h4>
+      <ul>
+        <li>فعال روی هر ماژول با فیلد picklist</li>
+        <li>ستون‌ها = مقادیر picklist (مثلاً مراحل فروش)</li>
+        <li>Drag-drop → بروزرسانی فیلد + trigger workflow</li>
+        <li>کارت: ویرایش سریع، وظیفه، رویداد، ارسال پیام</li>
+        <li>مراحل پیش‌فرض فرصت: اعتمادسازی → مستندات → پیش‌فاکتور → برنده/بازنده</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🔄 معادل‌سازی تبدیل (۲ نوع)</h4>
+      <ul>
+        <li><strong>Lead → Contact/Org/Opportunity</strong> (conversion_rules)</li>
+        <li><strong>Opportunity → Project</strong> (project_conversion_rules)</li>
+        <li>نگاشت فیلد به فیلد + انتقال یادداشت/فعالیت</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🛡️ گارانتی / وارانتی / پرونده فروش</h4>
+      <ul>
+        <li>ثبت گارانتی محصول پس از فاکتور</li>
+        <li>تاریخ شروع/پایان، شماره سریال</li>
+        <li>پرونده فروش محصول (Product Sales Case)</li>
+        <li>پیگیری خدمات پس از فروش</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🏭 انبار و تأمین‌کننده</h4>
+      <ul>
+        <li>موجودی (stock_qty) + رزرو + حداقل موجودی</li>
+        <li>Vendor (تأمین‌کننده) برای PurchaseOrder</li>
+        <li>ورود/خروج انبار (stock_movements)</li>
+        <li>هشدار کمبود موجودی (Workflow)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🏢 B2B / B2C</h4>
+      <ul>
+        <li>B2B: Organization + Contact (حقوقی)</li>
+        <li>B2C: Contact only (حقیقی)</li>
+        <li>تفکیک در فرم تبدیل Lead و Quote</li>
+        <li>گزارش جداگانه B2B vs B2C</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>✅ تأییدیه‌ها (Approval)</h4>
+      <ul>
+        <li>تعریف قانون: ماژول + شرط + زنجیره تأیید</li>
+        <li>وضعیت: Pending → Approved → Rejected</li>
+        <li>استفاده در: Quote, Invoice, Leave, Discount</li>
+        <li>اعلان + قفل ویرایش تا تأیید</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📝 وب‌فرم — جزئیات کامل</h4>
+      <ul>
+        <li>نام، ماژول مقصد، redirect URL، assigned_to</li>
+        <li>Captcha، فیلدهای مخفی (hidden pre-fill)</li>
+        <li>تخصیص گروه کاربری</li>
+        <li>مدیریت تکراری (merge field)</li>
+        <li>کد کشور پیش‌فرض موبایل</li>
+        <li>آپلود فایل در فرم</li>
+        <li>خروجی: Public URL + iFrame embed code</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>فاز اضافه در Roadmap: فاز ۱۳ (اختیاری — SaaS)</h3>
+  <p>اگر محصول را به‌صورت SaaS می‌فروشید (مثل CRM24):</p>
+  <ul>
+    <li>تعرفه و پنل‌ها (Free / Pro / Enterprise)</li>
+    <li>محدودیت کاربر/ماژول per-plan</li>
+    <li>درگاه پرداخت اشتراک (Zarinpal/IDPay)</li>
+    <li>Super-admin panel برای مدیریت tenantها</li>
+  </ul>
+</section>
+
+<!-- ========== 16. ERD ========== -->
+<section id="erd">
+  <h2><span class="num">۱۶</span> نمودار روابط موجودیت‌ها (ERD)</h2>
+  <pre>
+Tenant ──┬── Users ── Role (tree)
+         ├── Profiles ── ProfilePermissions
+         └── Modules ── Fields ── PicklistValues
+
+Lead ──convert──► Contact ──┬── Organization
+         │                   │
+         └──────────────► Opportunity ──┬── Quote ──► SalesOrder ──► Invoice ── Payment
+                                        ├── Project ── Phase ── Task
+                                        └── Campaign
+
+Contact/Org ──► Ticket ── SLA
+Invoice ──► Warranty / ProductSalesCase
+Product ── PriceBookEntry ── QuoteLine / InvoiceLine
+Vendor ── PurchaseOrder ── Payment
+
+Polymorphic (همه ماژول‌ها):
+  Record ── Notes, Tasks, Events, Tags, Attachments, Documents, AuditLogs
+  </pre>
+
+  <h3>شماره‌گذاری خودکار اسناد</h3>
+  <table>
+    <tr><th>نوع</th><th>فرمت پیشنهادی</th><th>جدول</th></tr>
+    <tr><td>پیش‌فاکتور</td><td>QUO-{YEAR}-{SEQ:5}</td><td>number_sequences</td></tr>
+    <tr><td>سفارش فروش</td><td>SO-{YEAR}-{SEQ:5}</td><td>number_sequences</td></tr>
+    <tr><td>فاکتور</td><td>INV-{YEAR}-{SEQ:5}</td><td>number_sequences</td></tr>
+    <tr><td>سفارش خرید</td><td>PO-{YEAR}-{SEQ:5}</td><td>number_sequences</td></tr>
+    <tr><td>تیکت</td><td>TKT-{SEQ:6}</td><td>number_sequences</td></tr>
+  </table>
+  <p>پیاده‌سازی: جدول <code>number_sequences(tenant_id, prefix, year, last_number)</code> + transaction lock</p>
+</section>
+
+<!-- ========== 17. ENV & DEVOPS ========== -->
+<section id="env">
+  <h2><span class="num">۱۷</span> متغیرهای محیطی و DevOps</h2>
+
+  <h3>.env.example (Backend)</h3>
+  <pre>NODE_ENV=development
+PORT=3000
+DEPLOYMENT_MODE=cloud|local
+ENABLE_BILLING=true          # false for local
+ENABLE_MULTI_TENANT=true     # false for local
+API_RATE_LIMIT_ENABLED=true  # false for local optional
+DATABASE_URL=postgresql://crm:crm123@localhost:5432/crm24
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=change-me-in-production
+JWT_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minio
+MINIO_SECRET_KEY=minio123
+MINIO_BUCKET=crm24-files
+MEILISEARCH_HOST=http://localhost:7700
+MEILISEARCH_KEY=masterKey
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASS=
+BALE_BOT_TOKEN=
+SMS_API_KEY=
+ACCOUNTING_API_URL=
+PAYMENT_GATEWAY_KEY=</pre>
+
+  <h3>CI/CD Pipeline (GitHub Actions)</h3>
+  <ol>
+    <li><strong>on push PR:</strong> lint + unit tests + build</li>
+    <li><strong>on merge main:</strong> build Docker images → push registry</li>
+    <li><strong>deploy staging:</strong> docker compose pull && up -d</li>
+    <li><strong>deploy prod:</strong> manual approval + backup DB + migrate + deploy</li>
+  </ol>
+
+  <h3>استرategی تست</h3>
+  <table>
+    <tr><th>نوع</th><th>ابزار</th><th>پوشش</th></tr>
+    <tr><td>Unit</td><td>Vitest</td><td>Services, ConditionEvaluator, RBAC filter</td></tr>
+    <tr><td>Integration</td><td>Supertest</td><td>API endpoints + DB</td></tr>
+    <tr><td>E2E</td><td>Playwright</td><td>Login → Create Lead → Convert → Quote</td></tr>
+  </table>
+
+  <h3>Backup</h3>
+  <ul>
+    <li>PostgreSQL: pg_dump روزانه + WAL archiving</li>
+    <li>MinIO: replication یا sync به bucket دوم</li>
+    <li>Redis: persistence AOF</li>
+  </ul>
+</section>
+
+<!-- ========== 18. COVERAGE MATRIX ========== -->
+<section id="matrix">
+  <h2><span class="num">۱۸</span> ماتریس پوشش — مقایسه با CRM24 اصلی</h2>
+  <p>✅ = پوشش کامل در سند | ⚠️ = ذکر شده ولی نیاز به جزئیات بیشتر در کد | ❌ = قبلاً جا افتاده (الان اضافه شد)</p>
+
+  <table>
+    <tr><th>قابلیت CRM24</th><th>سند</th><th>فاز</th></tr>
+    <tr><td>سرنخ‌های فروش</td><td>✅</td><td>۲</td></tr>
+    <tr><td>فرصت‌های فروش + کاریز</td><td>✅</td><td>۲</td></tr>
+    <tr><td>مخاطبین / سازمان‌ها</td><td>✅</td><td>۲</td></tr>
+    <tr><td>پیش‌فاکتور / سفارش / فاکتور</td><td>✅</td><td>۳</td></tr>
+    <tr><td>محصولات / دفترچه قیمت / مالیات</td><td>✅</td><td>۳</td></tr>
+    <tr><td>Workflow + ۱۱ اکشن</td><td>✅</td><td>۴</td></tr>
+    <tr><td>نقش / پروفایل / Sharing Rules</td><td>✅</td><td>۱</td></tr>
+    <tr><td>تیکت / پورتال / FAQ</td><td>✅</td><td>۶</td></tr>
+    <tr><td>پروژه / فاز / وظیفه</td><td>✅</td><td>۷</td></tr>
+    <tr><td>کمپین / تماس / پیام‌رسان</td><td>✅</td><td>۹</td></tr>
+    <tr><td>وب‌فرم / نظرسنجی</td><td>✅</td><td>۱۰</td></tr>
+    <tr><td>داشبورد / گزارش / تقویم</td><td>✅</td><td>۵</td></tr>
+    <tr><td>ایمپورت/اکسپورت Excel</td><td>✅</td><td>۲</td></tr>
+    <tr><td>سطل بازیابی</td><td>✅</td><td>۰</td></tr>
+    <tr><td>تأییدیه‌ها</td><td>✅</td><td>۱۰</td></tr>
+    <tr><td>اتصال بله / حسابداری</td><td>✅</td><td>۱۱</td></tr>
+    <tr><td>پیام‌رسان (SMS/Autochat/Bale)</td><td>✅</td><td>۹+۱۱</td></tr>
+    <tr><td>Import report + Find Duplicates</td><td>✅</td><td>۲</td></tr>
+    <tr><td>ماژول اسناد + Drive/Dropbox</td><td>✅</td><td>۱۰</td></tr>
+    <tr><td>مرخصی و مأموریت</td><td>✅</td><td>۶</td></tr>
+    <tr><td>مشارکت در فروش / پورسانت</td><td>✅</td><td>۳</td></tr>
+    <tr><td>لیست‌های سفارشی + Bulk Edit</td><td>✅</td><td>۲</td></tr>
+    <tr><td>قالب پیام آماده</td><td>✅</td><td>۹</td></tr>
+    <tr><td>گارانتی / وارانتی / پرونده فروش</td><td>✅</td><td>۶</td></tr>
+    <tr><td>انبار + Vendor + Stock</td><td>✅</td><td>۸</td></tr>
+    <tr><td>شماره‌گذاری خودکار</td><td>✅</td><td>۳</td></tr>
+    <tr><td>B2B / B2C</td><td>✅</td><td>۲</td></tr>
+    <tr><td>Sharing Rules تقویم</td><td>✅</td><td>۱</td></tr>
+    <tr><td>تعرفه SaaS (اختیاری)</td><td>✅</td><td>۱۳</td></tr>
+    <tr><td>REST API عمومی + Swagger</td><td>✅</td><td>۰–۲</td></tr>
+    <tr><td>API Key + Scopes + Rate Limit</td><td>✅</td><td>۲</td></tr>
+    <tr><td>Inbound/Outbound Webhooks</td><td>✅</td><td>۴، ۹، ۱۱</td></tr>
+    <tr><td>VoIP / تماس تلفنی API</td><td>✅</td><td>۹، ۱۱</td></tr>
+    <tr><td>Cloud vs Local deployment</td><td>✅</td><td>بخش ۱۰</td></tr>
+  </table>
+
+  <div class="alert alert-success" style="margin-top:1.5rem;">
+    <strong>نتیجه بررسی:</strong> با بخش‌های ۱۵–۱۹، تمام <strong>۶۰ موضوع آموزشی منحصربه‌فرد</strong> در crm24.txt پوشش داده شده است. برای پیاده‌سازی فردا: بخش ۱۳ (Day 1) + فاز ۰ چک‌لیست + ERD بخش ۱۶ را دنبال کن.
+  </div>
+</section>
+
+<!-- ========== 19. FINAL AUDIT ========== -->
+<section id="audit">
+  <h2><span class="num">۱۹</span> ممیزی نهایی — ۶۰ موضوع crm24.txt</h2>
+  <p>استخراج خودکار از فایل <code>crm24.txt</code> — هر سطر = یک مقاله آموزشی منحصربه‌فرد</p>
+
+  <h3>ابزارها (۵/۵) ✅</h3>
+  <table>
+    <tr><th>مقاله CRM24</th><th>پوشش سند</th><th>جزئیات پیاده‌سازی</th></tr>
+    <tr><td>معرفی وب فرم‌ها</td><td>✅</td><td>بخش ۱۵ — captcha, hidden, iframe, group</td></tr>
+    <tr><td>قالب‌های پیام آماده</td><td>✅</td><td>بخش ۱۵ + Sharing عمومی/خصوصی per-module</td></tr>
+    <tr><td>نظرسنجی‌ها</td><td>✅</td><td>بخش ۱۹ پایین — ۴ نوع سوال، publish، Lead/Contact</td></tr>
+    <tr><td>سطل بازیابی</td><td>✅</td><td>soft-delete + restore + حذف دائمی + خالی کردن + bulk</td></tr>
+    <tr><td>ایجاد لیست</td><td>✅</td><td>بخش ۱۵ — Saved Views</td></tr>
+  </table>
+
+  <h3>اسناد (۱/۱) ✅</h3>
+  <table><tr><td>اسناد</td><td>✅ بخش ۱۵ — folder, Drive/Dropbox, link to modules</td></tr></table>
+
+  <h3>بازاریابی (۵/۵) ✅</h3>
+  <table>
+    <tr><td>سرنخ‌های فروش</td><td>✅</td></tr>
+    <tr><td>فرصت‌های فروش</td><td>✅ + کاریز</td></tr>
+    <tr><td>کمپین‌ها</td><td>✅</td></tr>
+    <tr><td>تماس‌های تلفنی</td><td>✅ Call Log</td></tr>
+    <tr><td>پیام‌رسان‌ها</td><td>✅ Bale/SMS + بخش ۱۹</td></tr>
+  </table>
+
+  <h3>فروش (۵/۵) ✅</h3>
+  <table>
+    <tr><td>پیش‌فاکتور / سفارش فروش / فاکتور</td><td>✅ فاز ۳</td></tr>
+    <tr><td>مشارکت در فروش</td><td>✅ بخش ۱۵ — پورسانت</td></tr>
+    <tr><td>تبدیل فرصت به پروژه</td><td>✅ چرخه ۲ + conversion mapping</td></tr>
+  </table>
+
+  <h3>تأمین و خرید (۵/۵) ✅</h3>
+  <table>
+    <tr><td>محصولات / سرویس‌ها</td><td>✅ type=product|service</td></tr>
+    <tr><td>دفترچه‌های قیمت</td><td>✅</td></tr>
+    <tr><td>سفارش خرید / پرداخت‌ها</td><td>✅ فاز ۸</td></tr>
+  </table>
+
+  <h3>پشتیبانی (۹/۹) ✅</h3>
+  <table>
+    <tr><td>مخاطبین / سازمان‌ها</td><td>✅</td></tr>
+    <tr><td>تیکت‌ها</td><td>✅ SLA</td></tr>
+    <tr><td>پورتال مشتریان</td><td>✅ بخش ۱۹ — portal user, 24h setup</td></tr>
+    <tr><td>قراردادهای خدمات</td><td>✅ بخش ۱۹</td></tr>
+    <tr><td>سوالات متداول (FAQ)</td><td>✅ بخش ۱۹</td></tr>
+    <tr><td>پرونده‌های فروش محصول</td><td>✅ بخش ۱۵</td></tr>
+    <tr><td>مرخصی و مأموریت</td><td>✅ بخش ۱۵</td></tr>
+    <tr><td>اتصال بله</td><td>✅ بخش ۱۹ — Bot Token steps</td></tr>
+  </table>
+
+  <h3>پروژه‌ها (۳/۳) ✅</h3>
+  <table><tr><td>پروژه / فاز / وظیفه</td><td>✅ فاز ۷</td></tr></table>
+
+  <h3>داشبورد (۴/۴) ✅</h3>
+  <table><tr><td>داشبورد / گزارشات / تقویم / وظایف و رویدادها</td><td>✅ فاز ۵ + ۲</td></tr></table>
+
+  <h3>تنظیمات (۱۱/۱۱) ✅</h3>
+  <table>
+    <tr><td>نقش‌ها / گروه‌ها / Sharing / مالیات / واحد پولی</td><td>✅</td></tr>
+    <tr><td>تأییدیه‌ها / شخصی‌سازی منو / کاریز / ایمپورت CSV</td><td>✅</td></tr>
+    <tr><td>معادل‌سازی تبدیل سرنخ / فرصت→پروژه</td><td>✅</td></tr>
+  </table>
+
+  <h3>گردش‌کارها (۱۲/۱۲) ✅</h3>
+  <table><tr><td>راهنمای ایجاد + ۱۱ اکشن (ایمیل، پیام، وظیفه، رویداد، فیلد، رکورد، اعلان، تابع، webhook، برچسب، حسابداری)</td><td>✅ بخش ۸</td></tr></table>
+
+  <h3>ویژگی‌های مارکتینگ سایت (بدون مقاله جدا) — ۴ مورد</h3>
+  <table>
+    <tr><th>ویژگی</th><th>وضعیت</th><th>توضیح</th></tr>
+    <tr><td>قیف فروش</td><td>✅</td><td>= Pipeline stages + Kanban</td></tr>
+    <tr><td>گارانتی و وارانتی</td><td>✅</td><td>بخش ۱۵ — مقاله جدا ندارد</td></tr>
+    <tr><td>مدیریت تیم‌ها</td><td>✅</td><td>Groups + Roles + assigned_to + گزارش عملکرد</td></tr>
+    <tr><td>تعرفه و پنل‌ها</td><td>✅</td><td>فاز ۱۳ اختیاری (SaaS)</td></tr>
+  </table>
+
+  <h3>جزئیات تکمیلی (برای پیاده‌سازی دقیق)</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h4>📊 نظرسنجی — Spec کامل</h4>
+      <ul>
+        <li>وضعیت: پیش‌نویس → منتشر شده → پایان یافته</li>
+        <li>سوالات: متنی | طیفی (min-max) | تک‌انتخابی | چندانتخابی</li>
+        <li>متن خوشامد + متن تشکر</li>
+        <li>دریافت مشخصات → ایجاد Lead یا Contact</li>
+        <li>Public link + نتایج aggregate</li>
+        <li>جداول: surveys, survey_questions, survey_responses</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🌐 پورتال مشتری — Spec کامل</h4>
+      <ul>
+        <li>فیلد is_portal_user روی Contact</li>
+        <li>ارسال لینک + رمز ۲۴ ساعته</li>
+        <li>تنظیمات: اطلاعیه، ویجت‌ها، دسترسی ماژول (FAQ, Ticket, Invoice…)</li>
+        <li>مشتری: ثبت تیکت، مشاهده فاکتور/سفارش</li>
+        <li>Auth جدا: portal_users table</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📋 قرارداد خدمات + FAQ</h4>
+      <ul>
+        <li>ServiceContract: subject, contact/org, start/end, type, status</li>
+        <li>ارتباط با Ticket و SLA</li>
+        <li>FAQ: category, question, answer, publish, portal visibility</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🤖 اتصال بله — مراحل</h4>
+      <ul>
+        <li>۱) business.bale.ai → ایجاد بازو → API Token + Bot ID</li>
+        <li>۲) CRM Settings → Integrations → Bale: token, bot_id</li>
+        <li>۳) Webhook inbound → ذخیره در conversations</li>
+        <li>۴) Outbound از Workflow + پیام‌رسان module</li>
+        <li>پشتیبانی: text, file, voice</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>🗑️ سطل بازیابی — کامل</h4>
+      <ul>
+        <li>soft delete (deleted_at)</li>
+        <li>بازیافت تکی/گروهی</li>
+        <li>حذف دائمی (purge) — irreversible</li>
+        <li>خالی کردن کل سطل per-module</li>
+        <li>API: GET /recycle-bin/:module, POST restore, DELETE purge</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>⚙️ سفارشی‌سازی ماژول (Field Editor)</h4>
+      <ul>
+        <li>مسیر: Module → Customize → Edit Fields</li>
+        <li>افزودن/حذف فیلد (max 15 custom)</li>
+        <li>انواع: text, number, date, picklist, multi, bool, lookup, phone, email, url, file</li>
+        <li>Layout sections + field order</li>
+        <li>فیلدهای سیستمی: non-hideable</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>👥 گروه‌ها + مدیریت تیم</h4>
+      <ul>
+        <li>Groups: static user lists for assignment + sharing</li>
+        <li>ارجاع رکورد به Group (round-robin optional)</li>
+        <li>گزارش عملکرد per-user/per-team</li>
+        <li>داشبورد: leaderboard فروش</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>💱 واحد پولی + مالیات</h4>
+      <ul>
+        <li>Currencies: code, symbol, rate, is_default</li>
+        <li>Taxes: name, rate%, compound/simple</li>
+        <li>اعمال روی QuoteLine/InvoiceLine</li>
+        <li>تبدیل ارز در PriceBook</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>💬 ماژول پیام‌رسان — Spec کامل</h4>
+      <ul>
+        <li><strong>SMS:</strong> اتصال پنل پیامکی (API Token یا user/pass + sender)</li>
+        <li>Webhook دریافت پیامک inbound → conversations</li>
+        <li><strong>WhatsApp/Telegram:</strong> via Autochat.ir + API token + webhook</li>
+        <li><strong>بله:</strong> business.bale.ai → Bot Token (بخش جدا)</li>
+        <li>کاربر عامل (default agent) برای پیام‌های بدون assigned_to</li>
+        <li>قابل‌دسترسی‌برای: نقش/کاربر per channel</li>
+        <li>ارسال تکی از Lead/Contact + ارسال گروهی (bulk)</li>
+        <li>Inbound/Outbound + اعلان + آرشیو</li>
+        <li>جداول: messenger_channels, conversations, messages</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📞 VoIP / تماس تلفنی</h4>
+      <ul>
+        <li>اتصال PBX/VoIP به CRM (درخواست نصب یا API)</li>
+        <li>ثبت خودکار: direction, status, duration, recording</li>
+        <li>Popup تماس + WebSocket notification</li>
+        <li>Link به Contact/Lead + Call Log module</li>
+        <li>API: POST /webhooks/inbound/voip/call</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>📥 Import/Export + یافتن تکراری</h4>
+      <ul>
+        <li>Import ۳ مرحله: آپلود → تکراری → mapping</li>
+        <li>تکراری: ثبت‌نکن | بازنویسی | ادغام</li>
+        <li>گزارش import: ناموفق، منتظر، ایجاد، نادیده، رونویسی، ادغام</li>
+        <li>Export: انتخاب‌شده | همین صفحه | کل ماژول (csv/xlsx)</li>
+        <li>Find Duplicates: اسکن همه فیلدها (permission per role)</li>
+        <li>Merge tool: انتخاب master record</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="alert alert-success" style="margin-top:1.5rem;">
+    <strong>✅ نتیجه ممیزی نهایی (Gap Check #4 — API + Cloud/Local):</strong>
+    ۶۰ مقاله + ۴ ویژگی مارکتینگ + API عمومی + Webhook + VoIP + پلن Cloud/Local = <strong>پوشش ۱۰۰٪</strong>.
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer style="text-align:center; padding:2rem; color:var(--muted); border-top:1px solid var(--border); font-size:.85rem;">
+  CRM24 Implementation Guide v1.2 — API + Cloud/Local — Node.js + NestJS + React + PostgreSQL
+</footer>
+
+<script>
+  // Highlight active nav on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('nav.sidebar a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (scrollY >= s.offsetTop - 100) current = s.id;
+    });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+</body>
+</html>
