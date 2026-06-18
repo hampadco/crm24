@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>کاتالوگ جامع امکانات و نقشه راه پیاده‌سازی CRM24</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ============ تنظیمات صفحه A4 ============ */
+        @page {
+            size: A4;
+            margin: 1.6cm 1.8cm 2.6cm 1.8cm;
+        }
+
+        :root {
+            --ink: #000000;
+            --ink-soft: #2b2b2b;
+            --muted: #555555;
+            --line: #000000;
+            --line-soft: #bdbdbd;
+            --fill: #f2f2f2;
+            --fill-2: #e4e4e4;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'b nazanin';
+            color: var(--ink);
+            line-height: 1.85;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            text-align: justify;
+            counter-reset: module;
+        }
+
+        /* ============ ساختار و صفحه‌بندی ============ */
+        .page-break { page-break-before: always; }
+        .avoid-break { page-break-inside: avoid; }
+
+        /* ============ صفحه کاور ============ */
+        .cover {
+            height: 247mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 4px double var(--line);
+            padding: 2.5rem;
+            page-break-after: always;
+            position: relative;
+        }
+        .cover .top-tag {
+            position: absolute;
+            top: 1.5rem;
+            font-size: 10pt;
+            letter-spacing: 2px;
+            color: var(--muted);
+            border: 1px solid var(--line-soft);
+            padding: 4px 18px;
+            border-radius: 20px;
+        }
+        .cover h1 {
+            font-size: 30pt;
+            font-weight: 800;
+            margin: 0 0 1rem;
+            border: none;
+            line-height: 1.4;
+        }
+        .cover .rule {
+            width: 60%;
+            border-top: 2px solid var(--line);
+            margin: 0.5rem 0 1.5rem;
+        }
+        .cover h2 {
+            font-size: 15pt;
+            font-weight: 500;
+            color: var(--ink-soft);
+            background: none;
+            color: var(--ink-soft);
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+        .cover .desc {
+            font-size: 12pt;
+            color: var(--muted);
+            max-width: 80%;
+            margin: 2.5rem auto 0;
+        }
+        .cover .cover-foot {
+            position: absolute;
+            bottom: 2rem;
+            width: 80%;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid var(--line-soft);
+            padding-top: 1rem;
+            font-size: 10pt;
+            color: var(--muted);
+        }
+
+        /* ============ تیترها ============ */
+        h1, h2, h3, h4 { page-break-after: avoid; }
+
+        h2 {
+            font-size: 15pt;
+            background: var(--ink);
+            color: #fff;
+            padding: 0.55rem 1rem;
+            margin: 2.4rem 0 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        h2 .sec-no {
+            background: #fff;
+            color: var(--ink);
+            width: 1.7rem; height: 1.7rem;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11pt;
+            flex-shrink: 0;
+        }
+
+        h3 {
+            font-size: 13.5pt;
+            margin: 1.8rem 0 1rem;
+            border-bottom: 2px solid var(--ink);
+            padding-bottom: 0.3rem;
+            font-weight: 700;
+        }
+
+        p { margin: 0.6rem 0; }
+        .lead-text { color: var(--ink-soft); }
+
+        /* ============ بلوک ماژول شماره‌دار (چیدمان عمودی) ============ */
+        .module {
+            page-break-inside: avoid;
+            margin: 1.1rem 0;
+            padding: 0.2rem 0 0.9rem;
+            border-bottom: 1px solid var(--line-soft);
+        }
+        .module:last-child { border-bottom: none; }
+
+        .module-head {
+            display: flex;
+            align-items: baseline;
+            gap: 0.7rem;
+            margin-bottom: 0.5rem;
+        }
+        .module-head .num {
+            counter-increment: module;
+            font-size: 12pt;
+            font-weight: 800;
+            border: 2px solid var(--ink);
+            min-width: 2.2rem;
+            height: 2.2rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: var(--fill);
+        }
+        .module-head .num::before {
+            content: counter(module, decimal);
+        }
+        .module-head .title {
+            font-size: 13pt;
+            font-weight: 700;
+        }
+        .module-head .title .en {
+            font-size: 9.5pt;
+            font-weight: 500;
+            color: var(--muted);
+        }
+        .module-body {
+            padding-right: 2.9rem;
+        }
+        .module-body p { margin: 0.3rem 0; }
+        .module-body .tagline {
+            font-weight: 600;
+            color: var(--ink-soft);
+            margin-bottom: 0.4rem;
+        }
+        .module-body ul {
+            margin: 0.3rem 1.2rem 0 0;
+            padding: 0;
+        }
+        .module-body li { margin-bottom: 0.35rem; }
+
+        /* ============ لیست‌های عمومی ============ */
+        ul, ol { margin: 0.6rem 1.6rem 1rem 0; padding: 0; }
+        li { margin-bottom: 0.4rem; }
+
+        /* ============ جداول ============ */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.3rem 0;
+            page-break-inside: avoid;
+            font-size: 10pt;
+        }
+        th, td { border: 1px solid var(--line); padding: 0.55rem 0.6rem; text-align: right; vertical-align: top; }
+        th { background: var(--fill-2); font-weight: 700; text-align: center; }
+        tr:nth-child(even) td { background: var(--fill); }
+
+        /* ============ فلوچارت متنی ============ */
+        .flow {
+            background: var(--fill);
+            border: 1.5px solid var(--line);
+            padding: 1.2rem;
+            margin: 1.2rem 0;
+            page-break-inside: avoid;
+            line-height: 2.4;
+        }
+        .flow .flow-title {
+            display: block;
+            font-weight: 800;
+            border-bottom: 1px solid var(--line-soft);
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.3rem;
+        }
+        .flow .step {
+            display: inline-block;
+            border: 1px solid var(--ink);
+            background: #fff;
+            padding: 2px 10px;
+            border-radius: 4px;
+            margin: 3px 0;
+            font-size: 9.5pt;
+            font-weight: 600;
+        }
+        .flow .arrow { margin: 0 0.4rem; font-weight: 800; }
+
+        /* ============ بلوک فاز ============ */
+        .phase {
+            border: 1px solid var(--line);
+            border-right: 5px solid var(--ink);
+            padding: 0.8rem 1.1rem;
+            margin-bottom: 1rem;
+            page-break-inside: avoid;
+            background: #fff;
+        }
+        .phase .phase-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+        .phase h4 { margin: 0; font-size: 12.5pt; font-weight: 700; }
+        .phase .weeks {
+            font-size: 9pt;
+            border: 1px solid var(--ink);
+            padding: 1px 10px;
+            border-radius: 12px;
+            white-space: nowrap;
+            background: var(--fill);
+        }
+        .phase .out { margin: 0; font-size: 10pt; color: var(--ink-soft); }
+        .phase .out strong { color: var(--ink); }
+
+        /* ============ باکس نکته ============ */
+        .note {
+            border: 1.5px solid var(--ink);
+            padding: 0.9rem 1.1rem;
+            margin: 1.2rem 0;
+            page-break-inside: avoid;
+            background: var(--fill);
+        }
+        .note .note-title { font-weight: 800; display: block; margin-bottom: 0.3rem; }
+
+        /* ============ فهرست مطالب ============ */
+        .toc { list-style: none; margin: 1.5rem 0; padding: 0; }
+        .toc li {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 0.7rem;
+            font-size: 11.5pt;
+        }
+        .toc .t-num {
+            font-weight: 800;
+            border: 1.5px solid var(--ink);
+            width: 1.9rem; height: 1.9rem;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 0.8rem;
+            flex-shrink: 0;
+        }
+        .toc .t-dots {
+            flex: 1;
+            border-bottom: 2px dotted var(--line-soft);
+            margin: 0 0.5rem 4px;
+        }
+
+        /* ============ نمایش روی صفحه (Screen) ============ */
+        @media screen {
+            body {
+                background: #d9d9d9;
+                padding: 2rem 0;
+            }
+            .sheet {
+                background: #fff;
+                width: 21cm;
+                min-height: 29.7cm;
+                margin: 0 auto 1.2rem;
+                padding: 2.2cm 1.8cm;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+                position: relative;
+            }
+            .print-btn {
+                position: fixed;
+                top: 20px; left: 20px;
+                padding: 11px 22px;
+                background: #000; color: #fff;
+                border: none; cursor: pointer;
+                font-family: inherit; font-weight: 700;
+                font-size: 11pt;
+                z-index: 100;
+                border-radius: 4px;
+            }
+            .cover { height: auto; min-height: 26cm; }
+        }
+
+        /* ============ چاپ ============ */
+        @media print {
+            .print-btn { display: none; }
+            .sheet { width: auto; min-height: auto; margin: 0; padding: 0; box-shadow: none; }
+            .content { margin-top: 0; padding-top: 0; }
+            body { background: #fff; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="print-btn" onclick="window.print()">🖨️ چاپ کاتالوگ (PDF)</button>
+
+    <div class="sheet">
+    <div class="content">
+
+    <!-- ============ صفحه کاور ============ -->
+    <div class="cover">
+        <span class="top-tag">سند معرفی محصول</span>
+        <h1>کاتالوگ جامع امکانات<br>و نقشه راه پیاده‌سازی</h1>
+        <div class="rule"></div>
+        <h2>سیستم مدیریت ارتباط با مشتری (CRM Enterprise)</h2>
+        <p class="desc">
+            شرح دقیق و دسته‌بندی‌شده‌ی تمامی ماژول‌ها، زیرسیستم‌ها، چرخه‌های کاری، اتوماسیون‌ها و مراحل اجرایی پروژه — به زبانی ساده و کاربردی برای مدیران و تصمیم‌گیرندگان.
+        </p>
+        <div class="cover-foot">
+            <span>تاریخ تدوین: خرداد ۱۴۰۵</span>
+            <span>شماره سند: CRM-CAT-1405</span>
+        </div>
+    </div>
+
+    <!-- ============ فهرست مطالب ============ -->
+    <h1 style="font-size:20pt; border-bottom:2px solid #000; padding-bottom:0.5rem;">فهرست مطالب</h1>
+    <ul class="toc">
+        <li><span class="t-num">۱</span> معرفی ساختار و امنیت سیستم <span class="t-dots"></span></li>
+        <li><span class="t-num">۲</span> کاتالوگ جامع ماژول‌ها و امکانات <span class="t-dots"></span></li>
+        <li><span class="t-num">۳</span> چرخه‌های کاری (مسیر گردش اطلاعات) <span class="t-dots"></span></li>
+        <li><span class="t-num">۴</span> موتور اتوماسیون و گردش‌کار <span class="t-dots"></span></li>
+        <li><span class="t-num">۵</span> یکپارچگی و اتصال به سایر نرم‌افزارها <span class="t-dots"></span></li>
+        <li><span class="t-num">۶</span> مدل‌های استقرار (ابری / محلی) <span class="t-dots"></span></li>
+        <li><span class="t-num">۷</span> نقشه راه و فازبندی پیاده‌سازی <span class="t-dots"></span></li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- ============ بخش ۱ ============ -->
+    <h2><span class="sec-no">۱</span> معرفی ساختار و امنیت سیستم</h2>
+    <p class="lead-text">
+        این سیستم یک پلتفرم جامع و یکپارچه است که به‌گونه‌ای طراحی شده تا تمامی نیازهای سازمان را از اولین تماس با مشتری تا خدمات پس از فروش پوشش دهد. زیرساخت سیستم بر پایه معماری مدرن، امن و توسعه‌پذیر بنا شده است.
+    </p>
+
+    <h3>۱.۱. ساختار پویا (بدون نیاز به کدنویسی مجدد)</h3>
+    <p>یکی از مهم‌ترین مزیت‌های این سیستم، انعطاف‌پذیری بالای آن است؛ به‌گونه‌ای که مدیر سیستم می‌تواند نرم‌افزار را مطابق با فرآیندهای منحصربه‌فرد سازمان خود تنظیم کند:</p>
+    <ul>
+        <li><strong>فیلدهای سفارشی:</strong> امکان افزودن فیلدهای جدید (متنی، عددی، تاریخ شمسی، لیست کشویی، فایل و...) به تمامی فرم‌ها.</li>
+        <li><strong>شخصی‌سازی فرم‌ها:</strong> تغییر چیدمان فرم‌ها و اجباری، مخفی یا فقط‌خواندنی کردن فیلدها.</li>
+        <li><strong>شخصی‌سازی منوها:</strong> تغییر ترتیب، نام و دسترسی منوها بر اساس نیاز هر سازمان.</li>
+    </ul>
+
+    <h3>۱.۲. امنیت چندلایه و سطوح دسترسی</h3>
+    <p>دسترسی به اطلاعات در این سیستم بسیار دقیق بوده و در سه لایه‌ی درهم‌تنیده کنترل می‌شود تا اطلاعات حساس هر بخش محفوظ بماند:</p>
+    <ul>
+        <li><strong>سلسله‌مراتب سازمانی (نقش‌ها):</strong> تعریف چارت سازمانی؛ مدیران به‌طور خودکار به اطلاعات پرسنل زیرمجموعه‌ی خود دسترسی دارند.</li>
+        <li><strong>پروفایل‌های کاربری:</strong> تعیین مجوزهای «ایجاد، ویرایش، مشاهده و حذف» برای هر کاربر در هر بخش.</li>
+        <li><strong>قوانین اشتراک‌گذاری:</strong> امکان خصوصی‌سازی کامل اطلاعات (هرکس فقط داده‌ی خودش را ببیند) یا اشتراک‌گذاری هدفمند بین دپارتمان‌ها.</li>
+    </ul>
+
+    <div class="note">
+        <span class="note-title">تضمین امنیت اطلاعات مشتریان</span>
+        در صورت استفاده‌ی چند شرکت از یک بستر مشترک (مدل ابری)، اطلاعات هر سازمان به‌صورت کاملاً مجزا و ایزوله نگهداری می‌شود و هیچ شرکتی به داده‌های شرکت دیگر دسترسی نخواهد داشت.
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ============ بخش ۲ ============ -->
+    <h2><span class="sec-no">۲</span> کاتالوگ جامع ماژول‌ها و امکانات</h2>
+    <p class="lead-text">
+        سیستم از بیش از ۳۰ ماژول به‌هم‌پیوسته تشکیل شده است. در ادامه، هر ماژول به‌صورت مجزا و شماره‌گذاری‌شده، همراه با کاربرد و قابلیت‌های کلیدی آن معرفی می‌شود.
+    </p>
+
+    <h3>الف) بازاریابی و جذب مشتری</h3>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">سرنخ‌های فروش <span class="en">(Leads)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">جمع‌آوری و مدیریت مشتریان بالقوه تا لحظه تبدیل به مشتری واقعی.</p>
+            <ul>
+                <li>ثبت اطلاعات اولیه‌ی مشتریان بالقوه (نام، موبایل، شرکت و منبع آشنایی).</li>
+                <li>تعیین وضعیت پیگیری (سرد، گرم، مشتاق، واجد شرایط، بی‌ارزش).</li>
+                <li>قابلیت «عدم ارسال پیام/ایمیل» برای رعایت حریم مشتری.</li>
+                <li>تبدیل خودکار سرنخ به مخاطب، سازمان و فرصت فروش تنها با یک کلیک.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">وب‌فرم‌ها <span class="en">(Web Forms)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">دریافت خودکار اطلاعات از وب‌سایت و ورود مستقیم به سیستم.</p>
+            <ul>
+                <li>فرم‌ساز داخلی برای ساخت فرم‌های دلخواه بدون نیاز به برنامه‌نویس.</li>
+                <li>تولید لینک عمومی یا کد iFrame برای قرارگیری در وب‌سایت و شبکه‌های اجتماعی.</li>
+                <li>جلوگیری از ثبت ربات‌ها با کد امنیتی (Captcha).</li>
+                <li>ارجاع خودکار اطلاعات ثبت‌شده به کارشناس یا تیم مربوطه.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">کمپین‌های تبلیغاتی <span class="en">(Campaigns)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت و سنجش اثربخشی فعالیت‌های بازاریابی.</p>
+            <ul>
+                <li>تعریف کمپین به همراه بودجه، تاریخ شروع و پایان.</li>
+                <li>ارتباط دادن سرنخ‌ها و مشتریان به کمپین مربوطه.</li>
+                <li>محاسبه نرخ بازگشت سرمایه (ROI) و سنجش اثربخشی تبلیغات.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">نظرسنجی‌ها <span class="en">(Surveys)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">دریافت بازخورد مشتریان و شناخت نقاط قوت و ضعف.</p>
+            <ul>
+                <li>طراحی انواع سوال: متنی، طیفی (امتیازی)، تک‌انتخابی و چندانتخابی.</li>
+                <li>ارسال لینک نظرسنجی برای مشتریان و جمع‌آوری پاسخ‌ها.</li>
+                <li>تبدیل خودکار شرکت‌کنندگان جدید به سرنخ فروش یا مخاطب.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>ب) مدیریت فروش و امور مالی</h3>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">فرصت‌های فروش <span class="en">(Opportunities)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت معاملات در جریان و پیش‌بینی فروش.</p>
+            <ul>
+                <li>مدیریت معاملات در حال پیگیری با مشتریان.</li>
+                <li>نمایش بصری قیف فروش (کاریز / Kanban) با قابلیت جابه‌جایی آسان کارت‌ها.</li>
+                <li>ثبت مبلغ احتمالی، درصد موفقیت و تاریخ پیش‌بینی‌شده‌ی بستن معامله.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">مخاطبین و سازمان‌ها <span class="en">(B2B / B2C)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت یکپارچه‌ی مشتریان حقیقی و حقوقی.</p>
+            <ul>
+                <li><strong>مخاطبین:</strong> اشخاص حقیقی به همراه اطلاعات کامل تماس.</li>
+                <li><strong>سازمان‌ها:</strong> اشخاص حقوقی (شرکت‌ها) با کد اقتصادی و شناسه‌ی ملی.</li>
+                <li>اتصال یک سازمان به چندین مخاطب (پرسنل آن شرکت).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">چرخه‌ی صدور فاکتور <span class="en">(Quote → Order → Invoice)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">از پیشنهاد قیمت تا فاکتور نهایی، به‌صورت یکپارچه.</p>
+            <ul>
+                <li><strong>پیش‌فاکتور:</strong> صدور به همراه تاریخ اعتبار و شرایط فروش.</li>
+                <li><strong>سفارش فروش:</strong> ثبت تأیید قطعی خرید توسط مشتری.</li>
+                <li><strong>فاکتور:</strong> صدور فاکتور نهایی و ثبت مبالغ پرداختی.</li>
+                <li>محاسبه‌ی خودکار مالیات، تخفیف (درصدی/مبلغی) و جمع کل.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">مشارکت در فروش (پورسانت) <span class="en">(Commission)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">محاسبه‌ی شفاف و خودکار پاداش تیم فروش.</p>
+            <ul>
+                <li>محاسبه‌ی خودکار پورسانت بازاریابان و کارشناسان فروش.</li>
+                <li>تعریف قوانین درصدی (از کل فاکتور یا محصول خاص) یا مبلغ ثابت.</li>
+                <li>قابلیت تعریف پلکان فروش (مثلاً فروش بالای ۵۰ میلیون تومان معادل ۳٪).</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>ج) پشتیبانی و خدمات پس از فروش</h3>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">تیکتینگ و پشتیبانی <span class="en">(Tickets / SLA)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">رسیدگی سازمان‌یافته به درخواست‌های مشتریان.</p>
+            <ul>
+                <li>ثبت درخواست‌ها و مشکلات مشتریان به‌صورت متمرکز.</li>
+                <li>تعیین اولویت، وضعیت و ارجاع به کارشناس فنی مربوطه.</li>
+                <li>مدیریت زمان پاسخگویی (SLA) و هشدار در صورت تأخیر.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">پورتال اختصاصی مشتریان <span class="en">(Customer Portal)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">درگاه مستقیم ارتباط مشتری با سازمان.</p>
+            <ul>
+                <li>درگاه ورود مجزا برای هر مشتری با نام کاربری و رمز عبور.</li>
+                <li>امکان ثبت تیکت و مشاهده‌ی وضعیت فاکتورها و پروژه‌ها توسط خود مشتری.</li>
+                <li>دسترسی به پایگاه دانش و سوالات متداول.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">گارانتی و قراردادهای خدمات <span class="en">(Warranty / Contracts)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت تعهدات خدماتی و دوره‌ی گارانتی محصولات.</p>
+            <ul>
+                <li>ثبت قراردادهای پشتیبانی دوره‌ای با مشتریان.</li>
+                <li>ثبت شماره سریال محصولات و تاریخ شروع/پایان گارانتی.</li>
+                <li>تشکیل پرونده‌ی خدمات پس از فروش برای هر محصول.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">پایگاه دانش / سوالات متداول <span class="en">(FAQ)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">پاسخ سریع و یکسان به پرسش‌های پرتکرار.</p>
+            <ul>
+                <li>ایجاد بانک اطلاعاتی از مشکلات رایج و راه‌حل‌های آن‌ها.</li>
+                <li>دسترسی سریع کارشناسان برای پاسخ‌گویی دقیق و یکسان.</li>
+                <li>نمایش در پورتال مشتریان جهت کاهش حجم تماس‌ها.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>د) تأمین، انبار، پروژه و منابع انسانی</h3>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">محصولات، خدمات و انبار <span class="en">(Products / Inventory)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت کاتالوگ کالا و کنترل موجودی.</p>
+            <ul>
+                <li>تعریف کاتالوگ محصولات (کالا) و خدمات.</li>
+                <li>مدیریت موجودی انبار، نقطه‌ی سفارش و هشدار کمبود موجودی.</li>
+                <li>تعریف دفترچه‌های قیمت متعدد (قیمت همکار، قیمت مصرف‌کننده و...).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">تأمین‌کنندگان و خرید <span class="en">(Vendors / Purchase)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت زنجیره‌ی تأمین و سفارشات خرید.</p>
+            <ul>
+                <li>ثبت اطلاعات تأمین‌کنندگان (Vendors).</li>
+                <li>صدور سفارش خرید (Purchase Order) برای شارژ انبار.</li>
+                <li>ثبت و پیگیری پرداخت‌ها به تأمین‌کنندگان.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">مدیریت پروژه‌ها <span class="en">(Projects)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">سازماندهی و پیگیری پروژه‌های پس از فروش.</p>
+            <ul>
+                <li>تبدیل مستقیم یک فرصت فروش موفق به یک پروژه‌ی اجرایی.</li>
+                <li>شکستن پروژه به فازهای مختلف و تعریف وظایف (Tasks).</li>
+                <li>نمایش پیشرفت پروژه و نمودار زمان‌بندی (گانت چارت).</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">منابع انسانی (مرخصی و مأموریت) <span class="en">(HR)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت درخواست‌های پرسنلی به‌صورت سیستمی.</p>
+            <ul>
+                <li>ثبت درخواست مرخصی یا مأموریت توسط پرسنل.</li>
+                <li>تعیین تاریخ، ساعت و دلیل درخواست.</li>
+                <li>تأیید یا رد درخواست توسط مدیر مربوطه با ثبت کامل سوابق.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>ه) ابزارهای بهره‌وری و ارتباطات</h3>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">ارتباطات یکپارچه (پیام‌رسان و تلفن) <span class="en">(Omnichannel)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">مدیریت تمام کانال‌های ارتباطی از یک نقطه.</p>
+            <ul>
+                <li><strong>پیامک:</strong> اتصال به پنل‌های پیامکی برای ارسال تکی و گروهی.</li>
+                <li><strong>بله / واتساپ / تلگرام:</strong> چت مستقیم با مشتری از داخل CRM.</li>
+                <li><strong>تلفن (VoIP):</strong> اتصال به سانترال، پاپ‌آپ تماس ورودی و ضبط مکالمات.</li>
+                <li><strong>قالب‌های پیام:</strong> ذخیره‌ی متن‌های آماده برای پاسخ‌گویی سریع.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">مدیریت اسناد و فایل‌ها <span class="en">(Documents)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">آرشیو امن و یکپارچه‌ی مدارک سازمانی.</p>
+            <ul>
+                <li>آپلود و بایگانی امن قراردادها، مدارک و تصاویر.</li>
+                <li>پوشه‌بندی اسناد و اتصال آن‌ها به مشتری یا فاکتور مرتبط.</li>
+                <li>اتصال مستقیم به فضای ابری Google Drive و Dropbox.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">تقویم، وظایف و داشبورد <span class="en">(Calendar / Dashboard)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">برنامه‌ریزی روزانه و گزارش‌گیری مدیریتی.</p>
+            <ul>
+                <li>تقویم کاملاً شمسی برای مدیریت جلسات، وظایف و رویدادها.</li>
+                <li>داشبورد مدیریتی با ویجت‌های نموداری قابل تنظیم.</li>
+                <li>گزارش‌ساز پیشرفته با خروجی اکسل و PDF.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="module">
+        <div class="module-head">
+            <span class="num"></span>
+            <span class="title">ابزارهای سیستمی پیشرفته <span class="en">(System Tools)</span></span>
+        </div>
+        <div class="module-body">
+            <p class="tagline">ابزارهای کنترلی برای دقت و امنیت بیشتر داده‌ها.</p>
+            <ul>
+                <li><strong>تأییدیه‌ها:</strong> قفل کردن اسناد حساس تا زمان تأیید مدیر.</li>
+                <li><strong>سطل بازیابی:</strong> جلوگیری از حذف دائمی و اشتباه اطلاعات.</li>
+                <li><strong>لیست‌های سفارشی:</strong> ساخت فیلترهای پیچیده و ویرایش گروهی اطلاعات.</li>
+                <li><strong>یافتن تکراری‌ها:</strong> شناسایی و ادغام رکوردهای تکراری.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ============ بخش ۳ ============ -->
+    <h2><span class="sec-no">۳</span> چرخه‌های کاری (مسیر گردش اطلاعات)</h2>
+    <p class="lead-text">
+        سیستم به‌گونه‌ای طراحی شده که اطلاعات به‌صورت روان بین بخش‌های مختلف جریان یابد و نیاز به ورود مجدد داده‌ها از بین برود. مهم‌ترین چرخه‌های کاری به شرح زیر است:
+    </p>
+
+    <div class="flow">
+        <span class="flow-title">۳.۱. چرخه‌ی فروش</span>
+        <span class="step">سرنخ (سایت / اکسل)</span> <span class="arrow">←</span>
+        <span class="step">پیگیری و تماس</span> <span class="arrow">←</span>
+        <span class="step">تبدیل به مشتری</span> <span class="arrow">←</span>
+        <span class="step">پیش‌فاکتور</span> <span class="arrow">←</span>
+        <span class="step">سفارش فروش</span> <span class="arrow">←</span>
+        <span class="step">فاکتور نهایی</span> <span class="arrow">←</span>
+        <span class="step">ثبت پرداخت</span>
+    </div>
+
+    <div class="flow">
+        <span class="flow-title">۳.۲. چرخه‌ی پشتیبانی</span>
+        <span class="step">درخواست مشتری</span> <span class="arrow">←</span>
+        <span class="step">ثبت تیکت در پورتال</span> <span class="arrow">←</span>
+        <span class="step">ارجاع به کارشناس</span> <span class="arrow">←</span>
+        <span class="step">بررسی گارانتی/قرارداد</span> <span class="arrow">←</span>
+        <span class="step">حل مشکل و بستن تیکت</span> <span class="arrow">←</span>
+        <span class="step">نظرسنجی خودکار</span>
+    </div>
+
+    <div class="flow">
+        <span class="flow-title">۳.۳. چرخه‌ی تبدیل به پروژه</span>
+        <span class="step">فرصت فروش موفق</span> <span class="arrow">←</span>
+        <span class="step">ایجاد پروژه</span> <span class="arrow">←</span>
+        <span class="step">تعریف فازها</span> <span class="arrow">←</span>
+        <span class="step">تخصیص وظایف</span> <span class="arrow">←</span>
+        <span class="step">پیگیری پیشرفت (گانت)</span>
+    </div>
+
+    <!-- ============ بخش ۴ ============ -->
+    <h2><span class="sec-no">۴</span> موتور اتوماسیون و گردش‌کار</h2>
+    <p class="lead-text">
+        این بخش، قدرتمندترین ابزار سیستم برای حذف کارهای دستی و تکراری است. مدیر سیستم می‌تواند بدون برنامه‌نویسی، قوانین خودکاری تعریف کند تا سیستم به‌جای پرسنل، فعالیت‌ها را انجام دهد.
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="24%">۱) زمان اجرا (محرک)</th>
+                <th width="30%">۲) شروط (شرایط)</th>
+                <th width="46%">۳) عملیات خودکار</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    • هنگام ایجاد رکورد جدید<br>
+                    • هنگام ویرایش اطلاعات<br>
+                    • زمان‌بندی‌شده (ساعتی، روزانه، ماهانه)
+                </td>
+                <td>
+                    ترکیب شرط‌ها با عملگر «و / یا».<br><br>
+                    <em>مثال:</em> اگر استان = تهران <strong>و</strong> مبلغ فاکتور بیشتر از ۱۰ میلیون باشد.
+                </td>
+                <td>
+                    ۱. ارسال ایمیل &nbsp;|&nbsp; ۲. ارسال پیامک / پیام‌رسان<br>
+                    ۳. ایجاد وظیفه برای پرسنل &nbsp;|&nbsp; ۴. ایجاد رویداد تقویم<br>
+                    ۵. بروزرسانی خودکار فیلدها &nbsp;|&nbsp; ۶. ایجاد رکورد جدید<br>
+                    ۷. ارسال اعلان درون‌سیستمی &nbsp;|&nbsp; ۸. افزودن/حذف برچسب<br>
+                    ۹. ارسال به نرم‌افزار حسابداری &nbsp;|&nbsp; ۱۰. فراخوانی وب‌هوک<br>
+                    ۱۱. اجرای توابع سفارشی
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="note">
+        <span class="note-title">نمونه‌ی یک سناریوی واقعی</span>
+        «هرگاه سرنخ جدیدی از وب‌سایت ثبت شد، اگر شهر آن تهران بود، به‌صورت خودکار به کارشناس مربوطه ارجاع داده شود، یک پیامک خوش‌آمدگویی برای مشتری ارسال گردد و یک وظیفه‌ی تماس برای فردا در تقویم کارشناس ایجاد شود.»
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- ============ بخش ۵ ============ -->
+    <h2><span class="sec-no">۵</span> یکپارچگی و اتصال به سایر نرم‌افزارها</h2>
+    <p class="lead-text">
+        این سیستم یک جزیره‌ی بسته نیست. وجود رابط برنامه‌نویسی قدرتمند (API) و وب‌هوک (Webhook) باعث می‌شود سیستم بتواند با سایر نرم‌افزارهای سازمان شما گفت‌وگو کند:
+    </p>
+    <ul>
+        <li><strong>اتصال به سایت / فروشگاه اینترنتی:</strong> ثبت خودکار سفارشات سایت به‌صورت فاکتور در CRM.</li>
+        <li><strong>اتصال به نرم‌افزار حسابداری:</strong> ارسال خودکار فاکتورهای تأییدشده به نرم‌افزارهای حسابداری (سپیدار، هلو، راهکاران و...).</li>
+        <li><strong>اتصال به درگاه پرداخت:</strong> ارسال لینک پرداخت برای مشتری و تأیید خودکار فاکتور پس از پرداخت موفق.</li>
+        <li><strong>اتصال به سیستم تلفنی (VoIP):</strong> نمایش پاپ‌آپ اطلاعات مشتری هنگام زنگ خوردن تلفن.</li>
+    </ul>
+
+    <!-- ============ بخش ۶ ============ -->
+    <h2><span class="sec-no">۶</span> مدل‌های استقرار (نحوه‌ی نصب و راه‌اندازی)</h2>
+    <p class="lead-text">
+        این سیستم با توجه به نیاز و سیاست‌های امنیتی سازمان شما، به دو روش قابل ارائه است:
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th width="22%">ویژگی</th>
+                <th width="39%">مدل ابری (Cloud / SaaS)</th>
+                <th width="39%">مدل محلی (On-Premise)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>محل نگهداری اطلاعات</strong></td>
+                <td>روی سرورهای امن و پرسرعت ما</td>
+                <td>روی سرورهای داخلی سازمان شما</td>
+            </tr>
+            <tr>
+                <td><strong>نصب و راه‌اندازی</strong></td>
+                <td>آنی (در کمتر از ۵ دقیقه)</td>
+                <td>نیاز به آماده‌سازی سرور (۱ تا ۲ روز)</td>
+            </tr>
+            <tr>
+                <td><strong>نگهداری و پشتیبان‌گیری</strong></td>
+                <td>خودکار، توسط تیم ما</td>
+                <td>توسط تیم فناوری اطلاعات سازمان شما</td>
+            </tr>
+            <tr>
+                <td><strong>بروزرسانی‌ها</strong></td>
+                <td>خودکار و بدون قطعی</td>
+                <td>توسط تیم ما با هماهنگی قبلی</td>
+            </tr>
+            <tr>
+                <td><strong>مدل هزینه</strong></td>
+                <td>اشتراک ماهانه/سالانه بر اساس تعداد کاربر</td>
+                <td>خرید لایسنس دائمی + پشتیبانی سالانه</td>
+            </tr>
+            <tr>
+                <td><strong>مناسب برای</strong></td>
+                <td>استارتاپ‌ها و کسب‌وکارهای کوچک و متوسط</td>
+                <td>سازمان‌های بزرگ، بانک‌ها و نهادهای حساس</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- ============ بخش ۷ ============ -->
+    <h2><span class="sec-no">۷</span> نقشه راه و فازبندی پیاده‌سازی</h2>
+    <p class="lead-text">
+        توسعه و استقرار این پلتفرم طی <strong>۱۲ فاز اجرایی</strong> و به‌صورت مرحله‌ای انجام می‌پذیرد. رویکرد ما تحویل تدریجی است؛ به‌طوری‌که سازمان شما می‌تواند زودتر از بخش‌های پایه‌ای استفاده کند و هر فاز پس از تکمیل، تحویل و راه‌اندازی می‌شود.
+    </p>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۰ و ۱ — زیرساخت، هسته‌ی مرکزی و امنیت</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> نصب سیستم، تعریف چارت سازمانی، نقش‌ها، سطوح دسترسی و تنظیمات پایه.</p>
+    </div>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۲ — ماژول‌های فروش پایه</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> راه‌اندازی سرنخ‌ها، مخاطبین، سازمان‌ها، کاریز فروش، تقویم و وظایف. <strong>(در این مرحله سیستم برای تیم فروش قابل استفاده است.)</strong></p>
+    </div>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۳ — کاتالوگ محصولات و اسناد مالی</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> تعریف محصولات، صدور پیش‌فاکتور، سفارش فروش و فاکتور نهایی با محاسبه‌ی مالیات.</p>
+    </div>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۴ — موتور اتوماسیون و گردش‌کار</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> راه‌اندازی گردش‌کارها برای انجام خودکار امور (ارسال پیامک خودکار، ارجاع خودکار و...).</p>
+    </div>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۵ و ۶ — داشبورد، گزارشات، پشتیبانی و پورتال</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> گزارش‌ساز پویا، سیستم تیکتینگ و راه‌اندازی پورتال اختصاصی ورود مشتریان.</p>
+    </div>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۷ تا ۹ — پروژه، تأمین، انبار و مارکتینگ</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> گانت چارت پروژه‌ها، سفارش خرید، مدیریت کمپین‌ها و اتصال پیام‌رسان‌ها.</p>
+    </div>
+
+    <div class="phase">
+        <div class="phase-top">
+            <h4>فاز ۱۰ تا ۱۲ — ابزارها، یکپارچگی‌ها و استقرار نهایی</h4>
+        </div>
+        <p class="out"><strong>خروجی:</strong> فرم‌ساز وب، نظرسنجی، اتصال به حسابداری و VoIP، تست‌های امنیتی و تحویل نهایی کل سیستم.</p>
+    </div>
+
+    <div class="note">
+        <span class="note-title">جمع‌بندی</span>
+        این سند به‌منظور شفاف‌سازی امکانات و مسیر پیاده‌سازی سیستم مدیریت ارتباط با مشتری تهیه گردیده است. تیم ما آماده‌ی ارائه‌ی توضیحات تکمیلی و دموی زنده‌ی هر یک از بخش‌ها می‌باشد.
+    </div>
+
+    </div><!-- /.content -->
+    </div><!-- /.sheet -->
+
+</body>
+</html>

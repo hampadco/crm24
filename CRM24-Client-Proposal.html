@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پروپوزال فنی و اجرایی پیاده‌سازی CRM24</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* تنظیمات پایه برای چاپ A4 */
+        @page {
+            size: A4;
+            margin: 2.5cm 2cm;
+            @bottom-center {
+                content: counter(page);
+            }
+        }
+
+        :root {
+            --black: #000000;
+            --dark-gray: #333333;
+            --gray: #666666;
+            --light-gray: #e6e6e6;
+            --lighter-gray: #f5f5f5;
+        }
+
+        body {
+            font-family: 'b nazanin';
+            background: #ffffff;
+            color: var(--black);
+            line-height: 1.8;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+            text-align: justify;
+        }
+
+        /* عناصر ساختاری */
+        .page-break {
+            page-break-before: always;
+        }
+
+        .avoid-break {
+            page-break-inside: avoid;
+        }
+
+        /* صفحه کاور */
+        .cover-page {
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 4px double var(--black);
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .cover-title {
+            font-size: 28pt;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--black);
+            padding-bottom: 1rem;
+        }
+
+        .cover-subtitle {
+            font-size: 16pt;
+            color: var(--dark-gray);
+            margin-bottom: 4rem;
+        }
+
+        .cover-meta {
+            font-size: 12pt;
+            margin-top: auto;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid var(--gray);
+            padding-top: 1rem;
+        }
+
+        /* تیترها */
+        h1, h2, h3, h4 {
+            color: var(--black);
+            page-break-after: avoid;
+            font-weight: 700;
+        }
+
+        h1 {
+            font-size: 20pt;
+            border-bottom: 2px solid var(--black);
+            padding-bottom: 0.5rem;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 16pt;
+            background-color: var(--lighter-gray);
+            padding: 0.5rem 1rem;
+            border-right: 4px solid var(--black);
+            margin-top: 2rem;
+        }
+
+        h3 {
+            font-size: 14pt;
+            margin-top: 1.5rem;
+            border-bottom: 1px dashed var(--gray);
+            padding-bottom: 0.3rem;
+        }
+
+        h4 {
+            font-size: 12pt;
+            margin-top: 1.2rem;
+        }
+
+        /* جداول */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            page-break-inside: avoid;
+            font-size: 10pt;
+        }
+
+        th, td {
+            border: 1px solid var(--black);
+            padding: 0.6rem;
+            text-align: right;
+        }
+
+        th {
+            background-color: var(--light-gray);
+            font-weight: bold;
+            text-align: center;
+        }
+
+        tr:nth-child(even) {
+            background-color: var(--lighter-gray);
+        }
+
+        /* لیست‌ها */
+        ul, ol {
+            margin: 1rem 2rem 1rem 0;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* باکس‌های تاکید */
+        .box {
+            border: 1px solid var(--black);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            background-color: var(--lighter-gray);
+            page-break-inside: avoid;
+        }
+
+        .box-title {
+            font-weight: bold;
+            font-size: 12pt;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        /* نمودار درختی ساده با CSS */
+        .tree-diagram {
+            font-family: monospace;
+            white-space: pre;
+            background: var(--lighter-gray);
+            border: 1px solid var(--black);
+            padding: 1rem;
+            direction: ltr;
+            text-align: left;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+
+        /* امضاها */
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4rem;
+            page-break-inside: avoid;
+        }
+
+        .signature-box {
+            width: 40%;
+            text-align: center;
+            border-top: 1px solid var(--black);
+            padding-top: 0.5rem;
+        }
+
+        /* فهرست مطالب */
+        .toc-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .toc-list li {
+            margin-bottom: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dotted var(--gray);
+        }
+        .toc-list li span {
+            background: #fff;
+            padding-right: 0.5rem;
+            margin-bottom: -4px;
+        }
+        
+        /* مخفی کردن المان‌های غیر چاپی در صورت نیاز */
+        @media screen {
+            body {
+                max-width: 21cm;
+                margin: 2rem auto;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                padding: 2cm;
+            }
+            .print-button {
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                padding: 10px 20px;
+                background: #000;
+                color: #fff;
+                cursor: pointer;
+                border: none;
+                font-family: inherit;
+            }
+        }
+        @media print {
+            .print-button { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="print-button" onclick="window.print()">🖨️ چاپ / ذخیره PDF</button>
+
+    <!-- صفحه کاور -->
+    <div class="cover-page">
+        <div>
+            <div class="cover-title">سند جامع نیازمندی‌ها، معماری و برآورد اجرایی</div>
+            <div class="cover-subtitle">پروژه پیاده‌سازی سیستم مدیریت ارتباط با مشتری (CRM Enterprise)</div>
+        </div>
+        
+        <div class="box" style="width: 60%; text-align: right; background: transparent; border: 2px solid #000;">
+            <p><strong>کارفرما:</strong> [نام شرکت/سازمان مشتری]</p>
+            <p><strong>مجری:</strong> [نام تیم/شرکت مجری]</p>
+            <p><strong>تاریخ تدوین:</strong> ۲۸ خرداد ۱۴۰۵</p>
+            <p><strong>نسخه سند:</strong> ۱.۲ (نهایی)</p>
+            <p><strong>وضعیت سند:</strong> محرمانه / تجاری</p>
+        </div>
+
+        <div class="cover-meta">
+            <span>شماره سند: CRM-PRD-1405-01</span>
+            <span>تعداد صفحات: پیوست</span>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- فهرست مطالب -->
+    <h1>فهرست مطالب</h1>
+    <ul class="toc-list">
+        <li><span>۱. چکیده مدیریتی و اهداف پروژه</span></li>
+        <li><span>۲. دامنه پروژه و ماژول‌های عملیاتی</span></li>
+        <li><span>۳. معماری سیستم و امنیت داده‌ها</span></li>
+        <li><span>۴. زیرساخت، تکنولوژی و استقرار</span></li>
+        <li><span>۵. چرخه‌های کاری و اتوماسیون (Workflow)</span></li>
+        <li><span>۶. فازبندی اجرایی و زمان‌بندی (Gantt)</span></li>
+        <li><span>۷. برآورد منابع، نفر-ساعت و هزینه‌ها</span></li>
+        <li><span>۸. شرایط، تعهدات و گام‌های بعدی</span></li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <!-- بخش اول -->
+    <section>
+        <h2>۱. چکیده مدیریتی و اهداف پروژه</h2>
+        <p>
+            سند حاضر، پروپوزال فنی و اجرایی جهت طراحی، توسعه و استقرار یک سیستم جامع مدیریت ارتباط با مشتری (CRM) در سطح سازمانی (Enterprise) می‌باشد. هدف از این پروژه، خلق یک پلتفرم کاملاً بومی، مقیاس‌پذیر و ماژولار است که تمامی نیازهای چرخه‌ی حیات مشتری—از بازاریابی و جذب سرنخ، تا فروش، صدور فاکتور، پشتیبانی، مدیریت پروژه‌ها و اتوماسیون فرآیندها—را در یک درگاه واحد یکپارچه سازد.
+        </p>
+        <p>
+            <strong>مزیت‌های کلیدی پلتفرم پیشنهادی:</strong>
+        </p>
+        <ul>
+            <li><strong>معماری Metadata-Driven:</strong> امکان ساخت و سفارشی‌سازی فرم‌ها و فیلدها بدون نیاز به کدنویسی مجدد.</li>
+            <li><strong>امنیت سطح رکورد (Row-Level Security):</strong> تضمین عدم نشت اطلاعات بین دپارتمان‌ها یا شرکت‌های زیرمجموعه (Multi-Tenant Ready).</li>
+            <li><strong>موتور اتوماسیون قدرتمند:</strong> حذف کارهای دستی از طریق گردش‌کارهای هوشمند و ۱۱ نوع عملیات خودکار.</li>
+            <li><strong>بومی‌سازی عمیق:</strong> تقویم شمسی یکپارچه، اتصال به درگاه‌های پرداخت ایرانی، پیامک، پیام‌رسان بله و نرم‌افزارهای حسابداری داخلی.</li>
+        </ul>
+    </section>
+
+    <!-- بخش دوم -->
+    <section>
+        <h2>۲. دامنه پروژه و ماژول‌های عملیاتی</h2>
+        <p>
+            سیستم پیشنهادی شامل بیش از ۳۰ ماژول یکپارچه است که در دسته‌بندی‌های زیر توسعه می‌یابند. تمامی ماژول‌ها دارای قابلیت جستجوی پیشرفته، فیلترسازی، خروجی اکسل/PDF و مدیریت سطوح دسترسی می‌باشند.
+        </p>
+
+        <h3>۲.۱. بازاریابی و جذب (Marketing)</h3>
+        <ul>
+            <li><strong>سرنخ‌های فروش (Leads):</strong> ثبت اطلاعات اولیه، تعیین وضعیت (سرد، گرم، مشتاق)، منبع ورود و ارجاع خودکار.</li>
+            <li><strong>کمپین‌های تبلیغاتی:</strong> مدیریت بودجه، زمان‌بندی و محاسبه نرخ بازگشت سرمایه (ROI).</li>
+            <li><strong>وب‌فرم‌ها (WebForms):</strong> فرم‌ساز با قابلیت تولید کد iframe جهت قرارگیری در سایت مشتری و ثبت مستقیم سرنخ.</li>
+        </ul>
+
+        <h3>۲.۲. مدیریت فروش (Sales)</h3>
+        <ul>
+            <li><strong>فرصت‌های فروش (Opportunities):</strong> مدیریت کاریز فروش (Kanban)، احتمال موفقیت و پیش‌بینی درآمد.</li>
+            <li><strong>مخاطبین و سازمان‌ها (B2B & B2C):</strong> مدیریت یکپارچه اشخاص حقیقی و حقوقی و سوابق تعاملات.</li>
+            <li><strong>اسناد مالی:</strong> صدور پیش‌فاکتور (Quote)، سفارش فروش (Sales Order) و فاکتور نهایی (Invoice) با محاسبه خودکار مالیات و تخفیفات.</li>
+            <li><strong>مشارکت در فروش (Commission):</strong> محاسبه خودکار پورسانت بازاریابان و کارشناسان فروش.</li>
+        </ul>
+
+        <h3>۲.۳. پشتیبانی و خدمات پس از فروش (Support)</h3>
+        <ul>
+            <li><strong>تیکتینگ و SLA:</strong> ثبت درخواست‌ها، اولویت‌بندی، تعیین مهلت پاسخ‌گویی و ارجاع.</li>
+            <li><strong>پورتال مشتریان:</strong> درگاه اختصاصی مشتری برای پیگیری تیکت‌ها و فاکتورها.</li>
+            <li><strong>قراردادها و گارانتی:</strong> مدیریت قراردادهای خدمات، گارانتی محصولات و پرونده‌های فروش.</li>
+            <li><strong>پایگاه دانش (FAQ):</strong> ثبت سوالات متداول جهت استفاده کارشناسان و مشتریان.</li>
+        </ul>
+
+        <h3>۲.۴. تأمین، انبار و پروژه‌ها</h3>
+        <ul>
+            <li><strong>محصولات و خدمات:</strong> کاتالوگ کالا، مدیریت موجودی انبار و دفترچه‌های قیمت (Price Books) چندگانه.</li>
+            <li><strong>تأمین‌کنندگان و خرید:</strong> ثبت Vendorها، سفارشات خرید (PO) و پرداخت‌ها.</li>
+            <li><strong>مدیریت پروژه:</strong> شکست کار به پروژه، فاز و وظیفه (Task) با نمایش گانت‌چارت.</li>
+        </ul>
+
+        <h3>۲.۵. ابزارهای بهره‌وری و اتوماسیون</h3>
+        <ul>
+            <li><strong>تقویم و فعالیت‌ها:</strong> مدیریت وظایف، جلسات، تماس‌های تلفنی و یادداشت‌ها.</li>
+            <li><strong>گردش‌کار (Workflow):</strong> موتور اتوماسیون (شرح در بخش ۵).</li>
+            <li><strong>تأییدیه‌ها (Approvals):</strong> زنجیره تأیید چندمرحله‌ای برای اسناد حساس (مانند فاکتور با تخفیف بالا یا مرخصی پرسنل).</li>
+            <li><strong>مدیریت اسناد:</strong> آرشیو فایل‌ها، پوشه‌بندی و اتصال به فضاهای ابری.</li>
+        </ul>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- بخش سوم -->
+    <section>
+        <h2>۳. معماری سیستم و امنیت داده‌ها</h2>
+        
+        <h3>۳.۱. معماری چندمستأجری (Multi-Tenancy)</h3>
+        <p>
+            سیستم به گونه‌ای طراحی می‌شود که قابلیت سرویس‌دهی به چندین سازمان مستقل (SaaS) یا استقرار اختصاصی (On-Premise) را با یک کدبیس واحد داشته باشد. در مدل ابری، داده‌های هر سازمان با استفاده از شناسه <code>Tenant_ID</code> در پایگاه داده کاملاً ایزوله می‌گردد.
+        </p>
+
+        <h3>۳.۲. سطوح دسترسی و امنیت (RBAC)</h3>
+        <p>امنیت اطلاعات در این پلتفرم در سه لایه در هم تنیده پیاده‌سازی می‌شود:</p>
+        <table class="avoid-break">
+            <thead>
+                <tr>
+                    <th>لایه امنیتی</th>
+                    <th>شرح عملکرد</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>نقش‌ها (Roles)</strong></td>
+                    <td>تعریف ساختار سلسله‌مراتبی سازمان (مدیرعامل > مدیر فروش > کارشناس). مدیران به داده‌های زیردستان دسترسی دارند.</td>
+                </tr>
+                <tr>
+                    <td><strong>پروفایل‌ها (Profiles)</strong></td>
+                    <td>تعیین سطح دسترسی به ماژول‌ها (ایجاد، ویرایش، مشاهده، حذف) و حتی مخفی یا فقط‌خواندنی کردن فیلدهای خاص در یک فرم.</td>
+                </tr>
+                <tr>
+                    <td><strong>قوانین اشتراک (Sharing Rules)</strong></td>
+                    <td>تعیین سیاست کلی ماژول (خصوصی، عمومی) و ایجاد استثنائات (مثلاً اشتراک داده‌های تیم فروش تهران با تیم پشتیبانی).</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+            <em>نکته فنی:</em> فیلترهای امنیتی در پایین‌ترین لایه پایگاه داده (Row-Level Security) اعمال می‌شوند تا از هرگونه نشت اطلاعات حتی در صورت خطای نرم‌افزاری جلوگیری شود.
+        </p>
+    </section>
+
+    <!-- بخش چهارم -->
+    <section>
+        <h2>۴. زیرساخت، تکنولوژی و استقرار</h2>
+        
+        <h3>۴.۱. پشته فناوری (Tech Stack)</h3>
+        <p>انتخاب تکنولوژی‌ها بر اساس استانداردهای روز دنیا، پایداری در ترافیک بالا و سهولت توسعه تیم‌های فنی انجام شده است:</p>
+        <ul>
+            <li><strong>سمت کاربر (Frontend):</strong> React.js, TypeScript, TailwindCSS (طراحی واکنش‌گرا و SPA).</li>
+            <li><strong>سمت سرور (Backend):</strong> Node.js, NestJS (معماری ماژولار و سازمانی).</li>
+            <li><strong>پایگاه داده (Database):</strong> PostgreSQL 16 (قدرتمند در پردازش داده‌های رابطه‌ای و JSON برای فیلدهای سفارشی).</li>
+            <li><strong>مدیریت صف و کش:</strong> Redis + BullMQ (جهت اجرای بدون وقفه گردش‌کارها و ارسال پیامک/ایمیل).</li>
+            <li><strong>ذخیره‌سازی فایل:</strong> MinIO (سازگار با استاندارد S3 جهت ذخیره امن پیوست‌ها).</li>
+        </ul>
+
+        <h3>۴.۲. یکپارچگی‌ها (Integrations) و API</h3>
+        <p>سیستم دارای رابط برنامه‌نویسی (RESTful API) کامل همراه با مستندات Swagger خواهد بود. اتصالات پیش‌فرض شامل موارد زیر است:</p>
+        <ul>
+            <li>اتصال به پنل‌های پیامکی داخلی (ارسال تکی، گروهی و خودکار).</li>
+            <li>اتصال به پیام‌رسان‌های سازمانی (بله، واتساپ/تلگرام از طریق واسط).</li>
+            <li>وب‌هوک‌های دوطرفه (Inbound/Outbound) جهت اتصال به نرم‌افزارهای حسابداری (سپیدار، راهکاران و...) و سیستم‌های تلفنی (VoIP).</li>
+        </ul>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- بخش پنجم -->
+    <section>
+        <h2>۵. چرخه‌های کاری و اتوماسیون (Workflow)</h2>
+        <p>
+            موتور گردش‌کار قلب تپنده اتوماسیون در این CRM است. مدیر سیستم می‌تواند بدون نیاز به برنامه‌نویس، سناریوهای خودکار تعریف کند.
+        </p>
+        
+        <div class="box">
+            <span class="box-title">ساختار یک گردش‌کار:</span>
+            <p><strong>۱. محرک (Trigger):</strong> هنگام ایجاد رکورد / هنگام ویرایش رکورد / زمان‌بندی شده (ساعتی، روزانه، ماهانه).</p>
+            <p><strong>۲. شروط (Conditions):</strong> ترکیب منطقی (AND/OR) روی فیلدها (مثلاً: اگر مبلغ فاکتور > ۵۰ میلیون و وضعیت = پرداخت شده).</p>
+            <p><strong>۳. عملیات (Actions):</strong> اجرای یک یا چند مورد از ۱۱ عملیات زیر:</p>
+            <ul style="column-count: 2;">
+                <li>ارسال ایمیل</li>
+                <li>ارسال پیامک/پیام‌رسان</li>
+                <li>ایجاد وظیفه (Task)</li>
+                <li>ایجاد رویداد تقویم</li>
+                <li>بروزرسانی فیلدها</li>
+                <li>ایجاد رکورد جدید</li>
+                <li>ایجاد اعلان (Notification)</li>
+                <li>فراخوانی وب‌هوک (Webhook)</li>
+                <li>افزودن/حذف برچسب</li>
+                <li>ارسال به حسابداری</li>
+                <li>اجرای تابع سفارشی</li>
+            </ul>
+        </div>
+
+        <h4>نمونه سناریوی قابل پیاده‌سازی:</h4>
+        <p>
+            <em>"هرگاه سرنخ جدیدی از طریق وب‌سایت ثبت شد (محرک)، اگر شهر وی تهران بود (شرط)، سرنخ را به کارشناس الف ارجاع بده (عملیات بروزرسانی)، یک پیامک خوش‌آمدگویی برای مشتری بفرست (عملیات پیامک) و یک وظیفه تماس برای فردا در تقویم کارشناس ایجاد کن (عملیات وظیفه)."</em>
+        </p>
+    </section>
+
+    <!-- بخش ششم -->
+    <section>
+        <h2>۶. فازبندی اجرایی و زمان‌بندی</h2>
+        <p>
+            پروژه در ۱۲ فاز عملیاتی و طی <strong>۶ ماه کاری</strong> (حدود ۲۴ الی ۲۸ هفته) پیاده‌سازی و تحویل می‌گردد. رویکرد تحویل به صورت چابک (Agile) بوده و پس از پایان فاز ۲، هسته اولیه قابل تست توسط کارفرما خواهد بود.
+        </p>
+
+        <table class="avoid-break">
+            <thead>
+                <tr>
+                    <th>فاز</th>
+                    <th>عنوان فاز / ماژول‌های اصلی</th>
+                    <th>زمان تخمینی</th>
+                    <th>خروجی ملموس (Milestone)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>فاز ۰ و ۱</strong></td>
+                    <td>زیرساخت، هسته مرکزی، احراز هویت و امنیت (RBAC)</td>
+                    <td>۵ هفته</td>
+                    <td>ورود به سیستم، مدیریت کاربران، نقش‌ها و ساختار پایه جداول.</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۲</strong></td>
+                    <td>ماژول‌های فروش پایه (سرنخ، مخاطب، سازمان، فرصت)</td>
+                    <td>۳ هفته</td>
+                    <td>تبدیل سرنخ به مشتری، مشاهده کاریز فروش و تقویم. (نسخه MVP)</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۳</strong></td>
+                    <td>کاتالوگ محصولات، پیش‌فاکتور، سفارش و فاکتور</td>
+                    <td>۳ هفته</td>
+                    <td>صدور فاکتور، محاسبه مالیات و تولید فایل PDF.</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۴</strong></td>
+                    <td>موتور اتوماسیون و گردش‌کار (Workflow Engine)</td>
+                    <td>۳ هفته</td>
+                    <td>تعریف شروط و اجرای خودکار عملیات (ارسال پیام، ایجاد وظیفه).</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۵ و ۶</strong></td>
+                    <td>داشبورد، گزارش‌ساز، تیکتینگ و پورتال مشتریان</td>
+                    <td>۵ هفته</td>
+                    <td>گزارش‌گیری پویا، ثبت تیکت توسط مشتری در پورتال مجزا.</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۷ تا ۹</strong></td>
+                    <td>مدیریت پروژه، تأمین و خرید، مارکتینگ و کمپین‌ها</td>
+                    <td>۵ هفته</td>
+                    <td>گانت چارت پروژه‌ها، سفارش خرید، مدیریت بودجه کمپین.</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۱۰ و ۱۱</strong></td>
+                    <td>ابزارها (وب‌فرم، نظرسنجی) و یکپارچگی‌ها (API, SMS)</td>
+                    <td>۴ هفته</td>
+                    <td>دریافت لید از سایت، اتصال به درگاه‌ها و پیام‌رسان‌ها.</td>
+                </tr>
+                <tr>
+                    <td><strong>فاز ۱۲</strong></td>
+                    <td>تست نهایی (QA)، بهینه‌سازی، آموزش و استقرار نهایی</td>
+                    <td>۳ هفته</td>
+                    <td>تحویل نهایی روی سرور اصلی، رفع باگ‌ها و ارائه مستندات.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <div class="page-break"></div>
+
+    <!-- بخش هفتم -->
+    <section>
+        <h2>۷. برآورد منابع، نفر-ساعت و هزینه‌ها</h2>
+        <p>
+            برآورد حجم کار بر اساس نیازمندی‌های استخراج شده، معادل <strong>حدود ۲۸۸۰ نفر-ساعت</strong> کار تخصصی توسط یک تیم توسعه شامل (مدیر پروژه/معمار نرم‌افزار، توسعه‌دهنده ارشد Backend، توسعه‌دهنده ارشد Frontend و متخصص DevOps/QA) می‌باشد.
+        </p>
+
+        <table class="avoid-break">
+            <thead>
+                <tr>
+                    <th>ردیف</th>
+                    <th>شرح خدمات / فازهای اجرایی</th>
+                    <th>حجم کار (نفر-ساعت)</th>
+                    <th>برآورد هزینه (ریال)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>۱</td>
+                    <td>طراحی معماری، زیرساخت پایه و امنیت (فاز ۰ و ۱)</td>
+                    <td>۶۰۰</td>
+                    <td>[مبلغ توافقی]</td>
+                </tr>
+                <tr>
+                    <td>۲</td>
+                    <td>توسعه ماژول‌های فروش، مالی و محصولات (فاز ۲ و ۳)</td>
+                    <td>۷۲۰</td>
+                    <td>[مبلغ توافقی]</td>
+                </tr>
+                <tr>
+                    <td>۳</td>
+                    <td>توسعه موتور گردش‌کار، گزارشات و پورتال (فاز ۴، ۵ و ۶)</td>
+                    <td>۶۸۰</td>
+                    <td>[مبلغ توافقی]</td>
+                </tr>
+                <tr>
+                    <td>۴</td>
+                    <td>توسعه ماژول‌های تکمیلی، ابزارها و API (فاز ۷ تا ۱۱)</td>
+                    <td>۶۴۰</td>
+                    <td>[مبلغ توافقی]</td>
+                </tr>
+                <tr>
+                    <td>۵</td>
+                    <td>تست، استقرار، مستندسازی و آموزش (فاز ۱۲)</td>
+                    <td>۲۴۰</td>
+                    <td>[مبلغ توافقی]</td>
+                </tr>
+                <tr style="background-color: var(--light-gray); font-weight: bold;">
+                    <td colspan="2" style="text-align: left;">جمع کل برآورد خالص اجرایی:</td>
+                    <td>۲۸۸۰ ساعت</td>
+                    <td>[مجموع کل]</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="font-size: 9pt; color: var(--gray);">
+            * مبالغ فوق صرفاً هزینه توسعه نرم‌افزار بوده و هزینه‌های مربوط به تامین سرور، سخت‌افزار، لایسنس‌های شخص ثالث (مانند پنل پیامک) و مالیات بر ارزش افزوده در آن لحاظ نگردیده است.<br>
+            * پس از دوره گارانتی (استقرار)، قرارداد پشتیبانی و توسعه نگهداری (SLA) به صورت سالیانه با مبلغ معادل ۲۰٪ الی ۲۵٪ از کل قرارداد منعقد می‌گردد.
+        </p>
+    </section>
+
+    <!-- بخش هشتم -->
+    <section>
+        <h2>۸. شرایط، تعهدات و گام‌های بعدی</h2>
+        
+        <h3>۸.۱. تعهدات مجری</h3>
+        <ul>
+            <li>تحویل سورس‌کد (Source Code) کامل نرم‌افزار به همراه مستندات فنی (در صورت توافق روی مدل On-Premise با مالکیت سورس).</li>
+            <li>رعایت کامل اصول محرمانگی اطلاعات (NDA) کارفرما.</li>
+            <li>ارائه ۳ ماه گارانتی رفع باگ (Bug Fixing) رایگان پس از تحویل نهایی فاز ۱۲.</li>
+            <li>آموزش راهبری سیستم به ۲ نفر از نمایندگان کارفرما (Admin Training).</li>
+        </ul>
+
+        <h3>۸.۲. تعهدات کارفرما</h3>
+        <ul>
+            <li>تأمین زیرساخت سخت‌افزاری/ابری (Server) مورد نیاز جهت استقرار سیستم در زمان مقرر.</li>
+            <li>معرفی یک نفر نماینده تام‌الاختیار جهت بررسی خروجی‌ها، تست سیستم و تایید فازها.</li>
+            <li>پرداخت به موقع پیش‌پرداخت و صورت‌وضعیت‌های مربوط به هر فاز مطابق قرارداد.</li>
+        </ul>
+
+        <h3>۸.۳. گام‌های بعدی</h3>
+        <ol>
+            <li>بررسی و تایید پروپوزال حاضر توسط مدیریت کارفرما.</li>
+            <li>برگزاری جلسه نهایی جهت رفع ابهامات و توافق روی مبالغ و زمان‌بندی دقیق.</li>
+            <li>عقد قرارداد رسمی و واریز پیش‌پرداخت.</li>
+            <li>برگزاری جلسه Kick-off و آغاز رسمی فاز صفر پروژه.</li>
+        </ol>
+    </section>
+
+    <!-- امضاها -->
+    <div class="signatures">
+        <div class="signature-box">
+            <strong>مهر و امضای کارفرما</strong><br>
+            <span style="font-size: 9pt; color: var(--gray);">[نام و سمت نماینده کارفرما]</span>
+        </div>
+        <div class="signature-box">
+            <strong>مهر و امضای مجری</strong><br>
+            <span style="font-size: 9pt; color: var(--gray);">[نام و سمت نماینده مجری]</span>
+        </div>
+    </div>
+
+</body>
+</html>
