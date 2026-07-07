@@ -44,6 +44,7 @@ builder.Services.AddScoped<DynamicRecordService>();
 builder.Services.AddScoped<RecordImportExportService>();
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<TenantLifecycleService>();
+builder.Services.AddScoped<TenantQuotaService>();
 builder.Services.AddScoped<SalesModuleSeeder>();
 builder.Services.AddScoped<LeadConversionService>();
 builder.Services.AddScoped<FinanceService>();

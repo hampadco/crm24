@@ -196,6 +196,12 @@
         </li>
 
         <li class="menu-header small text-uppercase"><span class="menu-header-text">تنظیمات</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/team-users") ? "active" : "")">
+            <a href="/App/team-users" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-group"></i>
+                <div>همکاران</div>
+            </a>
+        </li>
         <li class="menu-item @(currentPath.StartsWith("/App/integrations") ? "active" : "")">
             <a href="/App/integrations" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-plug"></i>

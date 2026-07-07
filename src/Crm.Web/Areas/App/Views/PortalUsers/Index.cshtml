@@ -14,6 +14,10 @@
 
 <partial name="_Alerts" />
 
+<div class="alert alert-info small mb-3">
+    مشتریان از <a href="/Portal/Account/Login" target="_blank"><strong>/Portal/Account/Login</strong></a> وارد می‌شوند — نه از /App/Account/Login.
+</div>
+
 <div class="card">
     <div class="table-responsive text-nowrap">
         <table class="table table-hover">
@@ -35,6 +39,7 @@
                             </span>
                         </td>
                         <td class="text-end">
+                            <a href="/App/portal-users/@user.Id/edit" class="btn btn-sm btn-outline-primary">ویرایش</a>
                             <form action="/App/portal-users/@user.Id/toggle" method="post" class="d-inline">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm btn-icon btn-text-warning" title="فعال/غیرفعال">
@@ -79,6 +84,7 @@
                             <option value="@id">@title</option>
                         }
                     </select>
+                    <div class="form-text">مخاطب را از <a href="/App/m/contacts">مخاطبین CRM</a> بسازید.</div>
                 </div>
             </div>
             <div class="modal-footer">

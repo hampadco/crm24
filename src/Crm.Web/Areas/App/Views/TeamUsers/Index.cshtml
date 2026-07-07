@@ -1,0 +1,146 @@
+@using Crm.Infrastructure.Services
+@using Crm.Web.Areas.App.Models
+@model List<TeamUserListItem>
+@{
+    ViewData["PanelTitle"] = "تنظیمات";
+    var limits = (TenantPlanLimits)ViewBag.Limits;
+    var userCount = (int)ViewBag.UserCount;
+    var profiles = (Dictionary<int, string>)ViewBag.Profiles;
+    var roles = (Dictionary<int, string>)ViewBag.Roles;
+    var canAdd = userCount < limits.MaxUsers;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h4 class="mb-1"><i class="bx bx-group text-primary me-1"></i> همکاران (کاربران CRM)</h4>
+        <p class="text-muted small mb-0">
+            @userCount از @limits.MaxUsers کاربر فعال — پلن: @limits.PlanName
+        </p>
+    </div>
+    @if (canAdd)
+    {
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#teamUserModal">
+            <i class="bx bx-user-plus me-1"></i> افزودن همکار
+        </button>
+    }
+    else
+    {
+        <a href="/App/subscription" class="btn btn-outline-warning btn-sm">ارتقای اشتراک برای کاربر بیشتر</a>
+    }
+</div>
+
+<partial name="_Alerts" />
+
+<div class="alert alert-info small">
+    همکاران از <strong>/App/Account/Login</strong> وارد پنل CRM می‌شوند — این صفحه با «کاربران پورتال» (/Portal) فرق دارد.
+</div>
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>نام</th>
+                    <th>ایمیل</th>
+                    <th>پروفایل</th>
+                    <th>نقش</th>
+                    <th>نوع</th>
+                    <th>وضعیت</th>
+                    <th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-5">هنوز همکاری اضافه نشده است.</td></tr>
+                }
+                @foreach (var item in Model)
+                {
+                    var u = item.User;
+                    <tr>
+                        <td><strong>@u.FullName</strong></td>
+                        <td dir="ltr">@u.Email</td>
+                        <td>@(item.ProfileName ?? "—")</td>
+                        <td>@(item.RoleName ?? "—")</td>
+                        <td>
+                            @if (u.IsTenantAdmin)
+                            {
+                                <span class="badge bg-label-primary">مدیر</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-label-secondary">کاربر</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @(u.IsActive ? "bg-label-success" : "bg-label-secondary")">
+                                @(u.IsActive ? "فعال" : "غیرفعال")
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a href="/App/team-users/@u.Id/edit" class="btn btn-sm btn-outline-primary">ویرایش</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="teamUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form action="/App/team-users/create" method="post" class="modal-content">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title">افزودن همکار</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">نام و نام خانوادگی</label>
+                        <input type="text" name="fullName" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">ایمیل (نام کاربری ورود)</label>
+                        <input type="email" name="email" class="form-control" dir="ltr" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">رمز عبور اولیه</label>
+                        <input type="password" name="password" class="form-control" dir="ltr" minlength="6" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">پروفایل دسترسی</label>
+                        <select name="profileId" class="form-select">
+                            <option value="">— پیش‌فرض —</option>
+                            @foreach (var (id, name) in profiles.OrderBy(p => p.Value))
+                            {
+                                <option value="@id">@name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">نقش سازمانی</label>
+                        <select name="crmRoleId" class="form-select">
+                            <option value="">— انتخاب —</option>
+                            @foreach (var (id, name) in roles.OrderBy(r => r.Value))
+                            {
+                                <option value="@id">@name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-check">
+                            <input type="checkbox" name="isTenantAdmin" value="true" class="form-check-input" id="isTenantAdmin" />
+                            <label class="form-check-label" for="isTenantAdmin">مدیر Tenant (دسترسی کامل)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">ذخیره همکار</button>
+            </div>
+        </form>
+    </div>
+</div>

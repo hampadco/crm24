@@ -68,7 +68,7 @@ public class AccountController : Controller
             return View(model);
 
         var user = await _userManager.FindByEmailAsync(model.Email.Trim().ToLowerInvariant());
-        if (user is null)
+        if (user is null || !user.IsActive)
         {
             ModelState.AddModelError(string.Empty, "ایمیل یا رمز عبور اشتباه است.");
             return View(model);

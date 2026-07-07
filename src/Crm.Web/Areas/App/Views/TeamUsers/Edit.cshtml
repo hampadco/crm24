@@ -1,0 +1,77 @@
+@using Crm.Core.Entities
+@model Crm.Web.Areas.App.Models.TeamUserEditModel
+@{
+    ViewData["PanelTitle"] = "تنظیمات";
+    var profiles = (List<Profile>)ViewBag.Profiles;
+    var roles = (List<Role>)ViewBag.Roles;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-edit text-primary me-1"></i> ویرایش همکار</h4>
+    <a href="/App/team-users" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" />
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" dir="ltr" />
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ProfileId" class="form-label"></label>
+                    <select asp-for="ProfileId" class="form-select">
+                        <option value="">— بدون پروفایل —</option>
+                        @foreach (var p in profiles)
+                        {
+                            <option value="@p.Id">@p.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="CrmRoleId" class="form-label"></label>
+                    <select asp-for="CrmRoleId" class="form-select">
+                        <option value="">— بدون نقش —</option>
+                        @foreach (var r in roles)
+                        {
+                            <option value="@r.Id">@r.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NewPassword" class="form-label"></label>
+                    <input asp-for="NewPassword" class="form-control" dir="ltr" autocomplete="new-password" />
+                    <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6 d-flex flex-column justify-content-end gap-2">
+                    <div class="form-check">
+                        <input asp-for="IsTenantAdmin" class="form-check-input" />
+                        <label asp-for="IsTenantAdmin" class="form-check-label"></label>
+                    </div>
+                    <div class="form-check">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label asp-for="IsActive" class="form-check-label"></label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

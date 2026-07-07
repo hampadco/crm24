@@ -1,0 +1,48 @@
+@model Crm.Web.Areas.App.Models.PortalUserEditModel
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+    Dictionary<int, string> contacts = ViewBag.Contacts;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-edit text-primary me-1"></i> ویرایش کاربر پورتال</h4>
+    <a href="/App/portal-users" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Email" class="form-label"></label>
+                    <input asp-for="Email" class="form-control" dir="ltr" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="ContactRecordId" class="form-label"></label>
+                    <select asp-for="ContactRecordId" class="form-select">
+                        <option value="">— بدون مخاطب —</option>
+                        @foreach (var (id, title) in contacts)
+                        {
+                            <option value="@id">@title</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NewPassword" class="form-label"></label>
+                    <input asp-for="NewPassword" class="form-control" dir="ltr" autocomplete="new-password" />
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+        </form>
+    </div>
+</div>
