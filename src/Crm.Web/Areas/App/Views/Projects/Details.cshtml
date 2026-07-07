@@ -132,11 +132,11 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">شروع</label>
-                        <input type="date" name="startUtc" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+                        <input type="text" name="startUtc" value="@PersianDateHelper.ToIsoDate(DateTime.UtcNow)" class="form-control form-control-sm jalali-date" autocomplete="off" dir="ltr" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small">پایان</label>
-                        <input type="date" name="endUtc" value="@DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+                        <input type="text" name="endUtc" value="@PersianDateHelper.ToIsoDate(DateTime.UtcNow.AddDays(7))" class="form-control form-control-sm jalali-date" autocomplete="off" dir="ltr" />
                     </div>
                     <div class="col-md-1">
                         <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bx bx-plus"></i></button>

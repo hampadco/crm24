@@ -1,0 +1,14 @@
+@using Crm.Web.Services
+@model string?
+@{
+    var name = ViewData["Name"] as string ?? "date";
+    var id = ViewData["FieldId"] as string ?? name;
+    var cssClass = ViewData["CssClass"] as string ?? "form-control";
+    var mode = ViewData["Mode"] as string ?? "date";
+    var required = ViewData["Required"] as bool? ?? false;
+    var readOnly = ViewData["ReadOnly"] as bool? ?? false;
+    var css = cssClass + (mode == "datetime" ? " jalali-datetime" : " jalali-date");
+}
+
+<input type="text" id="@id" name="@name" value="@Model" class="@css"
+       autocomplete="off" dir="ltr" required="@required" readonly="@readOnly" />

@@ -1,5 +1,6 @@
 @using Crm.Core.Entities
 @using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Services
 @model Campaign
 
 <h4 class="mb-4"><i class="bx bx-broadcast text-primary me-1"></i> @ViewData["Title"]</h4>
@@ -31,11 +32,11 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">تاریخ شروع</label>
-                    <input type="date" name="startUtc" value="@Model.StartUtc.ToString("yyyy-MM-dd")" class="form-control" />
+                    <input type="text" name="startUtc" value="@PersianDateHelper.ToIsoDate(Model.StartUtc)" class="form-control jalali-date" autocomplete="off" dir="ltr" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">تاریخ پایان</label>
-                    <input type="date" name="endUtc" value="@Model.EndUtc.ToString("yyyy-MM-dd")" class="form-control" />
+                    <input type="text" name="endUtc" value="@PersianDateHelper.ToIsoDate(Model.EndUtc)" class="form-control jalali-date" autocomplete="off" dir="ltr" />
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">بودجه (تومان)</label>

@@ -74,11 +74,11 @@
                     break;
 
                 case FieldType.Date:
-                    <input type="date" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    <input type="text" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass jalali-date" readonly="@readOnly" autocomplete="off" />
                     break;
 
                 case FieldType.DateTime:
-                    <input type="datetime-local" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    <input type="text" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass jalali-datetime" readonly="@readOnly" autocomplete="off" />
                     break;
 
                 case FieldType.Email:

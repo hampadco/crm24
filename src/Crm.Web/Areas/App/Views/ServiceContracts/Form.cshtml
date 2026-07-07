@@ -1,4 +1,5 @@
 @using Crm.Core.Entities
+@using Crm.Web.Services
 @model ServiceContract
 @{
     ViewData["PanelTitle"] = "پشتیبانی";
@@ -24,11 +25,11 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">شروع</label>
-                    <input type="date" name="startUtc" class="form-control" value="@Model.StartUtc.ToString("yyyy-MM-dd")" required />
+                    <input type="text" name="startUtc" class="form-control jalali-date" value="@PersianDateHelper.ToIsoDate(Model.StartUtc)" autocomplete="off" dir="ltr" required />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">پایان</label>
-                    <input type="date" name="endUtc" class="form-control" value="@Model.EndUtc.ToString("yyyy-MM-dd")" required />
+                    <input type="text" name="endUtc" class="form-control jalali-date" value="@PersianDateHelper.ToIsoDate(Model.EndUtc)" autocomplete="off" dir="ltr" required />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">سقف تیکت (۰ = نامحدود)</label>

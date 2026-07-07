@@ -1,5 +1,6 @@
 @using Crm.Core.Entities
 @using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Services
 @model Crm.Web.Areas.App.Controllers.SalesDocFormModel
 @{
     ViewData["PanelTitle"] = "مالی";
@@ -40,7 +41,8 @@
                 {
                     <div class="col-md-2">
                         <label class="form-label">اعتبار تا</label>
-                        <input asp-for="ValidUntil" class="form-control" type="date" />
+                        <input asp-for="ValidUntil" class="form-control jalali-date" type="text"
+                               value="@PersianDateHelper.ToIsoDate(Model.ValidUntil)" autocomplete="off" dir="ltr" />
                     </div>
                 }
             </div>

@@ -25,16 +25,32 @@
 @section Scripts {
     <script src="~/panel-assets/vendor/libs/fullcalendar/fullcalendar.js"></script>
     <script>
-        const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
-            initialView: 'dayGridMonth',
-            direction: 'rtl',
-            locale: 'fa',
-            firstDay: 6,
-            height: 'auto',
-            headerToolbar: { start: 'prev,next today', center: 'title', end: 'dayGridMonth,timeGridWeek,listMonth' },
-            buttonText: { today: 'امروز', month: 'ماه', week: 'هفته', list: 'لیست' },
-            events: '/App/calendar/feed'
+        document.addEventListener('DOMContentLoaded', function () {
+            var el = document.getElementById('calendar');
+            if (!el || typeof Calendar === 'undefined') {
+                console.error('FullCalendar bundle not loaded.');
+                return;
+            }
+
+            var calendar = new Calendar(el, {
+                plugins: [dayGridPlugin, timegridPlugin, listPlugin],
+                initialView: 'dayGridMonth',
+                direction: 'rtl',
+                locale: 'fa',
+                firstDay: 6,
+                height: 'auto',
+                headerToolbar: { start: 'prev,next today', center: 'title', end: 'dayGridMonth,timeGridWeek,listMonth' },
+                buttonText: { today: 'امروز', month: 'ماه', week: 'هفته', list: 'لیست' },
+                dayCellContent: function (arg) {
+                    return { html: '<div class="fc-daygrid-day-number">' + window.jalaliDayNumber(arg.date) + '</div>' };
+                },
+                datesSet: function (info) {
+                    var titleEl = document.querySelector('#calendar .fc-toolbar-title');
+                    if (titleEl) titleEl.textContent = window.jalaliCalendarTitle(info.view.currentStart);
+                },
+                events: '/App/calendar/feed'
+            });
+            calendar.render();
         });
-        calendar.render();
     </script>
 }

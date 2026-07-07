@@ -1,4 +1,5 @@
 @using Crm.Core.Entities
+@using Crm.Web.Services
 @{
     ViewData["PanelTitle"] = "پشتیبانی";
     List<Product> products = ViewBag.Products;
@@ -33,11 +34,11 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">شروع</label>
-                    <input type="date" name="startUtc" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                    <input type="text" name="startUtc" class="form-control jalali-date" value="@PersianDateHelper.ToIsoDate(DateTime.UtcNow)" autocomplete="off" dir="ltr" required />
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">پایان</label>
-                    <input type="date" name="endUtc" class="form-control" value="@DateTime.UtcNow.AddYears(1).ToString("yyyy-MM-dd")" required />
+                    <input type="text" name="endUtc" class="form-control jalali-date" value="@PersianDateHelper.ToIsoDate(DateTime.UtcNow.AddYears(1))" autocomplete="off" dir="ltr" required />
                 </div>
                 <div class="col-12">
                     <label class="form-label">توضیحات</label>

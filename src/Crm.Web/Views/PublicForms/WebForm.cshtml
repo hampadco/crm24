@@ -12,6 +12,7 @@
     <title>@Model.Name</title>
     <link rel="stylesheet" href="/panel-assets/vendor/css/rtl/core.css" />
     <link rel="stylesheet" href="/panel-assets/vendor/css/rtl/theme-default.css" />
+    <link rel="stylesheet" href="/panel-assets/vendor/libs/flatpickr/flatpickr.css" />
     <style>body { background: transparent; padding: 1rem; }</style>
 </head>
 <body>
@@ -55,7 +56,10 @@
                                     <input type="number" name="fld_@field.Name" value="@defaultValue" class="form-control" required="@field.IsRequired" />
                                     break;
                                 case FieldType.Date:
-                                    <input type="date" name="fld_@field.Name" value="@defaultValue" class="form-control" required="@field.IsRequired" />
+                                    <input type="text" name="fld_@field.Name" value="@defaultValue" class="form-control jalali-date" autocomplete="off" dir="ltr" required="@field.IsRequired" />
+                                    break;
+                                case FieldType.DateTime:
+                                    <input type="text" name="fld_@field.Name" value="@defaultValue" class="form-control jalali-datetime" autocomplete="off" dir="ltr" required="@field.IsRequired" />
                                     break;
                                 case FieldType.Email:
                                     <input type="email" name="fld_@field.Name" value="@defaultValue" class="form-control" dir="ltr" required="@field.IsRequired" />
@@ -81,5 +85,9 @@
             }
         </div>
     </div>
+    <script src="/panel-assets/vendor/libs/jdate/jdate.js"></script>
+    <script src="/panel-assets/vendor/libs/flatpickr/flatpickr-jdate.js"></script>
+    <script src="/panel-assets/vendor/libs/flatpickr/l10n/fa-jdate.js"></script>
+    <script src="/js/panel-jalali.js"></script>
 </body>
 </html>

@@ -181,8 +181,8 @@
                                 <input type="number" name="count" class="form-control form-control-sm" placeholder="تعداد" min="2" max="60" value="3" required />
                             </div>
                             <div class="col-7">
-                                <input type="date" name="firstDueDate" class="form-control form-control-sm" required
-                                       value="@DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd")" />
+                                <input type="text" name="firstDueDate" class="form-control form-control-sm jalali-date" required
+                                       value="@PersianDateHelper.ToIsoDate(DateTime.UtcNow.AddMonths(1))" autocomplete="off" dir="ltr" />
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-sm btn-outline-primary w-100">تقسیط مانده</button>

@@ -1839,7 +1839,7 @@ class ElementorBuilder {
             heading: '<div class="widget-heading"><h2>عنوان جدید</h2></div>',
             text: '<div class="widget-text"><p>این یک متن نمونه است. محتوای خود را اینجا بنویسید.</p></div>',
             image: '<div class="widget-image"><img src="/images/seed/placeholder.jpg" alt="تصویر"></div>',
-            video: '<div class="widget-video"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe></div>',
+            video: '<div class="widget-video widget-video--placeholder"><p class="text-muted mb-0">ویدیو — آدرس embed را در تنظیمات وارد کنید</p></div>',
             audio: `
                 <div class="widget-audio">
                     <div class="widget-audio-meta">
