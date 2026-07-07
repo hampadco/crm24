@@ -1,0 +1,25 @@
+@model (Crm.Web.Models.ContentCategory? Category, IEnumerable<Crm.Web.Models.ContentTag> Tags, string ControllerName)
+
+@if (Model.Category is not null || Model.Tags.Any())
+{
+    <div class="taben-card-badges taben-detail-badges">
+        @if (Model.Category is not null)
+        {
+            <a asp-controller="@Model.ControllerName"
+               asp-action="Index"
+               asp-route-category="@Model.Category.Slug"
+               class="taben-badge taben-badge--category">
+                @Model.Category.Name
+            </a>
+        }
+        @foreach (var tag in Model.Tags)
+        {
+            <a asp-controller="@Model.ControllerName"
+               asp-action="Index"
+               asp-route-tag="@tag.Slug"
+               class="taben-badge taben-badge--tag">
+                @tag.Name
+            </a>
+        }
+    </div>
+}

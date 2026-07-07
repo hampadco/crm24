@@ -1,0 +1,82 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Services
+@model SalesDocument
+@{
+    Layout = null;
+    var kindLabel = FinanceController.KindLabel(Model.Kind);
+}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>@kindLabel شماره @Model.Number</title>
+    <style>
+        body { font-family: Tahoma, 'Iranian Sans', sans-serif; font-size: 13px; color: #222; margin: 30px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
+        h1 { font-size: 20px; margin: 0; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        th, td { border: 1px solid #999; padding: 6px 10px; text-align: right; }
+        th { background: #f0f0f0; }
+        .totals td { border: none; }
+        .totals { width: 320px; margin-inline-start: auto; }
+        .grand { font-weight: bold; font-size: 15px; border-top: 2px solid #333 !important; }
+        .note { border: 1px dashed #999; padding: 10px; margin-top: 16px; }
+        @@media print { .no-print { display: none; } body { margin: 10px; } }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="header">
+        <div>
+            <h1>@kindLabel</h1>
+            <div>شماره: @Model.Number</div>
+            <div>تاریخ: @PersianDateHelper.ToJalaliDate(Model.IssueDateUtc)</div>
+            @if (Model.ValidUntilUtc is DateTime valid)
+            {
+                <div>اعتبار تا: @PersianDateHelper.ToJalaliDate(valid)</div>
+            }
+        </div>
+        <div style="text-align:left">
+            <strong>@ViewBag.TenantName</strong>
+            <div>مشتری: @Model.CustomerName</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr><th>#</th><th>شرح</th><th>تعداد</th><th>قیمت واحد</th><th>تخفیف</th><th>مالیات</th><th>جمع (تومان)</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines.OrderBy(l => l.SortOrder))
+            {
+                <tr>
+                    <td>@line.SortOrder</td>
+                    <td>@line.Title</td>
+                    <td>@line.Quantity.ToString("0.##")</td>
+                    <td>@line.UnitPrice.ToString("N0")</td>
+                    <td>@(line.DiscountPercent > 0 ? line.DiscountPercent.ToString("0.#") + "%" : "—")</td>
+                    <td>@(line.TaxPercent > 0 ? line.TaxPercent.ToString("0.#") + "%" : "—")</td>
+                    <td>@line.LineTotal.ToString("N0")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <table class="totals">
+        <tr><td>جمع اقلام</td><td>@Model.SubTotal.ToString("N0")</td></tr>
+        <tr><td>مالیات</td><td>@Model.TaxTotal.ToString("N0")</td></tr>
+        @if (Model.DiscountAmount > 0)
+        {
+            <tr><td>تخفیف کلی</td><td>-@Model.DiscountAmount.ToString("N0")</td></tr>
+        }
+        <tr class="grand"><td>مبلغ نهایی</td><td>@Model.GrandTotal.ToString("N0") تومان</td></tr>
+    </table>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Note))
+    {
+        <div class="note">@Model.Note</div>
+    }
+
+    <button class="no-print" onclick="window.print()">چاپ</button>
+</body>
+</html>

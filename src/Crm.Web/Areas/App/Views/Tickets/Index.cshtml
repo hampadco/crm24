@@ -1,0 +1,82 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Services
+@model List<Ticket>
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-support text-primary me-1"></i> تیکت‌ها
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.Count</span>
+    </h4>
+    <div class="d-flex gap-2">
+        <a href="/App/tickets/sla" class="btn btn-outline-secondary"><i class="bx bx-timer me-1"></i> تنظیمات SLA</a>
+        <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> تیکت جدید</a>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-header pb-0">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">همه وضعیت‌ها</option>
+                    @foreach (var st in Enum.GetValues<TicketStatus>())
+                    {
+                        <option value="@st" selected="@(ViewBag.Status == st.ToString())">@TicketsController.StatusLabel(st)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" name="q" value="@ViewBag.Query" class="form-control" placeholder="جستجو در موضوع..." />
+                    <button class="btn btn-outline-primary" type="submit"><i class="bx bx-search"></i></button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>#</th><th>موضوع</th><th>اولویت</th><th>وضعیت</th><th>مهلت SLA</th><th>ثبت</th></tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">تیکتی یافت نشد.</td></tr>
+                }
+                @foreach (var ticket in Model)
+                {
+                    <tr>
+                        <td><a href="/App/tickets/@ticket.Id"><strong>@ticket.Number</strong></a></td>
+                        <td>
+                            @ticket.Subject
+                            @if (ticket.EscalatedAtUtc is not null)
+                            {
+                                <span class="badge bg-label-danger ms-1">نقض SLA</span>
+                            }
+                        </td>
+                        <td><partial name="_PriorityBadge" model="ticket.Priority" /></td>
+                        <td><partial name="_TicketStatusBadge" model="ticket.Status" /></td>
+                        <td>
+                            @if (ticket.DueAtUtc is DateTime due)
+                            {
+                                var overdue = ticket.FirstResponseAtUtc is null && due < DateTime.UtcNow;
+                                <span class="@(overdue ? "text-danger" : "text-muted")">@PersianDateHelper.ToJalaliDate(due) @due.ToString("HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="text-muted">@PersianDateHelper.ToJalaliDate(ticket.CreatedAtUtc)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

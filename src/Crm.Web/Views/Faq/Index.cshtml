@@ -1,0 +1,35 @@
+@model Crm.Web.Models.FaqListingViewModel
+@{
+    ViewData["Title"] = "پرسش و پاسخ";
+}
+
+<div class="container taben-page">
+    <div class="taben-page-head">
+        <h1 class="taben-page-head-title"><i class="fas fa-comments"></i> نکات تغذیه و پرسش و پاسخ</h1>
+        <p class="taben-page-head-sub">پاسخ سوالات رایج درباره نرم‌افزار CRM و خدمات ما</p>
+    </div>
+
+    @if (!Model.Items.Any())
+    {
+        <div class="taben-list-empty">هنوز سوالی ثبت نشده است.</div>
+    }
+    else
+    {
+        <div class="taben-faq-page">
+            <div class="taben-faq-list" data-taben-faq>
+                @foreach (var item in Model.Items)
+                {
+                    <div class="taben-faq-item">
+                        <button type="button" class="taben-faq-q" aria-expanded="false">
+                            <span>@item.Question</span>
+                            <i class="fas fa-chevron-down taben-faq-arrow"></i>
+                        </button>
+                        <div class="taben-faq-a">
+                            <div class="taben-faq-a-inner">@item.Answer</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

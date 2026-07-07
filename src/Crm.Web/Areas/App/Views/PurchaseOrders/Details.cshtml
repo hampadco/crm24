@@ -1,0 +1,116 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@using Crm.Web.Areas.App.Controllers
+@model PurchaseOrder
+@{
+    var paid = Model.Payments.Sum(p => p.Amount);
+    var remaining = Model.Total - paid;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-cart-download text-primary me-1"></i>
+        سفارش خرید @Model.Number
+        <span class="badge @(Model.Status switch { PurchaseOrderStatus.Draft => "bg-label-secondary", PurchaseOrderStatus.Ordered => "bg-label-warning", PurchaseOrderStatus.Received => "bg-label-success", _ => "bg-label-danger" })">
+            @PurchaseOrdersController.StatusLabel(Model.Status)
+        </span>
+    </h4>
+    <div class="d-flex gap-2">
+        @if (Model.Status == PurchaseOrderStatus.Draft)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bx bx-edit me-1"></i> ویرایش</a>
+            <form asp-action="MarkOrdered" asp-route-id="@Model.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary"><i class="bx bx-check me-1"></i> ثبت سفارش</button>
+            </form>
+        }
+        @if (Model.Status == PurchaseOrderStatus.Ordered)
+        {
+            <form asp-action="Receive" asp-route-id="@Model.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success"><i class="bx bx-package me-1"></i> دریافت کالا (شارژ انبار)</button>
+            </form>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <p class="text-muted">
+                    تأمین‌کننده: <strong>@Model.Vendor.Name</strong>
+                    — تاریخ: @PersianDateHelper.ToJalaliDate(Model.IssueDateUtc)
+                    @if (Model.ReceivedAtUtc is DateTime received)
+                    {
+                        <span> — دریافت: @PersianDateHelper.ToJalaliDate(received)</span>
+                    }
+                </p>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>#</th><th>شرح</th><th>تعداد</th><th>قیمت واحد</th><th>جمع</th></tr></thead>
+                        <tbody>
+                            @foreach (var line in Model.Lines)
+                            {
+                                <tr>
+                                    <td>@line.SortOrder</td>
+                                    <td>@line.Title</td>
+                                    <td>@line.Quantity.ToString("0.##")</td>
+                                    <td>@line.UnitCost.ToString("N0")</td>
+                                    <td>@line.LineTotal.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-active">
+                                <td colspan="4" class="text-end"><strong>جمع کل</strong></td>
+                                <td><strong>@Model.Total.ToString("N0") تومان</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.Note))
+                {
+                    <p class="text-muted mb-0">یادداشت: @Model.Note</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">پرداخت به تأمین‌کننده</h5></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-1"><span class="text-muted">پرداخت‌شده</span><strong>@paid.ToString("N0")</strong></div>
+                <div class="d-flex justify-content-between mb-3"><span class="text-muted">مانده</span><strong class="@(remaining > 0 ? "text-danger" : "text-success")">@remaining.ToString("N0")</strong></div>
+
+                @if (Model.Payments.Count > 0)
+                {
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var payment in Model.Payments.OrderBy(p => p.Id))
+                        {
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span class="text-muted small">@PersianDateHelper.ToJalaliDate(payment.PaidAtUtc) @(payment.Method is null ? "" : $"({payment.Method})")</span>
+                                <strong>@payment.Amount.ToString("N0")</strong>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (remaining > 0 && Model.Status != PurchaseOrderStatus.Cancelled)
+                {
+                    <form asp-action="Pay" asp-route-id="@Model.Id" method="post" class="row g-2">
+                        @Html.AntiForgeryToken()
+                        <div class="col-12"><input type="number" name="amount" class="form-control form-control-sm" placeholder="مبلغ" min="1" required /></div>
+                        <div class="col-6"><input type="text" name="method" class="form-control form-control-sm" placeholder="روش" /></div>
+                        <div class="col-6"><input type="text" name="reference" class="form-control form-control-sm" placeholder="مرجع" /></div>
+                        <div class="col-12"><button type="submit" class="btn btn-sm btn-primary w-100"><i class="bx bx-wallet me-1"></i> ثبت پرداخت</button></div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

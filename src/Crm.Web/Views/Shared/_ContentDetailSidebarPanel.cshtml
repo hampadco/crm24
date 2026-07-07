@@ -1,0 +1,39 @@
+@model (string Title, string IconClass, string ControllerName, string? DetailRouteName, IReadOnlyList<Crm.Web.Models.ContentSidebarItem> Items)
+
+@if (Model.Items.Count > 0)
+{
+    <section class="taben-detail-aside-panel">
+        <h2 class="taben-detail-aside-title">
+            <i class="@Model.IconClass" aria-hidden="true"></i>
+            @Model.Title
+        </h2>
+        <ul class="taben-detail-aside-list">
+            @foreach (var item in Model.Items)
+            {
+                var thumb = !string.IsNullOrWhiteSpace(item.ThumbnailUrl)
+                    ? item.ThumbnailUrl
+                    : Url.Content("~/images/home/hero.jpg");
+                var href = !string.IsNullOrEmpty(Model.DetailRouteName)
+                    ? Url.RouteUrl(Model.DetailRouteName, new { slug = item.Slug })
+                    : Url.Action("Detail", Model.ControllerName, new { slug = item.Slug });
+                <li>
+                    <a href="@href" class="taben-detail-aside-item">
+                        <span class="taben-detail-aside-item__thumb">
+                            <img src="@thumb" alt="" loading="lazy" />
+                        </span>
+                        <span class="taben-detail-aside-item__body">
+                            <span class="taben-detail-aside-item__title">@item.Title</span>
+                            @if (item.PublishedAt is not null)
+                            {
+                                <span class="taben-detail-aside-item__meta">
+                                    <i class="far fa-calendar" aria-hidden="true"></i>
+                                    @PersianDateHelper.ToJalaliDate(item.PublishedAt.Value)
+                                </span>
+                            }
+                        </span>
+                    </a>
+                </li>
+            }
+        </ul>
+    </section>
+}

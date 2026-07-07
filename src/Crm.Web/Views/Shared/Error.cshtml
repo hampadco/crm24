@@ -1,0 +1,23 @@
+﻿@model ErrorViewModel
+@{
+    ViewData["Title"] = "خطا";
+}
+
+<div class="taben-page-header">
+    <div class="container">
+        <h1 class="mb-0 text-danger">خطایی رخ داد</h1>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="taben-card p-4">
+        <p class="mb-3">در پردازش درخواست شما مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</p>
+
+        @if (Model.ShowRequestId)
+        {
+            <p class="text-muted small mb-0">
+                <strong>شناسه درخواست:</strong> <code>@Model.RequestId</code>
+            </p>
+        }
+    </div>
+</div>

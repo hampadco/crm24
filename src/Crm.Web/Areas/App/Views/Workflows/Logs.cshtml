@@ -1,0 +1,39 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model List<WorkflowLog>
+@{
+    ViewData["PanelTitle"] = "گردش‌کار";
+    WorkflowRule rule = ViewBag.Rule;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-history text-primary me-1"></i> لاگ اجرای «@rule.Name»</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>زمان</th><th>رکورد</th><th>نتیجه</th><th>پیام</th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-5">هنوز اجرایی ثبت نشده است.</td></tr>
+                }
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td>@PersianDateHelper.ToJalaliDate(log.CreatedAtUtc) @log.CreatedAtUtc.ToString("HH:mm")</td>
+                        <td>@(log.RecordId?.ToString() ?? "—")</td>
+                        <td>
+                            <span class="badge @(log.Success ? "bg-label-success" : "bg-label-danger")">
+                                @(log.Success ? "موفق" : "خطا")
+                            </span>
+                        </td>
+                        <td class="text-wrap" style="max-width:480px">@log.Message</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

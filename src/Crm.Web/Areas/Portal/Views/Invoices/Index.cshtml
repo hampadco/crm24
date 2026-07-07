@@ -1,0 +1,45 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model List<SalesDocument>
+@{
+    ViewData["PanelTitle"] = "پورتال مشتری";
+}
+
+<h4 class="mb-4"><i class="bx bx-receipt text-primary me-1"></i> فاکتورهای من</h4>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>شماره</th><th>تاریخ</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-5">فاکتوری برای شما ثبت نشده است.</td></tr>
+                }
+                @foreach (var invoice in Model)
+                {
+                    var paid = invoice.Payments.Sum(p => p.Amount);
+                    var remaining = invoice.GrandTotal - paid;
+                    <tr>
+                        <td><a href="/Portal/invoices/@invoice.Id"><strong>@invoice.Number</strong></a></td>
+                        <td>@PersianDateHelper.ToJalaliDate(invoice.IssueDateUtc)</td>
+                        <td>@invoice.GrandTotal.ToString("N0") تومان</td>
+                        <td>@paid.ToString("N0")</td>
+                        <td>
+                            @if (remaining <= 0)
+                            {
+                                <span class="badge bg-label-success">تسویه‌شده</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger">@remaining.ToString("N0") تومان</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

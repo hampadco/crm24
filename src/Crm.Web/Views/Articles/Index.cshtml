@@ -1,0 +1,65 @@
+@model Crm.Web.Models.ArticleListingViewModel
+@{
+    ViewData["Title"] = "مقالات";
+}
+
+<div class="taben-listing-page">
+    <div class="container taben-page">
+        <div class="taben-page-head">
+            <h1 class="taben-page-head-title"><i class="fas fa-newspaper"></i> مقالات</h1>
+            <p class="taben-page-head-sub">آخرین مطالب تغذیه و سبک زندگی سالم</p>
+        </div>
+
+        <div class="taben-listing-shell">
+            <partial name="_ContentFilters" model="Model.Filters" />
+
+            <div class="taben-list-main">
+                @if (Model.Results.TotalCount > 0)
+                {
+                    <p class="taben-list-count">@Model.Results.TotalCount.ToFa() مورد</p>
+                }
+
+                @if (!Model.Results.Items.Any())
+                {
+                    <div class="taben-list-empty">موردی با این جستجو یا فیلتر یافت نشد.</div>
+                }
+                else
+                {
+                    <div class="taben-listing-grid">
+                        @foreach (var article in Model.Results.Items)
+                        {
+                                <a asp-action="Detail" asp-route-slug="@article.Slug" class="taben-hcard taben-hcard--article h-100">
+                                    <span class="taben-hcard-media">
+                                        <img src="@article.ThumbnailUrl" alt="@article.Title" loading="lazy" />
+                                    </span>
+                                    <span class="taben-hcard-body">
+                                        @if (article.Category is not null || article.Tags.Count > 0)
+                                        {
+                                            <span class="taben-card-badges">
+                                                @if (article.Category is not null)
+                                                {
+                                                    <span class="taben-badge taben-badge--category">@article.Category.Name</span>
+                                                }
+                                                @foreach (var tag in article.Tags.Take(2))
+                                                {
+                                                    <span class="taben-badge taben-badge--tag">@tag.Tag.Name</span>
+                                                }
+                                            </span>
+                                        }
+                                        <span class="taben-hcard-title">@article.Title</span>
+                                        @if (!string.IsNullOrWhiteSpace(article.Summary))
+                                        {
+                                            <span class="taben-hcard-excerpt">@article.Summary</span>
+                                        }
+                                        <span class="taben-hcard-meta"><i class="far fa-calendar"></i> @PersianDateHelper.ToJalaliDate(article.PublishedAt)</span>
+                                    </span>
+                                </a>
+                        }
+                    </div>
+
+                    <partial name="_CustomerPagination" model="Model.Pagination" />
+                }
+            </div>
+        </div>
+    </div>
+</div>

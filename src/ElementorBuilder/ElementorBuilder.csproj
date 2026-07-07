@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ElementorBuilder</RootNamespace>
+    <AssemblyName>ElementorBuilder</AssemblyName>
+    <Description>Drag-and-drop page builder (Elementor-style) for ASP.NET Core MVC</Description>
+    <Version>1.0.0</Version>
+    <Authors>Dromrani</Authors>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>ElementorBuilder</PackageId>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

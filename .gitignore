@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+publish/
+*.user
+*.suo
+
+## IDE
+.vs/
+.idea/
+
+## Local databases
+*.db
+*.db-shm
+*.db-wal
+
+## Node (future tooling)
+node_modules/
+
+## OS
+Thumbs.db
+.DS_Store

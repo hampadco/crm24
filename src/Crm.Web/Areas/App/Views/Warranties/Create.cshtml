@@ -1,0 +1,53 @@
+@using Crm.Core.Entities
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+    List<Product> products = ViewBag.Products;
+}
+
+<h4 class="mb-4"><i class="bx bx-shield-quarter text-primary me-1"></i> گارانتی جدید</h4>
+
+<partial name="_Alerts" />
+
+<div class="card" style="max-width:720px">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">شماره سریال *</label>
+                    <input type="text" name="serialNumber" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">محصول</label>
+                    <select name="productId" class="form-select">
+                        <option value="">— انتخاب کنید —</option>
+                        @foreach (var product in products)
+                        {
+                            <option value="@product.Id">@product.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">نام مشتری</label>
+                    <input type="text" name="customerName" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">شروع</label>
+                    <input type="date" name="startUtc" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">پایان</label>
+                    <input type="date" name="endUtc" class="form-control" value="@DateTime.UtcNow.AddYears(1).ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">توضیحات</label>
+                    <textarea name="notes" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ثبت</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

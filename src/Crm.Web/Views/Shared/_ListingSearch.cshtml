@@ -1,0 +1,21 @@
+@model Crm.Web.Models.ContentFilterBarViewModel
+
+<form method="get" asp-controller="@Model.ControllerName" asp-action="Index" class="taben-list-search-form">
+    @if (!string.IsNullOrEmpty(Model.SelectedCategorySlug))
+    {
+        <input type="hidden" name="category" value="@Model.SelectedCategorySlug" />
+    }
+    @if (!string.IsNullOrEmpty(Model.SelectedTagSlug))
+    {
+        <input type="hidden" name="tag" value="@Model.SelectedTagSlug" />
+    }
+    <div class="taben-list-search">
+        <i class="fas fa-search taben-list-search-icon"></i>
+        <input type="search"
+               name="search"
+               value="@Model.Search"
+               placeholder="جستجو در این بخش..."
+               aria-label="جستجو" />
+        <button type="submit" class="taben-btn taben-btn-primary taben-list-search-btn">جستجو</button>
+    </div>
+</form>

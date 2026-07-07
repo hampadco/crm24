@@ -1,0 +1,112 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@using Crm.Web.Areas.App.Controllers
+@model Campaign
+@{
+    var memberRecords = (Dictionary<int, Crm.Core.Entities.DynamicRecord>)ViewBag.MemberRecords;
+    var memberOptions = (Dictionary<string, Dictionary<int, string>>)ViewBag.MemberOptions;
+    var wonAmount = (decimal)ViewBag.WonAmount;
+    var cost = Model.ActualCost > 0 ? Model.ActualCost : Model.Budget;
+    var roi = cost > 0 ? Math.Round((wonAmount - cost) / cost * 100, 1) : (decimal?)null;
+    var moduleLabels = new Dictionary<string, string> { ["leads"] = "سرنخ", ["contacts"] = "مخاطب", ["opportunities"] = "فرصت" };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-broadcast text-primary me-1"></i> @Model.Name
+        <span class="badge @(Model.Status switch { CampaignStatus.Active => "bg-label-success", CampaignStatus.Planned => "bg-label-info", CampaignStatus.Finished => "bg-label-secondary", _ => "bg-label-danger" })">
+            @CampaignsController.StatusLabel(Model.Status)
+        </span>
+    </h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bx bx-edit me-1"></i> ویرایش</a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <h6 class="text-muted mb-1">هزینه</h6>
+            <h4 class="mb-0">@cost.ToString("N0") <small class="fs-6 text-muted">تومان</small></h4>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <h6 class="text-muted mb-1">درآمد فرصت‌های برنده</h6>
+            <h4 class="mb-0">@wonAmount.ToString("N0") <small class="fs-6 text-muted">تومان</small></h4>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <h6 class="text-muted mb-1">ROI</h6>
+            <h4 class="mb-0 @(roi >= 0 ? "text-success" : "text-danger")">@(roi is null ? "—" : $"{roi}%")</h4>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100"><div class="card-body">
+            <h6 class="text-muted mb-1">اعضا</h6>
+            <h4 class="mb-0">@Model.Members.Count</h4>
+        </div></div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">اعضای کمپین</h5></div>
+            <div class="table-responsive text-nowrap">
+                <table class="table table-sm">
+                    <thead><tr><th>نوع</th><th>عنوان</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td><span class="badge bg-label-info">@moduleLabels.GetValueOrDefault(member.ModuleName, member.ModuleName)</span></td>
+                                <td>@(memberRecords.TryGetValue(member.RecordId, out var record) ? record.Title : $"#{member.RecordId}")</td>
+                                <td class="text-end">
+                                    <form asp-action="RemoveMember" asp-route-memberId="@member.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-text-danger"><i class="bx bx-x"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                        @if (Model.Members.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-center text-muted py-3">عضوی افزوده نشده است.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">افزودن عضو</h5></div>
+            <div class="card-body">
+                @foreach (var group in memberOptions.Where(g => g.Value.Count > 0))
+                {
+                    <form asp-action="AddMember" asp-route-id="@Model.Id" method="post" class="d-flex gap-2 mb-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="moduleName" value="@group.Key" />
+                        <select name="recordId" class="form-select form-select-sm">
+                            @foreach (var option in group.Value)
+                            {
+                                <option value="@option.Key">@option.Value</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-primary text-nowrap">
+                            <i class="bx bx-plus me-1"></i>@moduleLabels.GetValueOrDefault(group.Key, group.Key)
+                        </button>
+                    </form>
+                }
+                @if (memberOptions.All(g => g.Value.Count == 0))
+                {
+                    <p class="text-muted mb-0">رکوردی برای افزودن وجود ندارد.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,63 @@
+@model ArticleDetailViewModel
+@{
+    var article = Model.Article;
+    ViewData["Title"] = article.Title;
+    var heroImage = !string.IsNullOrWhiteSpace(article.ThumbnailUrl)
+        ? article.ThumbnailUrl
+        : Url.Content("~/images/home/hero.jpg")!;
+    var relatedSections = new ContentDetailRelatedSectionsModel
+    {
+        ControllerName = "Articles",
+        DetailRouteName = "articles-detail",
+        IndexActionLabel = "مقالات",
+        RelatedTitle = "مقالات مشابه",
+        LatestTitle = "آخرین مقالات",
+        RelatedIcon = "fas fa-layer-group",
+        LatestIcon = "fas fa-newspaper",
+        Related = Model.Related,
+        Latest = Model.Latest
+    };
+}
+
+<div class="taben-content-detail taben-article-detail">
+    <div class="taben-content-detail__top taben-home-fluid">
+        <nav class="taben-breadcrumb" aria-label="breadcrumb">
+            <a asp-controller="Home" asp-action="Index">خانه</a>
+            <i class="fas fa-chevron-left sep"></i>
+            <a asp-controller="Articles" asp-action="Index">مقالات</a>
+            <i class="fas fa-chevron-left sep"></i>
+            <span class="current">@article.Title</span>
+        </nav>
+    </div>
+
+    <header class="taben-content-hero @(string.IsNullOrWhiteSpace(article.ThumbnailUrl) ? "taben-content-hero--fallback" : "")"
+            style="background-image: url('@heroImage')">
+        <div class="taben-content-hero__overlay" aria-hidden="true"></div>
+        <div class="taben-content-hero__inner taben-home-fluid">
+            <partial name="_ContentDetailBadges" model="@(article.Category, article.Tags.Select(t => t.Tag), "Articles")" />
+            <h1 class="taben-content-hero__title">@article.Title</h1>
+            @if (!string.IsNullOrWhiteSpace(article.Summary))
+            {
+                <p class="taben-content-hero__summary">@article.Summary</p>
+            }
+            <div class="taben-content-hero__meta">
+                <time class="taben-content-hero__date" datetime="@article.PublishedAt.ToString("yyyy-MM-dd")">
+                    <i class="far fa-calendar" aria-hidden="true"></i>
+                    @PersianDateHelper.ToJalaliDate(article.PublishedAt)
+                </time>
+            </div>
+        </div>
+    </header>
+
+    <div class="taben-content-detail__main taben-home-fluid">
+        <div class="taben-content-detail__layout">
+            <article class="taben-content-detail__card">
+                @await Component.InvokeAsync("ElementorContent", new { html = article.Content, wrapperClass = "taben-elementor-content" })
+            </article>
+
+            <partial name="_ContentDetailAside" model="relatedSections" />
+        </div>
+
+        <partial name="_ContentDetailBottom" model="relatedSections" />
+    </div>
+</div>

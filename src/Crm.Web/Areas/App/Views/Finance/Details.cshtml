@@ -1,0 +1,206 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Services
+@model SalesDocument
+@{
+    ViewData["PanelTitle"] = "مالی";
+    var kindLabel = FinanceController.KindLabel(Model.Kind);
+    var totalPaid = Model.Payments.Sum(p => p.Amount);
+    var remaining = Model.GrandTotal - totalPaid;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-receipt text-primary me-1"></i>
+        @kindLabel شماره @Model.Number
+        <partial name="_DocStatusBadge" model="Model.Status" />
+    </h4>
+    <div class="d-flex gap-2">
+        <a href="/App/finance/doc/@Model.Id/print" target="_blank" class="btn btn-outline-secondary">
+            <i class="bx bx-printer me-1"></i> چاپ
+        </a>
+        @if (Model.Status == SalesDocumentStatus.Draft)
+        {
+            <a href="/App/finance/doc/@Model.Id/edit" class="btn btn-outline-primary"><i class="bx bx-edit me-1"></i> ویرایش</a>
+            <form action="/App/finance/doc/@Model.Id/confirm" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success"><i class="bx bx-check me-1"></i> تأیید سند</button>
+            </form>
+        }
+        @if (Model.Kind != SalesDocumentKind.Invoice && Model.Status is SalesDocumentStatus.Draft or SalesDocumentStatus.Confirmed)
+        {
+            var targetLabel = Model.Kind == SalesDocumentKind.Quote ? "سفارش فروش" : "فاکتور";
+            <form action="/App/finance/doc/@Model.Id/convert" method="post" class="d-inline"
+                  onsubmit="return confirm('این سند به @targetLabel تبدیل شود؟');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-primary"><i class="bx bx-transfer-alt me-1"></i> تبدیل به @targetLabel</button>
+            </form>
+        }
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4"><span class="text-muted">مشتری:</span> <strong>@Model.CustomerName</strong></div>
+                    <div class="col-md-4"><span class="text-muted">تاریخ صدور:</span> @PersianDateHelper.ToJalaliDate(Model.IssueDateUtc)</div>
+                    @if (Model.ValidUntilUtc is DateTime valid)
+                    {
+                        <div class="col-md-4"><span class="text-muted">اعتبار تا:</span> @PersianDateHelper.ToJalaliDate(valid)</div>
+                    }
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th><th>شرح</th><th>تعداد</th><th>قیمت واحد</th><th>تخفیف</th><th>مالیات</th><th>جمع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in Model.Lines.OrderBy(l => l.SortOrder))
+                            {
+                                <tr>
+                                    <td>@line.SortOrder</td>
+                                    <td>@line.Title</td>
+                                    <td>@line.Quantity.ToString("0.##")</td>
+                                    <td>@line.UnitPrice.ToString("N0")</td>
+                                    <td>@(line.DiscountPercent > 0 ? line.DiscountPercent.ToString("0.#") + "%" : "—")</td>
+                                    <td>@(line.TaxPercent > 0 ? line.TaxPercent.ToString("0.#") + "%" : "—")</td>
+                                    <td>@line.LineTotal.ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="6" class="text-end text-muted">جمع اقلام</td><td>@Model.SubTotal.ToString("N0")</td></tr>
+                            <tr><td colspan="6" class="text-end text-muted">مالیات</td><td>@Model.TaxTotal.ToString("N0")</td></tr>
+                            @if (Model.DiscountAmount > 0)
+                            {
+                                <tr><td colspan="6" class="text-end text-muted">تخفیف کلی (@Model.DiscountPercent.ToString("0.#")%)</td><td>-@Model.DiscountAmount.ToString("N0")</td></tr>
+                            }
+                            <tr class="table-active"><td colspan="6" class="text-end"><strong>مبلغ نهایی</strong></td><td><strong>@Model.GrandTotal.ToString("N0") تومان</strong></td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.Note))
+                {
+                    <div class="alert alert-secondary mb-0"><i class="bx bx-note me-1"></i> @Model.Note</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        @if (Model.Kind == SalesDocumentKind.Invoice)
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">پرداخت‌ها</h5>
+                    <span class="badge @(remaining <= 0 ? "bg-label-success" : "bg-label-warning")">
+                        مانده: @remaining.ToString("N0")
+                    </span>
+                </div>
+                <div class="card-body">
+                    @if (Model.Payments.Count == 0)
+                    {
+                        <p class="text-muted small mb-2">پرداختی ثبت نشده است.</p>
+                    }
+                    <ul class="list-group list-group-flush mb-3">
+                        @foreach (var payment in Model.Payments.OrderBy(p => p.PaidAtUtc))
+                        {
+                            <li class="list-group-item d-flex justify-content-between px-0">
+                                <span>@PersianDateHelper.ToJalaliDate(payment.PaidAtUtc) <small class="text-muted">(@payment.Method)</small></span>
+                                <strong>@payment.Amount.ToString("N0")</strong>
+                            </li>
+                        }
+                    </ul>
+                    @if (remaining > 0 && Model.Status != SalesDocumentStatus.Canceled)
+                    {
+                        <form action="/App/finance/doc/@Model.Id/pay" method="post" class="row g-2">
+                            @Html.AntiForgeryToken()
+                            <div class="col-7">
+                                <input type="number" name="amount" class="form-control form-control-sm" placeholder="مبلغ" max="@remaining" value="@remaining" required />
+                            </div>
+                            <div class="col-5">
+                                <select name="method" class="form-select form-select-sm">
+                                    <option value="cash">نقدی</option>
+                                    <option value="card">کارت</option>
+                                    <option value="transfer">حواله</option>
+                                    <option value="cheque">چک</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-sm btn-success w-100"><i class="bx bx-plus me-1"></i> ثبت پرداخت</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0">اقساط</h5></div>
+                <div class="card-body">
+                    @if (Model.Installments.Count == 0)
+                    {
+                        <p class="text-muted small">قسطی تعریف نشده است.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush mb-3">
+                            @foreach (var installment in Model.Installments.OrderBy(i => i.DueDateUtc))
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>
+                                        @PersianDateHelper.ToJalaliDate(installment.DueDateUtc)
+                                        — @installment.Amount.ToString("N0")
+                                    </span>
+                                    @if (installment.IsPaid)
+                                    {
+                                        <span class="badge bg-label-success">پرداخت شد</span>
+                                    }
+                                    else
+                                    {
+                                        <form action="/App/finance/installment/@installment.Id/pay" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="documentId" value="@Model.Id" />
+                                            <button type="submit" class="btn btn-xs btn-outline-success btn-sm">پرداخت</button>
+                                        </form>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    @if (remaining > 0)
+                    {
+                        <form action="/App/finance/doc/@Model.Id/installments" method="post" class="row g-2">
+                            @Html.AntiForgeryToken()
+                            <div class="col-5">
+                                <input type="number" name="count" class="form-control form-control-sm" placeholder="تعداد" min="2" max="60" value="3" required />
+                            </div>
+                            <div class="col-7">
+                                <input type="date" name="firstDueDate" class="form-control form-control-sm" required
+                                       value="@DateTime.UtcNow.AddMonths(1).ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">تقسیط مانده</button>
+                            </div>
+                        </form>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.SourceDocumentId is int sourceId)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <i class="bx bx-link me-1 text-muted"></i>
+                    <a href="/App/finance/doc/@sourceId">مشاهده سند مبدأ</a>
+                </div>
+            </div>
+        }
+    </div>
+</div>

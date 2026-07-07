@@ -1,0 +1,106 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "داشبورد";
+}
+
+<div class="admin-dashboard-welcome">
+    <h2>سلام، به پنل مدیریت محتوای سایت خوش آمدید</h2>
+    <p>امروز @Model.TodayJalali — از اینجا محتوای سایت را مدیریت کنید.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-3">
+        <div class="admin-stat-card admin-stat-card--articles">
+            <div class="admin-stat-icon"><i class="fas fa-newspaper"></i></div>
+            <div class="admin-stat-label">وبلاگ / مقالات</div>
+            <div class="admin-stat-value">@Model.ArticleCount.ToFa()</div>
+            <a asp-area="Admin" asp-controller="Articles" asp-action="Index">مدیریت مقالات <i class="fas fa-chevron-left"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="admin-stat-card admin-stat-card--faqs">
+            <div class="admin-stat-icon"><i class="fas fa-question-circle"></i></div>
+            <div class="admin-stat-label">سؤالات متداول</div>
+            <div class="admin-stat-value">@Model.FaqCount.ToFa()</div>
+            <a asp-area="Admin" asp-controller="Faqs" asp-action="Index">مدیریت FAQ <i class="fas fa-chevron-left"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="admin-stat-card admin-stat-card--news">
+            <div class="admin-stat-icon"><i class="fas fa-file-alt"></i></div>
+            <div class="admin-stat-label">صفحات سایت</div>
+            <div class="admin-stat-value">@Model.SitePageCount.ToFa()</div>
+            <a asp-area="Admin" asp-controller="SitePages" asp-action="EditAbout">مدیریت صفحات <i class="fas fa-chevron-left"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="admin-stat-card admin-stat-card--subscribers">
+            <div class="admin-stat-icon"><i class="fas fa-envelope"></i></div>
+            <div class="admin-stat-label">مشترکین خبرنامه</div>
+            <div class="admin-stat-value">@Model.SubscriberCount.ToFa()</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h2><i class="fas fa-clock ms-1"></i> فعالیت اخیر محتوا</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table admin-table admin-recent-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>نوع</th>
+                            <th>عنوان</th>
+                            <th>تاریخ</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.RecentItems.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">هنوز محتوایی ثبت نشده است.</td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.RecentItems)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="admin-recent-type admin-recent-type--@item.Type">@item.TypeLabel</span>
+                                </td>
+                                <td>@item.Title</td>
+                                <td>@item.DateLabel</td>
+                                <td class="text-end">
+                                    <a href="@item.EditUrl" class="btn btn-sm btn-outline-secondary">ویرایش</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h2><i class="fas fa-bolt ms-1"></i> دسترسی سریع</h2>
+            </div>
+            <div class="admin-card-body">
+                <div class="admin-quick-actions">
+                    <a asp-area="Admin" asp-controller="Articles" asp-action="Create" class="btn btn-outline-primary">
+                        <i class="fas fa-newspaper ms-1"></i> مقاله جدید
+                    </a>
+                    <a asp-area="Admin" asp-controller="Faqs" asp-action="Create" class="btn btn-outline-primary">
+                        <i class="fas fa-question-circle ms-1"></i> سؤال جدید
+                    </a>
+                    <a asp-area="Admin" asp-controller="SitePages" asp-action="EditAbout" class="btn btn-outline-secondary">
+                        <i class="fas fa-file-alt ms-1"></i> ویرایش صفحه درباره ما
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

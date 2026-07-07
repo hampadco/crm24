@@ -1,0 +1,45 @@
+@using Crm.Core.Entities
+@model List<Survey>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-poll text-primary me-1"></i> نظرسنجی‌ها</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> نظرسنجی جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>عنوان</th><th>سوالات</th><th>پاسخ‌ها</th><th>وضعیت</th><th>لینک عمومی</th><th></th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">نظرسنجی ساخته نشده است.</td></tr>
+                }
+                @foreach (var survey in Model)
+                {
+                    var publicUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/s/{survey.PublicKey}";
+                    <tr>
+                        <td>
+                            <strong>@survey.Title</strong>
+                            @if (survey.IsTicketSurvey)
+                            {
+                                <span class="badge bg-label-info ms-1">نظرسنجی تیکت</span>
+                            }
+                            @if (survey.ConvertToLead)
+                            {
+                                <span class="badge bg-label-warning ms-1">تبدیل به سرنخ</span>
+                            }
+                        </td>
+                        <td>@survey.Questions.Count</td>
+                        <td><a asp-action="Responses" asp-route-id="@survey.Id">@survey.Responses.Count پاسخ</a></td>
+                        <td><span class="badge @(survey.IsActive ? "bg-label-success" : "bg-label-secondary")">@(survey.IsActive ? "فعال" : "غیرفعال")</span></td>
+                        <td><a href="@publicUrl" target="_blank" dir="ltr" class="text-truncate d-inline-block" style="max-width:220px">@publicUrl</a></td>
+                        <td><a asp-action="Edit" asp-route-id="@survey.Id" class="btn btn-sm btn-outline-primary"><i class="bx bx-edit"></i></a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

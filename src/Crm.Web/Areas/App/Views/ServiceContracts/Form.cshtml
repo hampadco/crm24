@@ -1,0 +1,51 @@
+@using Crm.Core.Entities
+@model ServiceContract
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+}
+
+<h4 class="mb-4"><i class="bx bx-file-blank text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<div class="card" style="max-width:720px">
+    <div class="card-body">
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">نام قرارداد *</label>
+                    <input type="text" name="name" class="form-control" value="@Model.Name" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">نام مشتری</label>
+                    <input type="text" name="customerName" class="form-control" value="@Model.CustomerName" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">شروع</label>
+                    <input type="date" name="startUtc" class="form-control" value="@Model.StartUtc.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">پایان</label>
+                    <input type="date" name="endUtc" class="form-control" value="@Model.EndUtc.ToString("yyyy-MM-dd")" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">سقف تیکت (۰ = نامحدود)</label>
+                    <input type="number" name="maxTickets" class="form-control" value="@Model.MaxTickets" min="0" />
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="checkbox" name="isActive" value="true" class="form-check-input" id="isActive"
+                               checked="@Model.IsActive" />
+                        <label class="form-check-label" for="isActive">فعال</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

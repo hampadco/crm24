@@ -1,0 +1,85 @@
+@using Crm.Core.Entities
+@model WebForm
+@{
+    Layout = null;
+    var visibleFields = (List<(FieldDef Field, string? DefaultValue)>)ViewBag.VisibleFields;
+}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Model.Name</title>
+    <link rel="stylesheet" href="/panel-assets/vendor/css/rtl/core.css" />
+    <link rel="stylesheet" href="/panel-assets/vendor/css/rtl/theme-default.css" />
+    <style>body { background: transparent; padding: 1rem; }</style>
+</head>
+<body>
+    <div class="card mx-auto" style="max-width:560px">
+        <div class="card-body">
+            <h5 class="mb-4">@Model.Name</h5>
+
+            @if (ViewBag.Success is string success)
+            {
+                <div class="alert alert-success">@success</div>
+            }
+            else
+            {
+                @if (ViewBag.Error is string error)
+                {
+                    <div class="alert alert-danger">@error</div>
+                }
+                <form method="post">
+                    @foreach (var (field, defaultValue) in visibleFields)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">@field.Label @(field.IsRequired ? "*" : "")</label>
+                            @switch (field.Type)
+                            {
+                                case FieldType.MultilineText:
+                                    <textarea name="fld_@field.Name" class="form-control" rows="3" required="@field.IsRequired">@defaultValue</textarea>
+                                    break;
+                                case FieldType.Picklist:
+                                    <select name="fld_@field.Name" class="form-select" required="@field.IsRequired">
+                                        <option value="">انتخاب کنید...</option>
+                                        @foreach (var option in field.PicklistValues.Where(p => p.IsActive).OrderBy(p => p.SortOrder))
+                                        {
+                                            <option value="@option.Value" selected="@(defaultValue == option.Value)">@option.Label</option>
+                                        }
+                                    </select>
+                                    break;
+                                case FieldType.Checkbox:
+                                    <input type="checkbox" name="fld_@field.Name" value="true" class="form-check-input" />
+                                    break;
+                                case FieldType.Number or FieldType.Decimal or FieldType.Currency:
+                                    <input type="number" name="fld_@field.Name" value="@defaultValue" class="form-control" required="@field.IsRequired" />
+                                    break;
+                                case FieldType.Date:
+                                    <input type="date" name="fld_@field.Name" value="@defaultValue" class="form-control" required="@field.IsRequired" />
+                                    break;
+                                case FieldType.Email:
+                                    <input type="email" name="fld_@field.Name" value="@defaultValue" class="form-control" dir="ltr" required="@field.IsRequired" />
+                                    break;
+                                default:
+                                    <input type="text" name="fld_@field.Name" value="@defaultValue" class="form-control" required="@field.IsRequired" />
+                                    break;
+                            }
+                        </div>
+                    }
+
+                    @if (Model.UseCaptcha)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">سوال امنیتی: @ViewBag.CaptchaQuestion</label>
+                            <input type="hidden" name="captchaToken" value="@ViewBag.CaptchaToken" />
+                            <input type="text" name="captchaAnswer" class="form-control" style="max-width:120px" required />
+                        </div>
+                    }
+
+                    <button type="submit" class="btn btn-primary w-100">ارسال</button>
+                </form>
+            }
+        </div>
+    </div>
+</body>
+</html>

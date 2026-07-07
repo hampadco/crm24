@@ -1,0 +1,135 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model Crm.Web.Areas.Owner.Controllers.TenantDetailsViewModel
+@{
+    ViewData["Title"] = Model.Tenant.Name;
+    ViewData["PanelTitle"] = "پنل مالک CRM24";
+    var storageMb = Model.StorageBytes / 1024.0 / 1024.0;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-buildings text-primary me-1"></i>
+        @Model.Tenant.Name
+        <partial name="_TenantStatusBadge" model="Model.Tenant.Status" />
+    </h4>
+    <div class="d-flex gap-2">
+        <form asp-action="Impersonate" asp-route-id="@Model.Tenant.Id" method="post"
+              onsubmit="return confirm('با کاربر ادمین این Tenant وارد پنل CRM می‌شوید. ادامه می‌دهید؟');">
+            <button type="submit" class="btn btn-warning">
+                <i class="bx bx-log-in-circle me-1"></i> ورود به پنل (پشتیبانی)
+            </button>
+        </form>
+        <a asp-controller="Subscriptions" asp-action="Create" asp-route-tenantId="@Model.Tenant.Id" class="btn btn-primary">
+            <i class="bx bx-purchase-tag me-1"></i> ثبت اشتراک
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-md-3 col-6">
+        <div class="card h-100"><div class="card-body">
+            <div class="avatar mb-2"><span class="avatar-initial rounded bg-label-primary"><i class="bx bx-group"></i></span></div>
+            <h5 class="mb-0">@Model.UserCount</h5><p class="text-muted mb-0">کاربر</p>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card h-100"><div class="card-body">
+            <div class="avatar mb-2"><span class="avatar-initial rounded bg-label-success"><i class="bx bx-data"></i></span></div>
+            <h5 class="mb-0">@Model.RecordCount</h5><p class="text-muted mb-0">رکورد</p>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card h-100"><div class="card-body">
+            <div class="avatar mb-2"><span class="avatar-initial rounded bg-label-info"><i class="bx bx-hdd"></i></span></div>
+            <h5 class="mb-0">@storageMb.ToString("0.#") MB</h5><p class="text-muted mb-0">فضای مصرفی</p>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card h-100"><div class="card-body">
+            <div class="avatar mb-2"><span class="avatar-initial rounded bg-label-warning"><i class="bx bx-calendar"></i></span></div>
+            <h5 class="mb-0">@(Model.Tenant.TrialEndsAtUtc is DateTime te ? PersianDateHelper.ToJalaliDate(te) : "—")</h5>
+            <p class="text-muted mb-0">پایان دوره آزمایشی</p>
+        </div></div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h5 class="mb-0">تغییر وضعیت</h5>
+                <div class="d-flex gap-2">
+                    @foreach (var (target, label, cls) in new[] {
+                        (TenantStatus.Active, "فعال‌سازی", "btn-success"),
+                        (TenantStatus.Suspended, "تعلیق", "btn-danger"),
+                        (TenantStatus.Trial, "بازگشت به تریال", "btn-warning") })
+                    {
+                        if (Model.Tenant.Status != target)
+                        {
+                            <form asp-action="SetStatus" asp-route-id="@Model.Tenant.Id" method="post" class="d-inline">
+                                <input type="hidden" name="status" value="@target" />
+                                <button type="submit" class="btn btn-sm @cls">@label</button>
+                            </form>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">کاربران</h5></div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>نام</th><th>ایمیل</th><th>ادمین</th></tr></thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>@user.FullName</td>
+                                <td dir="ltr">@user.Email</td>
+                                <td>@(user.IsTenantAdmin ? "✓" : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="mb-0">اشتراک‌ها</h5></div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>پلن</th><th>بازه</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+                    <tbody>
+                        @if (Model.Subscriptions.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-muted text-center py-3">اشتراکی ثبت نشده است.</td></tr>
+                        }
+                        @foreach (var sub in Model.Subscriptions)
+                        {
+                            <tr>
+                                <td>@sub.Plan.Name</td>
+                                <td>@PersianDateHelper.ToJalaliDate(sub.StartsAtUtc) تا @PersianDateHelper.ToJalaliDate(sub.EndsAtUtc)</td>
+                                <td>@sub.Amount.ToString("N0") تومان</td>
+                                <td>
+                                    @switch (sub.Status)
+                                    {
+                                        case SubscriptionStatus.Active: <span class="badge bg-label-success">فعال</span>; break;
+                                        case SubscriptionStatus.Expired: <span class="badge bg-label-secondary">منقضی</span>; break;
+                                        case SubscriptionStatus.Canceled: <span class="badge bg-label-danger">لغو</span>; break;
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

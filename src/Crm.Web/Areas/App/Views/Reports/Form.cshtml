@@ -1,0 +1,153 @@
+@model Crm.Web.Areas.App.Controllers.ReportFormModel
+@{
+    ViewData["PanelTitle"] = "گزارش‌ها";
+}
+
+<h4 class="mb-4"><i class="bx bx-bar-chart-alt-2 text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<form asp-action="Save" method="post" id="reportForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="FiltersJson" id="filtersJson" />
+
+    <div class="card mb-4">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">نام گزارش *</label>
+                <input asp-for="Name" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">ماژول *</label>
+                <select asp-for="ModuleId" class="form-select" id="moduleSelect" required>
+                    <option value="">— انتخاب —</option>
+                    @foreach (var module in Model.Modules)
+                    {
+                        <option value="@module.Id">@module.PluralLabel</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">ستون‌ها</h5></div>
+        <div class="card-body" id="columnsBox">
+            <p class="text-muted small">ابتدا ماژول را انتخاب کنید.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">فیلترها</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addFilter()">
+                <i class="bx bx-plus"></i> فیلتر
+            </button>
+        </div>
+        <div class="card-body" id="filterBody">
+            <p class="text-muted small mb-0" id="noFilter">بدون فیلتر — همه رکوردها.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">گروه‌بندی و جمع</h5></div>
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">گروه‌بندی بر اساس</label>
+                <select asp-for="GroupByField" class="form-select field-select"><option value="">— بدون گروه‌بندی —</option></select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">جمع مقادیر فیلد (عددی)</label>
+                <select asp-for="SumField" class="form-select field-select numeric-only"><option value="">— فقط شمارش —</option></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bx bx-play me-1"></i> ذخیره و اجرا</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    const moduleFields = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ModuleFields));
+    const selectedColumns = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Columns));
+    const initialFilters = @Html.Raw(string.IsNullOrWhiteSpace(Model.FiltersJson) ? "{\"logic\":\"and\",\"items\":[]}" : Model.FiltersJson);
+    const initialGroupBy = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.GroupByField));
+    const initialSum = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SumField));
+    const numericTypes = ['Number', 'Decimal', 'Currency'];
+
+    function currentFields() {
+        return moduleFields[document.getElementById('moduleSelect').value] || [];
+    }
+
+    function renderColumns() {
+        const fields = currentFields();
+        const box = document.getElementById('columnsBox');
+        if (!fields.length) { box.innerHTML = '<p class="text-muted small">ابتدا ماژول را انتخاب کنید.</p>'; return; }
+        box.innerHTML = '<div class="row g-2">' + fields.map(f => `
+            <div class="col-md-3 col-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="Columns" value="${f.name}"
+                           id="col_${f.name}" ${selectedColumns.includes(f.name) ? 'checked' : ''} />
+                    <label class="form-check-label" for="col_${f.name}">${f.label}</label>
+                </div>
+            </div>`).join('') + '</div>';
+    }
+
+    function renderFieldSelects() {
+        const fields = currentFields();
+        document.querySelectorAll('.field-select').forEach(sel => {
+            const keep = sel.value || (sel.classList.contains('numeric-only') ? initialSum : initialGroupBy);
+            const first = sel.querySelector('option').outerHTML;
+            const usable = sel.classList.contains('numeric-only') ? fields.filter(f => numericTypes.includes(f.type)) : fields;
+            sel.innerHTML = first + usable.map(f => `<option value="${f.name}" ${f.name === keep ? 'selected' : ''}>${f.label}</option>`).join('');
+        });
+    }
+
+    function addFilter(cond) {
+        cond = cond || { field: '', op: 'equals', value: '' };
+        document.getElementById('noFilter').style.display = 'none';
+        const options = currentFields().map(f => `<option value="${f.name}" ${f.name === cond.field ? 'selected' : ''}>${f.label}</option>`).join('');
+        const row = document.createElement('div');
+        row.className = 'row g-2 mb-2 filter-row';
+        row.innerHTML = `
+            <div class="col-md-4"><select class="form-select form-select-sm f-field">${options}</select></div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm f-op">
+                    <option value="equals" ${cond.op==='equals'?'selected':''}>برابر با</option>
+                    <option value="notEquals" ${cond.op==='notEquals'?'selected':''}>مخالف با</option>
+                    <option value="contains" ${cond.op==='contains'?'selected':''}>شامل</option>
+                    <option value="greaterThan" ${cond.op==='greaterThan'?'selected':''}>بزرگ‌تر از</option>
+                    <option value="lessThan" ${cond.op==='lessThan'?'selected':''}>کوچک‌تر از</option>
+                    <option value="isEmpty" ${cond.op==='isEmpty'?'selected':''}>خالی است</option>
+                    <option value="isNotEmpty" ${cond.op==='isNotEmpty'?'selected':''}>خالی نیست</option>
+                </select>
+            </div>
+            <div class="col-md-4"><input class="form-control form-control-sm f-value" value="${cond.value ?? ''}" placeholder="مقدار" /></div>
+            <div class="col-md-1"><button type="button" class="btn btn-sm btn-icon btn-text-danger" onclick="this.closest('.filter-row').remove()"><i class="bx bx-x"></i></button></div>`;
+        document.getElementById('filterBody').appendChild(row);
+    }
+
+    document.getElementById('reportForm').addEventListener('submit', () => {
+        const items = [...document.querySelectorAll('.filter-row')].map(row => ({
+            field: row.querySelector('.f-field').value,
+            op: row.querySelector('.f-op').value,
+            value: row.querySelector('.f-value').value
+        })).filter(c => c.field);
+        document.getElementById('filtersJson').value = JSON.stringify({ logic: 'and', items });
+    });
+
+    document.getElementById('moduleSelect').addEventListener('change', () => {
+        renderColumns();
+        renderFieldSelects();
+        document.querySelectorAll('.filter-row').forEach(r => r.remove());
+    });
+
+    renderColumns();
+    renderFieldSelects();
+    (initialFilters.items || []).forEach(c => addFilter(c));
+</script>
+}

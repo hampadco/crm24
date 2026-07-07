@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fa" class="light-style layout-navbar-fixed layout-menu-fixed" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="vertical-menu-template">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] | @(ViewData["PanelTitle"] ?? "CRM24")</title>
+    <link rel="icon" type="image/x-icon" href="~/panel-assets/img/favicon/favicon.ico" />
+
+    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/boxicons.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/fontawesome.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/flag-icons.css" />
+
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/core.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/theme-default.css" />
+    <link rel="stylesheet" href="~/panel-assets/css/demo.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/rtl.css" />
+
+    <link rel="stylesheet" href="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/libs/apex-charts/apex-charts.css" />
+
+    <script src="~/panel-assets/vendor/js/helpers.js"></script>
+    <script src="~/panel-assets/js/config.js"></script>
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div class="layout-wrapper layout-content-navbar">
+        <div class="layout-container">
+            <partial name="_PanelMenu" />
+
+            <div class="layout-page">
+                <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
+                    <div class="container-fluid">
+                        <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+                            <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+                                <i class="bx bx-menu bx-sm"></i>
+                            </a>
+                        </div>
+
+                        <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+                            <div class="navbar-nav align-items-center">
+                                <span class="fw-semibold">@ViewData["PanelTitle"]</span>
+                            </div>
+
+                            <ul class="navbar-nav flex-row align-items-center ms-auto">
+                                <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
+                                    <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                                        <i class="bx bx-bell bx-sm"></i>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end py-0">
+                                        <li class="dropdown-menu-header border-bottom">
+                                            <div class="dropdown-header d-flex align-items-center py-3">
+                                                <h5 class="text-body mb-0 me-auto secondary-font">اعلان‌ها</h5>
+                                            </div>
+                                        </li>
+                                        <li class="border-top">
+                                            <div class="d-grid p-4">
+                                                <span class="text-muted text-center">اعلان جدیدی ندارید.</span>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </li>
+
+                                <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                                    <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+                                        <div class="avatar avatar-online">
+                                            <span class="avatar-initial rounded-circle bg-label-primary"><i class="bx bx-user"></i></span>
+                                        </div>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item" href="javascript:void(0);">
+                                                <span class="fw-semibold d-block">@(User.FindFirst("crm:full_name")?.Value ?? User.Identity?.Name ?? "کاربر مهمان")</span>
+                                            </a>
+                                        </li>
+                                        <li><div class="dropdown-divider"></div></li>
+                                        <li>
+                                            <a class="dropdown-item" asp-area="" asp-controller="Home" asp-action="Index">
+                                                <i class="bx bx-home-alt me-2"></i>
+                                                <span class="align-middle">بازگشت به سایت</span>
+                                            </a>
+                                        </li>
+                                        @if (ViewContext.RouteData.Values["area"]?.ToString() == "App")
+                                        {
+                                            <li>
+                                                <form asp-area="App" asp-controller="Account" asp-action="Logout" method="post">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bx bx-power-off me-2"></i>
+                                                        <span class="align-middle">خروج</span>
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        }
+                                        else if (ViewContext.RouteData.Values["area"]?.ToString() == "Owner")
+                                        {
+                                            <li>
+                                                <a class="dropdown-item" href="/Admin/Account/Logout">
+                                                    <i class="bx bx-power-off me-2"></i>
+                                                    <span class="align-middle">خروج</span>
+                                                </a>
+                                            </li>
+                                        }
+                                        else if (ViewContext.RouteData.Values["area"]?.ToString() == "Portal")
+                                        {
+                                            <li>
+                                                <form asp-area="Portal" asp-controller="Account" asp-action="Logout" method="post">
+                                                    <button type="submit" class="dropdown-item">
+                                                        <i class="bx bx-power-off me-2"></i>
+                                                        <span class="align-middle">خروج</span>
+                                                    </button>
+                                                </form>
+                                            </li>
+                                        }
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+
+                <div class="content-wrapper">
+                    <div class="container-fluid flex-grow-1 container-p-y">
+                        @if (User.FindFirst("crm:impersonated_by") is { } imp)
+                        {
+                            <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+                                <span>
+                                    <i class="bx bx-shield-quarter me-1"></i>
+                                    حالت پشتیبانی: شما به‌عنوان مالک (<strong>@imp.Value</strong>) وارد پنل این مشتری شده‌اید.
+                                </span>
+                                <form asp-area="App" asp-controller="Account" asp-action="StopImpersonation" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-warning">خروج و بازگشت به پنل مالک</button>
+                                </form>
+                            </div>
+                        }
+                        @RenderBody()
+                    </div>
+
+                    <footer class="content-footer footer bg-footer-theme">
+                        <div class="container-fluid d-flex flex-wrap justify-content-between py-3 flex-md-row flex-column">
+                            <div class="mb-2 mb-md-0">
+                                © ۱۴۰۵ CRM24 — تمامی حقوق محفوظ است.
+                            </div>
+                        </div>
+                    </footer>
+
+                    <div class="content-backdrop fade"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="layout-overlay layout-menu-toggle"></div>
+        <div class="drag-target"></div>
+    </div>
+
+    <script src="~/panel-assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="~/panel-assets/vendor/libs/popper/popper.js"></script>
+    <script src="~/panel-assets/vendor/js/bootstrap.js"></script>
+    <script src="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="~/panel-assets/vendor/libs/hammer/hammer.js"></script>
+    <script src="~/panel-assets/vendor/libs/i18n/i18n.js"></script>
+    <script src="~/panel-assets/vendor/js/menu.js"></script>
+    <script src="~/panel-assets/vendor/libs/apex-charts/apexcharts.js"></script>
+    <script src="~/panel-assets/js/main.js"></script>
+
+    @if (ViewContext.RouteData.Values["area"]?.ToString() == "App" && User.Identity?.IsAuthenticated == true)
+    {
+        <script src="~/lib/signalr/signalr.min.js"></script>
+        <script>
+            (function () {
+                var connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/hubs/notifications")
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("incomingCall", function (data) {
+                    var name = data.contactTitle || data.caller;
+                    var wrapper = document.createElement("div");
+                    wrapper.className = "position-fixed bottom-0 start-0 p-3";
+                    wrapper.style.zIndex = "9999";
+                    wrapper.innerHTML =
+                        '<div class="toast show" role="alert">' +
+                        '  <div class="toast-header bg-success text-white">' +
+                        '    <i class="bx bx-phone-incoming me-2"></i>' +
+                        '    <strong class="me-auto">تماس ورودی</strong>' +
+                        '    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
+                        '  </div>' +
+                        '  <div class="toast-body">' +
+                        '    <div class="mb-2">' + name + ' <span dir="ltr">(' + data.caller + ')</span></div>' +
+                        '    <a href="/App/m/calls/' + data.callRecordId + '/edit" class="btn btn-sm btn-primary">ثبت نتیجه تماس</a>' +
+                        '  </div>' +
+                        '</div>';
+                    document.body.appendChild(wrapper);
+                    setTimeout(function () { wrapper.remove(); }, 30000);
+                });
+
+                connection.start().catch(function () { /* اتصال لحظه‌ای در دسترس نیست */ });
+            })();
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

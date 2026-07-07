@@ -1,0 +1,54 @@
+@using Crm.Web.Services
+@model List<Crm.Core.Entities.Plan>
+@{
+    ViewData["Title"] = "تعرفه و پلن‌ها";
+}
+
+<section class="taben-section">
+    <div class="taben-container">
+        <div class="taben-section-header" style="text-align:center">
+            <h1 class="taben-section-title">تعرفه و پلن‌ها</h1>
+            <p style="color:var(--taben-muted); max-width:560px; margin:0.5rem auto 0">
+                با ۱۰ روز دوره آزمایشی رایگان شروع کنید؛ هر زمان خواستید پلن مناسب کسب‌وکارتان را انتخاب کنید.
+            </p>
+        </div>
+
+        @if (Model.Count == 0)
+        {
+            <p style="text-align:center; color:var(--taben-muted)">به‌زودی پلن‌های اشتراک اعلام می‌شوند.</p>
+        }
+        else
+        {
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.5rem; margin-top:2rem">
+                @foreach (var plan in Model)
+                {
+                    <div style="border:1px solid @(plan.IsFeatured ? "var(--taben-primary)" : "var(--taben-border)"); border-radius:16px; padding:2rem 1.5rem; background:#fff; position:relative; display:flex; flex-direction:column">
+                        @if (plan.IsFeatured)
+                        {
+                            <span style="position:absolute; top:-12px; right:50%; transform:translateX(50%); background:var(--taben-primary); color:#fff; padding:2px 14px; border-radius:999px; font-size:0.8rem">پیشنهادی</span>
+                        }
+                        <h3 style="margin:0 0 0.25rem">@plan.Name</h3>
+                        <p style="color:var(--taben-muted); min-height:2.5em; margin:0 0 1rem">@plan.Description</p>
+                        <div style="margin-bottom:1rem">
+                            <span style="font-size:1.8rem; font-weight:800">@PersianFormattingHelper.ToPersianDigits(plan.PriceMonthly.ToString("N0"))</span>
+                            <span style="color:var(--taben-muted)"> تومان / ماهانه</span>
+                        </div>
+                        <ul style="list-style:none; padding:0; margin:0 0 1.5rem; flex-grow:1">
+                            <li style="padding:0.3rem 0"><i class="fas fa-users" style="color:var(--taben-primary); margin-left:6px"></i> تا @PersianFormattingHelper.ToPersianDigits(plan.MaxUsers.ToString()) کاربر</li>
+                            <li style="padding:0.3rem 0"><i class="fas fa-database" style="color:var(--taben-primary); margin-left:6px"></i> @PersianFormattingHelper.ToPersianDigits(plan.MaxRecords.ToString("N0")) رکورد</li>
+                            <li style="padding:0.3rem 0"><i class="fas fa-hdd" style="color:var(--taben-primary); margin-left:6px"></i> @(plan.MaxStorageMb >= 1024 ? PersianFormattingHelper.ToPersianDigits((plan.MaxStorageMb / 1024).ToString()) + " گیگابایت" : PersianFormattingHelper.ToPersianDigits(plan.MaxStorageMb.ToString()) + " مگابایت") فضا</li>
+                            @foreach (var feature in plan.Features.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                            {
+                                <li style="padding:0.3rem 0"><i class="fas fa-check" style="color:var(--taben-primary); margin-left:6px"></i> @feature</li>
+                            }
+                        </ul>
+                        <a asp-area="App" asp-controller="Account" asp-action="Register"
+                           class="taben-btn @(plan.IsFeatured ? "taben-btn-primary" : "taben-btn-outline")" style="justify-content:center">
+                            شروع رایگان
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>

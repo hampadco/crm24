@@ -1,0 +1,46 @@
+@model ElementorBuilder.Models.ElementorContentViewModel
+@using ElementorBuilder.Options
+@{
+    var options = (ElementorBuilderOptions)ViewBag.Options!;
+    var wrapperClass = Model.WrapperClass;
+}
+
+<link rel="stylesheet" href="@options.FontAwesomePath">
+<link rel="stylesheet" href="@options.ContentCssPath">
+<style>
+    .@wrapperClass .elementor-widget-tools,
+    .@wrapperClass .elementor-section-tools,
+    .@wrapperClass .elementor-column-tools,
+    .@wrapperClass .elementor-add-section-btn,
+    .@wrapperClass .elementor-column-placeholder,
+    .@wrapperClass .elementor-empty-state,
+    .@wrapperClass .elementor-column-badge { display: none !important; }
+
+    .@wrapperClass .elementor-widget,
+    .@wrapperClass .elementor-section,
+    .@wrapperClass .elementor-column {
+        border: none !important;
+        cursor: default !important;
+        pointer-events: none !important;
+    }
+
+    .@wrapperClass .elementor-widget:hover,
+    .@wrapperClass .elementor-section:hover,
+    .@wrapperClass .elementor-column:hover {
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+
+    .@wrapperClass .elementor-widget-content a,
+    .@wrapperClass .elementor-widget-content button,
+    .@wrapperClass .elementor-widget-content input,
+    .@wrapperClass .elementor-widget-content audio,
+    .@wrapperClass .elementor-widget-content video,
+    .@wrapperClass .elementor-widget-content iframe {
+        pointer-events: auto !important;
+    }
+</style>
+<div class="@wrapperClass elementor-content-root">
+    @Html.Raw(Model.Html)
+</div>

@@ -1,0 +1,212 @@
+@inject Crm.Infrastructure.Services.MetadataService Metadata
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var currentPath = Context.Request.Path.Value ?? "";
+    var modules = await Metadata.GetActiveModulesAsync();
+}
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand demo">
+        <a asp-area="App" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
+            <span class="app-brand-logo demo">
+                <i class="bx bxs-analyse fs-3 text-primary"></i>
+            </span>
+            <span class="app-brand-text demo menu-text fw-bold ms-2">CRM24</span>
+        </a>
+
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
+            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
+        </a>
+    </div>
+
+    <div class="menu-divider mt-0"></div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <ul class="menu-inner py-1">
+        <li class="menu-item @(controller == "Dashboard" ? "active" : "")">
+            <a asp-area="App" asp-controller="Dashboard" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div>داشبورد</div>
+            </a>
+        </li>
+
+        @if (modules.Count > 0)
+        {
+            <li class="menu-header small text-uppercase"><span class="menu-header-text">ماژول‌ها</span></li>
+            @foreach (var module in modules)
+            {
+                <li class="menu-item @(currentPath.StartsWith($"/App/m/{module.Name}") ? "active" : "")">
+                    <a href="/App/m/@module.Name" class="menu-link">
+                        <i class="menu-icon tf-icons bx @module.Icon"></i>
+                        <div>@module.PluralLabel</div>
+                    </a>
+                </li>
+            }
+        }
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">مالی</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/products") ? "active" : "")">
+            <a href="/App/products" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-package"></i>
+                <div>محصولات و انبار</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/finance/quotes") ? "active" : "")">
+            <a href="/App/finance/quotes" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-file"></i>
+                <div>پیش‌فاکتورها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/finance/orders") ? "active" : "")">
+            <a href="/App/finance/orders" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-cart"></i>
+                <div>سفارش‌های فروش</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/finance/invoices") ? "active" : "")">
+            <a href="/App/finance/invoices" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-receipt"></i>
+                <div>فاکتورها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/commissions") ? "active" : "")">
+            <a href="/App/commissions" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-gift"></i>
+                <div>پورسانت</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">پروژه و خرید</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/projects") ? "active" : "")">
+            <a href="/App/projects" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-briefcase-alt-2"></i>
+                <div>پروژه‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/vendors") ? "active" : "")">
+            <a href="/App/vendors" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-store"></i>
+                <div>تأمین‌کنندگان</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/purchase-orders") ? "active" : "")">
+            <a href="/App/purchase-orders" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-cart-download"></i>
+                <div>سفارش‌های خرید</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">بازاریابی</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/campaigns") ? "active" : "")">
+            <a href="/App/campaigns" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-broadcast"></i>
+                <div>کمپین‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/webforms") ? "active" : "")">
+            <a href="/App/webforms" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-layout"></i>
+                <div>وب‌فرم‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/surveys") ? "active" : "")">
+            <a href="/App/surveys" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-poll"></i>
+                <div>نظرسنجی‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/templates") ? "active" : "")">
+            <a href="/App/templates" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-message-square-detail"></i>
+                <div>قالب‌های پیام</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">پشتیبانی</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/tickets") ? "active" : "")">
+            <a href="/App/tickets" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-support"></i>
+                <div>تیکت‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/contracts") ? "active" : "")">
+            <a href="/App/contracts" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-file-blank"></i>
+                <div>قراردادهای خدمات</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/warranties") ? "active" : "")">
+            <a href="/App/warranties" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-shield-quarter"></i>
+                <div>گارانتی‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/kb") ? "active" : "")">
+            <a href="/App/kb" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-book-open"></i>
+                <div>پایگاه دانش</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/portal-users") ? "active" : "")">
+            <a href="/App/portal-users" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-user-circle"></i>
+                <div>کاربران پورتال</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/leaves") ? "active" : "")">
+            <a href="/App/leaves" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-calendar-minus"></i>
+                <div>مرخصی و مأموریت</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">اتوماسیون و گزارش</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/workflows") ? "active" : "")">
+            <a href="/App/workflows" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-git-branch"></i>
+                <div>گردش‌کار</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/reports") ? "active" : "")">
+            <a href="/App/reports" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+                <div>گزارش‌ساز</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">ابزار</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/kanban") ? "active" : "")">
+            <a href="/App/kanban/opportunities" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-columns"></i>
+                <div>کاریز فروش</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/calendar") ? "active" : "")">
+            <a href="/App/calendar" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-calendar"></i>
+                <div>تقویم</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/recycle-bin") ? "active" : "")">
+            <a href="/App/recycle-bin" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-recycle"></i>
+                <div>سطل بازیابی</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">تنظیمات</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/App/integrations") ? "active" : "")">
+            <a href="/App/integrations" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-plug"></i>
+                <div>یکپارچگی‌ها و API</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/App/subscription") ? "active" : "")">
+            <a href="/App/subscription" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-badge-check"></i>
+                <div>اشتراک و تمدید</div>
+            </a>
+        </li>
+    </ul>
+</aside>

@@ -1,0 +1,124 @@
+@using Crm.Core.Entities
+@model WebForm
+@{
+    var modules = (IReadOnlyList<ModuleDef>)ViewBag.Modules;
+    var users = (Dictionary<int, string>)ViewBag.Users;
+}
+
+<h4 class="mb-4"><i class="bx bx-layout text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+    <input type="hidden" name="fieldsJson" id="fieldsJson" value="@Model.FieldsJson" />
+
+    <div class="card mb-4" style="max-width:860px">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">نام فرم *</label>
+                <input type="text" name="name" value="@Model.Name" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">ماژول مقصد *</label>
+                <select name="moduleId" id="moduleId" class="form-select" required onchange="loadFields(this.value)">
+                    <option value="">انتخاب کنید...</option>
+                    @foreach (var module in modules)
+                    {
+                        <option value="@module.Id" selected="@(Model.ModuleId == module.Id)">@module.PluralLabel</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">پیام موفقیت</label>
+                <input type="text" name="successMessage" value="@Model.SuccessMessage" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">ارجاع خودکار به</label>
+                <select name="assignToUserId" class="form-select">
+                    <option value="">— بدون ارجاع —</option>
+                    @foreach (var user in users)
+                    {
+                        <option value="@user.Key" selected="@(Model.AssignToUserId == user.Key)">@user.Value</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-check">
+                    <input type="checkbox" name="useCaptcha" value="true" class="form-check-input" checked="@(Model.Id == 0 || Model.UseCaptcha)" />
+                    <span class="form-check-label">سوال امنیتی (Captcha)</span>
+                </label>
+            </div>
+            <div class="col-md-6">
+                <label class="form-check">
+                    <input type="checkbox" name="isActive" value="true" class="form-check-input" checked="@(Model.Id == 0 || Model.IsActive)" />
+                    <span class="form-check-label">فعال</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" style="max-width:860px">
+        <div class="card-header"><h5 class="mb-0">فیلدهای فرم</h5></div>
+        <div class="card-body">
+            <p class="text-muted small">فیلدهای موردنظر را انتخاب کنید. فیلد مخفی با مقدار پیش‌فرض بدون نمایش به کاربر ثبت می‌شود.</p>
+            <div id="fieldsBuilder" class="d-flex flex-column gap-2"></div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary" onclick="serializeFields()"><i class="bx bx-save me-1"></i> ذخیره</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    const initialConfig = JSON.parse(document.getElementById('fieldsJson').value || '[]');
+
+    async function loadFields(moduleId) {
+        const container = document.getElementById('fieldsBuilder');
+        container.innerHTML = '';
+        if (!moduleId) return;
+
+        const response = await fetch(`/App/webforms/module-fields/${moduleId}`);
+        const fields = await response.json();
+
+        for (const field of fields) {
+            const config = initialConfig.find(c => (c.Name || c.name) === field.name);
+            const row = document.createElement('div');
+            row.className = 'border rounded p-2 d-flex align-items-center gap-3 flex-wrap';
+            row.innerHTML = `
+                <label class="form-check mb-0" style="min-width:200px">
+                    <input type="checkbox" class="form-check-input fld-include" data-name="${field.name}" ${config ? 'checked' : ''} />
+                    <span class="form-check-label">${field.label}${field.required ? ' *' : ''}</span>
+                </label>
+                <label class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input fld-hidden" ${config && (config.Hidden || config.hidden) ? 'checked' : ''} />
+                    <span class="form-check-label text-muted">مخفی</span>
+                </label>
+                <input type="text" class="form-control form-control-sm fld-default" style="max-width:220px"
+                       placeholder="مقدار پیش‌فرض" value="${(config && (config.DefaultValue || config.defaultValue)) || ''}" />`;
+            container.appendChild(row);
+        }
+    }
+
+    function serializeFields() {
+        const configs = [];
+        document.querySelectorAll('#fieldsBuilder > div').forEach(row => {
+            const include = row.querySelector('.fld-include');
+            if (!include.checked) return;
+            configs.push({
+                Name: include.dataset.name,
+                Hidden: row.querySelector('.fld-hidden').checked,
+                DefaultValue: row.querySelector('.fld-default').value || null
+            });
+        });
+        document.getElementById('fieldsJson').value = JSON.stringify(configs);
+    }
+
+    const selectedModule = document.getElementById('moduleId').value;
+    if (selectedModule) loadFields(selectedModule);
+</script>
+}

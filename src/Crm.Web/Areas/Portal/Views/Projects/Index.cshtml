@@ -1,0 +1,41 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model List<Project>
+@{
+    ViewData["PanelTitle"] = "پورتال مشتری";
+}
+
+<h4 class="mb-4"><i class="bx bx-briefcase-alt-2 text-primary me-1"></i> پروژه‌های من</h4>
+
+<div class="row g-4">
+    @if (Model.Count == 0)
+    {
+        <div class="col-12 text-center text-muted py-5">پروژه‌ای برای نمایش وجود ندارد.</div>
+    }
+    @foreach (var project in Model)
+    {
+        var progress = project.Tasks.Count == 0 ? 0 : (int)project.Tasks.Average(t => t.ProgressPercent);
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-0">@project.Name</h5>
+                        <span class="badge @(project.Status switch { ProjectStatus.Active => "bg-label-success", ProjectStatus.OnHold => "bg-label-warning", ProjectStatus.Completed => "bg-label-info", _ => "bg-label-secondary" })">
+                            @(project.Status switch { ProjectStatus.Active => "در حال انجام", ProjectStatus.OnHold => "متوقف", ProjectStatus.Completed => "تکمیل‌شده", _ => "لغوشده" })
+                        </span>
+                    </div>
+                    <p class="text-muted small mb-3">
+                        @PersianDateHelper.ToJalaliDate(project.StartUtc) تا @PersianDateHelper.ToJalaliDate(project.EndUtc)
+                    </p>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">پیشرفت</span>
+                        <strong class="small">@progress%</strong>
+                    </div>
+                    <div class="progress" style="height:10px">
+                        <div class="progress-bar" style="width:@(progress)%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

@@ -1,0 +1,17 @@
+@model decimal
+@{
+    var fieldName = ViewData["FieldName"] as string ?? "Price";
+    var fieldId = ViewData["FieldId"] as string ?? fieldName;
+    var label = ViewData["Label"] as string ?? "قیمت";
+}
+
+<div class="admin-form-group col-4">
+    <label class="admin-form-label" for="@(fieldId)_display">@label <span class="admin-form-hint">(تومان)</span></label>
+    <div class="admin-price-wrap">
+        <span class="admin-price-suffix">تومان</span>
+        <input type="text" id="@(fieldId)_display" class="form-control admin-form-control admin-price-display"
+               value="@Model.ToFa()" inputmode="numeric" autocomplete="off" />
+        <input type="hidden" name="@fieldName" id="@fieldId" class="admin-price-value"
+               value="@((long)Model)" />
+    </div>
+</div>

@@ -1,0 +1,203 @@
+@using Crm.Core.Entities
+@model Crm.Web.Areas.App.Controllers.WorkflowFormModel
+@{
+    ViewData["PanelTitle"] = "گردش‌کار";
+}
+
+<h4 class="mb-4"><i class="bx bx-git-branch text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<form asp-action="Save" method="post" id="wfForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ConditionsJson" id="conditionsJson" />
+
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">۱ — محرک</h5></div>
+        <div class="card-body row g-3">
+            <div class="col-md-4">
+                <label class="form-label">نام قانون *</label>
+                <input asp-for="Name" class="form-control" required />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">ماژول *</label>
+                <select asp-for="ModuleId" class="form-select" id="moduleSelect" required>
+                    <option value="">— انتخاب —</option>
+                    @foreach (var module in Model.Modules)
+                    {
+                        <option value="@module.Id">@module.PluralLabel</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">محرک</label>
+                <select asp-for="Trigger" class="form-select" id="triggerSelect">
+                    <option value="RecordCreated">ایجاد رکورد</option>
+                    <option value="RecordUpdated">ویرایش رکورد</option>
+                    <option value="Scheduled">زمان‌بندی‌شده</option>
+                </select>
+            </div>
+            <div class="col-md-2" id="scheduleBox" style="display:none">
+                <label class="form-label">بازه</label>
+                <select asp-for="Schedule" class="form-select">
+                    <option value="Hourly">ساعتی</option>
+                    <option value="Daily">روزانه</option>
+                    <option value="Monthly">ماهانه</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">۲ — شرط‌ها</h5>
+            <div class="d-flex gap-3 align-items-center">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="condLogic" id="logicAnd" value="and" checked />
+                    <label class="form-check-label" for="logicAnd">همه شرط‌ها (و)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="condLogic" id="logicOr" value="or" />
+                    <label class="form-check-label" for="logicOr">حداقل یکی (یا)</label>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addCondition()">
+                    <i class="bx bx-plus"></i> شرط
+                </button>
+            </div>
+        </div>
+        <div class="card-body" id="condBody">
+            <p class="text-muted small mb-0" id="noCond">بدون شرط — قانون برای همه رکوردها اجرا می‌شود.</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">۳ — اکشن‌ها</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAction()">
+                <i class="bx bx-plus"></i> اکشن
+            </button>
+        </div>
+        <div class="card-body" id="actionBody"></div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره قانون</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    const moduleFields = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ModuleFields));
+    const initialConditions = @Html.Raw(string.IsNullOrWhiteSpace(Model.ConditionsJson) ? "{\"logic\":\"and\",\"items\":[]}" : Model.ConditionsJson);
+    const initialActions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Actions.Select(a => new { type = a.Type.ToString(), config = a.ConfigJson })));
+
+    const actionTypes = [
+        { v: 'SendEmail', label: 'ارسال ایمیل', fields: [['to','گیرنده'],['subject','موضوع'],['body','متن']] },
+        { v: 'SendSms', label: 'ارسال پیامک/پیام‌رسان', fields: [['to','شماره گیرنده'],['text','متن پیام']] },
+        { v: 'CreateTask', label: 'ایجاد وظیفه', fields: [['name','عنوان وظیفه'],['dueInDays','مهلت (روز بعد)'],['priority','اولویت (low/normal/high)']] },
+        { v: 'CreateEvent', label: 'ایجاد رویداد', fields: [['name','عنوان رویداد']] },
+        { v: 'UpdateField', label: 'بروزرسانی فیلد', fields: [['field','نام فیلد'],['value','مقدار جدید']] },
+        { v: 'CreateRecord', label: 'ایجاد رکورد', fields: [['module','نام ماژول هدف'],['name','عنوان رکورد']] },
+        { v: 'Notify', label: 'اعلان درون‌سیستمی', fields: [['title','عنوان'],['body','متن']] },
+        { v: 'ToggleTag', label: 'افزودن/حذف برچسب', fields: [['tag','نام برچسب'],['mode','add یا remove']] },
+        { v: 'SendToAccounting', label: 'ارسال به حسابداری', fields: [] },
+        { v: 'CallWebhook', label: 'فراخوانی وب‌هوک', fields: [['url','آدرس URL']] },
+        { v: 'RunCustomFunction', label: 'اجرای تابع سفارشی', fields: [['function','نام تابع']] }
+    ];
+
+    let condIdx = 0, actIdx = 0;
+
+    function fieldOptions(selected) {
+        const moduleId = document.getElementById('moduleSelect').value;
+        const fields = moduleFields[moduleId] || [];
+        return fields.map(f => `<option value="${f.name}" ${f.name === selected ? 'selected' : ''}>${f.label}</option>`).join('');
+    }
+
+    function addCondition(cond) {
+        cond = cond || { field: '', op: 'equals', value: '' };
+        document.getElementById('noCond').style.display = 'none';
+        const row = document.createElement('div');
+        row.className = 'row g-2 mb-2 cond-row';
+        row.innerHTML = `
+            <div class="col-md-4"><select class="form-select form-select-sm c-field">${fieldOptions(cond.field)}</select></div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm c-op">
+                    <option value="equals" ${cond.op==='equals'?'selected':''}>برابر با</option>
+                    <option value="notEquals" ${cond.op==='notEquals'?'selected':''}>مخالف با</option>
+                    <option value="contains" ${cond.op==='contains'?'selected':''}>شامل</option>
+                    <option value="greaterThan" ${cond.op==='greaterThan'?'selected':''}>بزرگ‌تر از</option>
+                    <option value="lessThan" ${cond.op==='lessThan'?'selected':''}>کوچک‌تر از</option>
+                    <option value="isEmpty" ${cond.op==='isEmpty'?'selected':''}>خالی است</option>
+                    <option value="isNotEmpty" ${cond.op==='isNotEmpty'?'selected':''}>خالی نیست</option>
+                </select>
+            </div>
+            <div class="col-md-4"><input class="form-control form-control-sm c-value" value="${cond.value ?? ''}" placeholder="مقدار" /></div>
+            <div class="col-md-1"><button type="button" class="btn btn-sm btn-icon btn-text-danger" onclick="this.closest('.cond-row').remove()"><i class="bx bx-x"></i></button></div>`;
+        document.getElementById('condBody').appendChild(row);
+    }
+
+    function addAction(act) {
+        act = act || { type: 'Notify', config: '{}' };
+        const i = actIdx++;
+        const config = JSON.parse(act.config || '{}');
+        const wrap = document.createElement('div');
+        wrap.className = 'border rounded p-3 mb-3 action-row';
+        wrap.dataset.idx = i;
+        const typeOptions = actionTypes.map(t => `<option value="${t.v}" ${t.v === act.type ? 'selected' : ''}>${t.label}</option>`).join('');
+        wrap.innerHTML = `
+            <div class="d-flex gap-2 align-items-start mb-2">
+                <select name="Actions[${i}].Type" class="form-select form-select-sm w-auto a-type" onchange="renderActionConfig(this.closest('.action-row'), {})">${typeOptions}</select>
+                <input type="hidden" name="Actions[${i}].ConfigJson" class="a-config" />
+                <button type="button" class="btn btn-sm btn-icon btn-text-danger ms-auto" onclick="this.closest('.action-row').remove()"><i class="bx bx-x"></i></button>
+            </div>
+            <div class="row g-2 a-fields"></div>
+            <div class="form-text">می‌توانید از placeholder فیلدها استفاده کنید؛ مثل {name} یا {city}</div>`;
+        document.getElementById('actionBody').appendChild(wrap);
+        renderActionConfig(wrap, config);
+    }
+
+    function renderActionConfig(wrap, config) {
+        const type = wrap.querySelector('.a-type').value;
+        const def = actionTypes.find(t => t.v === type);
+        const holder = wrap.querySelector('.a-fields');
+        holder.innerHTML = def.fields.map(([key, label]) =>
+            `<div class="col-md-4"><input class="form-control form-control-sm a-cfg" data-key="${key}" placeholder="${label}" value="${(config[key] ?? '').toString().replace(/"/g,'&quot;')}" /></div>`
+        ).join('');
+    }
+
+    document.getElementById('wfForm').addEventListener('submit', () => {
+        // شرط‌ها
+        const items = [...document.querySelectorAll('.cond-row')].map(row => ({
+            field: row.querySelector('.c-field').value,
+            op: row.querySelector('.c-op').value,
+            value: row.querySelector('.c-value').value
+        })).filter(c => c.field);
+        const logic = document.querySelector('[name="condLogic"]:checked').value;
+        document.getElementById('conditionsJson').value = JSON.stringify({ logic, items });
+
+        // پیکربندی اکشن‌ها
+        document.querySelectorAll('.action-row').forEach(wrap => {
+            const cfg = {};
+            wrap.querySelectorAll('.a-cfg').forEach(inp => { if (inp.value) cfg[inp.dataset.key] = inp.value; });
+            wrap.querySelector('.a-config').value = JSON.stringify(cfg);
+        });
+    });
+
+    document.getElementById('triggerSelect').addEventListener('change', e => {
+        document.getElementById('scheduleBox').style.display = e.target.value === 'Scheduled' ? '' : 'none';
+    });
+    document.getElementById('moduleSelect').addEventListener('change', () => {
+        document.querySelectorAll('.cond-row .c-field').forEach(sel => { sel.innerHTML = fieldOptions(sel.value); });
+    });
+
+    // مقداردهی اولیه (ویرایش)
+    if (document.getElementById('triggerSelect').value === 'Scheduled')
+        document.getElementById('scheduleBox').style.display = '';
+    (initialConditions.items || []).forEach(c => addCondition(c));
+    if (initialActions.length) initialActions.forEach(a => addAction(a));
+    else addAction();
+</script>
+}

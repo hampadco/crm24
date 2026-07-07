@@ -1,0 +1,13 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model TicketPriority
+@{
+    var cls = Model switch
+    {
+        TicketPriority.Low => "bg-label-secondary",
+        TicketPriority.Normal => "bg-label-info",
+        TicketPriority.High => "bg-label-warning",
+        _ => "bg-label-danger"
+    };
+}
+<span class="badge @cls">@TicketsController.PriorityLabel(Model)</span>

@@ -1,0 +1,13 @@
+@{
+    var tagNames = ViewBag.TagNames as string ?? string.Empty;
+}
+
+<div class="admin-form-group admin-tags-field">
+    <label for="tagNamesInput" class="admin-form-label">برچسب‌ها (تگ)</label>
+    <input type="hidden" name="tagNames" id="tagNames" value="@tagNames" />
+    <div class="admin-tags-box" id="tagNamesBox">
+        <div class="admin-tags-list" aria-live="polite"></div>
+        <input type="text" id="tagNamesInput" class="admin-tags-input" placeholder="تگ جدید… Enter" autocomplete="off" />
+    </div>
+    <div class="admin-form-text">هر تگ را بنویسید و Enter بزنید. برای حذف آخرین تگ، Backspace بزنید.</div>
+</div>

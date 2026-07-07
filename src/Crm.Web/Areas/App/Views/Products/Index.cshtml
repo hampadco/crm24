@@ -1,0 +1,97 @@
+@model List<Crm.Core.Entities.Product>
+@{
+    ViewData["PanelTitle"] = "محصولات و سرویس‌ها";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-package text-primary me-1"></i>
+        محصولات و سرویس‌ها
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.Count</span>
+    </h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> محصول جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-header pb-0">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" name="q" value="@ViewBag.Query" class="form-control" placeholder="جستجو در نام یا کد..." />
+                    <button class="btn btn-outline-primary" type="submit"><i class="bx bx-search"></i></button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>نام</th>
+                    <th>کد</th>
+                    <th>واحد</th>
+                    <th>قیمت فروش</th>
+                    <th>مالیات</th>
+                    <th>موجودی</th>
+                    <th>وضعیت</th>
+                    <th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-5">هنوز محصولی ثبت نشده است.</td></tr>
+                }
+                @foreach (var product in Model)
+                {
+                    <tr>
+                        <td>
+                            <strong>@product.Name</strong>
+                            @if (product.IsService)
+                            {
+                                <span class="badge bg-label-info ms-1">سرویس</span>
+                            }
+                        </td>
+                        <td class="text-muted">@(product.Sku ?? "—")</td>
+                        <td>@product.Unit</td>
+                        <td>@product.SalePrice.ToString("N0") تومان</td>
+                        <td>@(product.TaxPercent > 0 ? product.TaxPercent.ToString("0.#") + "%" : "—")</td>
+                        <td>
+                            @if (product.IsService || !product.TrackInventory)
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                            else if (product.StockQty <= product.ReorderPoint)
+                            {
+                                <span class="badge bg-label-danger">@product.StockQty.ToString("0.##") — کمبود!</span>
+                            }
+                            else
+                            {
+                                @product.StockQty.ToString("0.##")
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @(product.IsActive ? "bg-label-success" : "bg-label-secondary")">
+                                @(product.IsActive ? "فعال" : "غیرفعال")
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
+                                <i class="bx bx-edit"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@product.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('این محصول حذف شود؟');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

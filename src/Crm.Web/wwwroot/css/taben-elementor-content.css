@@ -1,0 +1,81 @@
+@import url('/_content/ElementorBuilder/css/elementor-content.css');
+
+.taben-elementor-content {
+    font-family: var(--taben-font, 'Vazirmatn', Tahoma, sans-serif);
+    font-size: var(--text-body, 0.8125rem);
+    color: var(--taben-text-body, #374151);
+    line-height: 1.7;
+    margin-top: 1.5rem;
+    max-width: 100%;
+    overflow-x: clip;
+    overflow-wrap: anywhere;
+}
+
+.taben-elementor-content .elementor-section,
+.taben-elementor-content .elementor-columns,
+.taben-elementor-content .elementor-column {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.taben-elementor-content .widget-heading h1,
+.taben-elementor-content .widget-heading h2,
+.taben-elementor-content .widget-heading h3 {
+    color: var(--taben-text, #111827);
+    font-weight: 700;
+}
+
+.taben-elementor-content .widget-text p {
+    color: var(--taben-text-body, #374151);
+}
+
+.taben-elementor-content .widget-button .btn-widget {
+    background: var(--taben-primary, #1a56db);
+    border-radius: var(--taben-radius-sm, 6px);
+    font-size: var(--text-small, 0.75rem);
+    padding: 0.5rem 1rem;
+}
+
+.taben-elementor-content .widget-button .btn-widget:hover {
+    background: var(--taben-primary-hover, #1648b8);
+    color: #fff;
+}
+
+.taben-elementor-content .widget-list ul {
+    padding-right: 1.1rem;
+}
+
+.taben-elementor-content .widget-list li {
+    margin-bottom: 0.35rem;
+    font-size: var(--text-small, 0.75rem);
+}
+
+.taben-elementor-content .widget-quote blockquote {
+    border-right-color: var(--taben-primary, #1a56db);
+    background: var(--taben-bg-muted, #f9fafb);
+}
+
+.taben-elementor-content .widget-icon i {
+    color: var(--taben-primary, #1a56db);
+}
+
+.taben-elementor-content .widget-audio {
+    background: var(--taben-bg-muted, #f9fafb);
+    border-color: var(--taben-border, #e5e7eb);
+}
+
+.taben-elementor-content .widget-audio-title {
+    color: var(--taben-text, #111827);
+}
+
+.taben-elementor-content .widget-audio-desc {
+    color: var(--taben-text-body, #374151);
+}
+
+.taben-elementor-content .widget-audio-player {
+    max-width: 100%;
+}
+
+.taben-elementor-content .elementor-section {
+    margin-bottom: 0.5rem;
+}

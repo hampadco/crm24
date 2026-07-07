@@ -1,0 +1,47 @@
+﻿@{
+    ViewData["Title"] = "خانه";
+}
+
+<div class="taben-page-home">
+@if (TempData["NewsletterSuccess"] is string successMessage)
+{
+    <div class="container pt-2">
+        <div class="taben-alert-success">@successMessage</div>
+    </div>
+}
+@if (TempData["NewsletterError"] is string errorMessage)
+{
+    <div class="container pt-2">
+        <div class="alert alert-danger">@errorMessage</div>
+    </div>
+}
+
+@await Component.InvokeAsync("HeroBanner")
+
+<div class="taben-home-main">
+    <div class="taben-home-fluid taben-home-container">
+        <div class="row g-2 g-md-3 taben-home-grid">
+            <div class="col-12 col-lg-6">
+                @await Component.InvokeAsync("LatestArticles")
+            </div>
+            <div class="col-12 col-lg-6">
+                @await Component.InvokeAsync("NutritionFaq")
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="taben-section-light taben-home-secondary" id="newsletter">
+    <div class="taben-home-fluid taben-home-container">
+        <div class="row g-2 g-md-3 taben-home-grid justify-content-center">
+            <div class="col-12 col-lg-6">
+                @await Component.InvokeAsync("Newsletter")
+            </div>
+        </div>
+    </div>
+</section>
+</div>
+
+@section Scripts {
+    <script src="~/js/taben-home.js" asp-append-version="true"></script>
+}

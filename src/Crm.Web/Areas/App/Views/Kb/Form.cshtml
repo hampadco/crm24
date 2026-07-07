@@ -1,0 +1,43 @@
+@using Crm.Core.Entities
+@model KbArticle
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+}
+
+<h4 class="mb-4"><i class="bx bx-book-open text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">عنوان *</label>
+                    <input type="text" name="title" class="form-control" value="@Model.Title" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">دسته‌بندی</label>
+                    <input type="text" name="category" class="form-control" value="@Model.Category" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">متن مقاله *</label>
+                    <textarea name="body" class="form-control" rows="10" required>@Model.Body</textarea>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="checkbox" name="isPublishedToPortal" value="true" class="form-check-input" id="pub"
+                               checked="@Model.IsPublishedToPortal" />
+                        <label class="form-check-label" for="pub">نمایش در پورتال مشتریان نهایی</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

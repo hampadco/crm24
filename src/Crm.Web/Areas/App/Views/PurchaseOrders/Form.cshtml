@@ -1,0 +1,99 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model PurchaseOrdersController.PoFormModel
+@{
+    var vendors = (List<Vendor>)ViewBag.Vendors;
+    var products = (List<Product>)ViewBag.Products;
+}
+
+<h4 class="mb-4"><i class="bx bx-cart-download text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="card mb-4">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">تأمین‌کننده *</label>
+                <select name="VendorId" class="form-select" required>
+                    <option value="">انتخاب کنید...</option>
+                    @foreach (var vendor in vendors)
+                    {
+                        <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">یادداشت</label>
+                <input type="text" name="Note" value="@Model.Note" class="form-control" />
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">آیتم‌ها</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLine()"><i class="bx bx-plus me-1"></i> افزودن ردیف</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table" id="linesTable">
+                <thead><tr><th style="width:220px">محصول</th><th>شرح *</th><th style="width:110px">تعداد</th><th style="width:160px">قیمت واحد خرید</th><th style="width:40px"></th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Lines.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <select name="Lines[@i].ProductId" class="form-select form-select-sm product-select" onchange="fillProduct(this)">
+                                    <option value="">— دستی —</option>
+                                    @foreach (var product in products)
+                                    {
+                                        <option value="@product.Id" data-name="@product.Name" selected="@(Model.Lines[i].ProductId == product.Id)">@product.Name</option>
+                                    }
+                                </select>
+                            </td>
+                            <td><input type="text" name="Lines[@i].Title" value="@Model.Lines[i].Title" class="form-control form-control-sm" /></td>
+                            <td><input type="number" name="Lines[@i].Quantity" value="@Model.Lines[i].Quantity.ToString("0.##")" class="form-control form-control-sm" step="0.01" min="0" /></td>
+                            <td><input type="number" name="Lines[@i].UnitCost" value="@Model.Lines[i].UnitCost.ToString("0")" class="form-control form-control-sm" min="0" /></td>
+                            <td><button type="button" class="btn btn-sm btn-text-danger" onclick="this.closest('tr').remove(); reindex()"><i class="bx bx-x"></i></button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    function addLine() {
+        const tbody = document.querySelector('#linesTable tbody');
+        const first = tbody.querySelector('tr');
+        const clone = first.cloneNode(true);
+        clone.querySelectorAll('input').forEach(i => i.value = i.type === 'number' ? (i.name.includes('Quantity') ? '1' : '0') : '');
+        clone.querySelector('select').selectedIndex = 0;
+        tbody.appendChild(clone);
+        reindex();
+    }
+    function reindex() {
+        document.querySelectorAll('#linesTable tbody tr').forEach((tr, idx) => {
+            tr.querySelectorAll('select, input').forEach(el => {
+                el.name = el.name.replace(/Lines\[\d+\]/, `Lines[${idx}]`);
+            });
+        });
+    }
+    function fillProduct(select) {
+        const option = select.selectedOptions[0];
+        if (!option.value) return;
+        const row = select.closest('tr');
+        row.querySelector('input[name$=".Title"]').value = option.dataset.name;
+    }
+</script>
+}

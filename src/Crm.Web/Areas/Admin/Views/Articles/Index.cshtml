@@ -1,0 +1,90 @@
+@model PagedList<Article>
+@{
+    ViewData["Title"] = "وبلاگ / مقالات";
+    var listQuery = ViewBag.ListQuery as ContentListQuery ?? new ContentListQuery();
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fas fa-plus ms-1"></i> مقاله جدید</a>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <partial name="_AdminListToolbar" model="listQuery" />
+        @if (Model.TotalCount > 0)
+        {
+            <partial name="_AdminListMeta" model="Model" />
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width:60px"></th>
+                    <th>عنوان</th>
+                    <th>دسته</th>
+                    <th>تگ‌ها</th>
+                    <th class="admin-slug-col">Slug</th>
+                    <th>تاریخ انتشار</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Items.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">موردی یافت نشد.</td>
+                    </tr>
+                }
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                            {
+                                <img src="@item.ThumbnailUrl" alt="" class="admin-thumb" />
+                            }
+                            else
+                            {
+                                <span class="admin-thumb admin-thumb-empty"><i class="fas fa-image"></i></span>
+                            }
+                        </td>
+                        <td>@item.Title</td>
+                        <td class="small">@(item.Category?.Name ?? "—")</td>
+                        <td class="small">
+                            @if (item.Tags.Any())
+                            {
+                                @foreach (var tag in item.Tags.Select(t => t.Tag.Name).OrderBy(n => n))
+                                {
+                                    <span class="admin-tag-badge">@tag</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td class="admin-slug-cell text-muted small">@item.Slug</td>
+                        <td>@PersianDateHelper.ToJalaliDate(item.PublishedAt)</td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">ویرایش</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('این مقاله حذف شود؟');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="admin-card-footer">
+            <partial name="_AdminPagination" model="Model" />
+        </div>
+    }
+</div>

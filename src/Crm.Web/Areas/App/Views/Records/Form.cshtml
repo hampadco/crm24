@@ -1,0 +1,34 @@
+@model Crm.Web.Areas.App.Models.RecordFormViewModel
+@{
+    ViewData["PanelTitle"] = Model.Module.PluralLabel;
+    var isEdit = Model.RecordId is not null;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bx @Model.Module.Icon text-primary me-1"></i>
+        @(isEdit ? $"ویرایش {Model.Module.SingularLabel}" : $"{Model.Module.SingularLabel} جدید")
+    </h4>
+    <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary">
+        <i class="bx bx-right-arrow-alt me-1"></i> بازگشت به لیست
+    </a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        <form method="post"
+              asp-action="@(isEdit ? "Edit" : "Create")"
+              asp-route-moduleName="@Model.Module.Name"
+              asp-route-id="@Model.RecordId">
+            <partial name="_DynamicForm" model="Model" />
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save me-1"></i> ذخیره
+                </button>
+                <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-label-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

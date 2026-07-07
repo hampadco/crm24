@@ -1,0 +1,61 @@
+# استقرار Production (Cloud یا On-Premise):
+#   docker compose -f docker-compose.deploy.yml up -d --build
+# متغیرها را قبل از اجرا در .env یا محیط ست کنید: POSTGRES_PASSWORD
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: crm24-db
+    environment:
+      POSTGRES_DB: crm24
+      POSTGRES_USER: crm24
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - crm24_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm24 -d crm24"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: src/Crm.Web/Dockerfile
+    container_name: crm24-web
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=crm24;Username=crm24;Password=${POSTGRES_PASSWORD}"
+    ports:
+      - "8080:8080"
+    volumes:
+      - crm24_uploads:/app/wwwroot/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Backup خودکار روزانه Postgres — خروجی در ولوم crm24_backups (۱۴ نسخه آخر)
+  backup:
+    image: postgres:16
+    container_name: crm24-backup
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - crm24_backups:/backups
+    entrypoint: >
+      bash -c 'while true; do
+        pg_dump -h postgres -U crm24 -d crm24 -F c -f "/backups/crm24-$$(date +%Y%m%d-%H%M).dump" &&
+        ls -1t /backups/crm24-*.dump 2>/dev/null | tail -n +15 | xargs -r rm --;
+        sleep 86400;
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  crm24_pgdata:
+  crm24_uploads:
+  crm24_backups:

@@ -1,0 +1,40 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@using Crm.Web.Areas.App.Controllers
+@model List<Campaign>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-broadcast text-primary me-1"></i> کمپین‌های تبلیغاتی</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> کمپین جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>نام</th><th>کانال</th><th>بازه</th><th>بودجه</th><th>اعضا</th><th>وضعیت</th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">کمپینی ثبت نشده است.</td></tr>
+                }
+                @foreach (var campaign in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@campaign.Id"><strong>@campaign.Name</strong></a></td>
+                        <td class="text-muted">@(campaign.Channel ?? "—")</td>
+                        <td class="text-muted">@PersianDateHelper.ToJalaliDate(campaign.StartUtc) تا @PersianDateHelper.ToJalaliDate(campaign.EndUtc)</td>
+                        <td>@campaign.Budget.ToString("N0")</td>
+                        <td>@campaign.Members.Count</td>
+                        <td>
+                            <span class="badge @(campaign.Status switch { CampaignStatus.Active => "bg-label-success", CampaignStatus.Planned => "bg-label-info", CampaignStatus.Finished => "bg-label-secondary", _ => "bg-label-danger" })">
+                                @CampaignsController.StatusLabel(campaign.Status)
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

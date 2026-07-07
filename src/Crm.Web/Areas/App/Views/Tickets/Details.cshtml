@@ -1,0 +1,133 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Services
+@model Ticket
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+    Dictionary<int, string> users = ViewBag.Users;
+    Warranty? warranty = ViewBag.Warranty;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-support text-primary me-1"></i>
+        تیکت #@Model.Number — @Model.Subject
+        <partial name="_TicketStatusBadge" model="Model.Status" />
+        <partial name="_PriorityBadge" model="Model.Priority" />
+        @if (Model.EscalatedAtUtc is not null)
+        {
+            <span class="badge bg-label-danger">نقض SLA</span>
+        }
+    </h4>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                @foreach (var message in Model.Messages)
+                {
+                    <div class="d-flex mb-3 @(message.IsFromCustomer ? "" : "flex-row-reverse")">
+                        <div class="p-3 rounded @(message.IsFromCustomer ? "bg-lighter" : "bg-label-primary")" style="max-width:80%">
+                            <div class="small text-muted mb-1">
+                                <strong>@message.AuthorName</strong>
+                                — @PersianDateHelper.ToJalaliDate(message.CreatedAtUtc) @message.CreatedAtUtc.ToString("HH:mm")
+                                @(message.IsFromCustomer ? "(مشتری)" : "(کارشناس)")
+                            </div>
+                            <div style="white-space:pre-wrap">@message.Body</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (Model.Status != TicketStatus.Closed)
+        {
+            <div class="card">
+                <div class="card-body">
+                    <form action="/App/tickets/@Model.Id/reply" method="post">
+                        @Html.AntiForgeryToken()
+                        <label class="form-label">پاسخ کارشناس</label>
+                        <textarea name="body" class="form-control mb-3" rows="4" required></textarea>
+                        <button type="submit" class="btn btn-primary"><i class="bx bx-send me-1"></i> ارسال پاسخ</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">مدیریت تیکت</h5></div>
+            <div class="card-body">
+                <form action="/App/tickets/@Model.Id/status" method="post" class="mb-3">
+                    @Html.AntiForgeryToken()
+                    <label class="form-label">تغییر وضعیت</label>
+                    <div class="input-group">
+                        <select name="status" class="form-select">
+                            @foreach (var st in Enum.GetValues<TicketStatus>())
+                            {
+                                <option value="@st" selected="@(st == Model.Status)">@TicketsController.StatusLabel(st)</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary">ثبت</button>
+                    </div>
+                </form>
+                <form action="/App/tickets/@Model.Id/assign" method="post">
+                    @Html.AntiForgeryToken()
+                    <label class="form-label">ارجاع به کارشناس</label>
+                    <div class="input-group">
+                        <select name="userId" class="form-select">
+                            @foreach (var (id, name) in users)
+                            {
+                                <option value="@id" selected="@(id == Model.AssignedUserId)">@name</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary">ارجاع</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">اطلاعات</h5></div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0 d-grid gap-2">
+                    <li><span class="text-muted">ثبت:</span> @PersianDateHelper.ToJalaliDate(Model.CreatedAtUtc) @Model.CreatedAtUtc.ToString("HH:mm")</li>
+                    @if (Model.DueAtUtc is DateTime due)
+                    {
+                        <li><span class="text-muted">مهلت SLA:</span> @PersianDateHelper.ToJalaliDate(due) @due.ToString("HH:mm")</li>
+                    }
+                    @if (Model.FirstResponseAtUtc is DateTime fr)
+                    {
+                        <li><span class="text-muted">اولین پاسخ:</span> @PersianDateHelper.ToJalaliDate(fr) @fr.ToString("HH:mm")</li>
+                    }
+                    @if (Model.PortalUser is not null)
+                    {
+                        <li><span class="text-muted">ثبت از پورتال:</span> @Model.PortalUser.FullName</li>
+                    }
+                    @if (Model.ServiceContract is not null)
+                    {
+                        <li>
+                            <span class="text-muted">قرارداد:</span> @Model.ServiceContract.Name
+                            <span class="badge bg-label-info">@Model.ServiceContract.TicketsUsed@(Model.ServiceContract.MaxTickets > 0 ? $" از {Model.ServiceContract.MaxTickets}" : "") تیکت</span>
+                        </li>
+                    }
+                    @if (warranty is not null)
+                    {
+                        var valid = warranty.EndUtc > DateTime.UtcNow;
+                        <li>
+                            <span class="text-muted">گارانتی:</span> @warranty.SerialNumber
+                            <span class="badge @(valid ? "bg-label-success" : "bg-label-danger")">
+                                @(valid ? $"معتبر تا {PersianDateHelper.ToJalaliDate(warranty.EndUtc)}" : "منقضی")
+                            </span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,54 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model List<Warranty>
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-shield-quarter text-primary me-1"></i> گارانتی‌ها</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> گارانتی جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-header pb-0">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" name="q" value="@ViewBag.Query" class="form-control" placeholder="جستجوی سریال یا مشتری..." />
+                    <button class="btn btn-outline-primary" type="submit"><i class="bx bx-search"></i></button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>سریال</th><th>محصول</th><th>مشتری</th><th>بازه گارانتی</th><th>وضعیت</th></tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-5">گارانتی ثبت نشده است.</td></tr>
+                }
+                @foreach (var warranty in Model)
+                {
+                    var valid = warranty.EndUtc > DateTime.UtcNow;
+                    <tr>
+                        <td><strong>@warranty.SerialNumber</strong></td>
+                        <td>@(warranty.Product?.Name ?? "—")</td>
+                        <td>@warranty.CustomerName</td>
+                        <td>@PersianDateHelper.ToJalaliDate(warranty.StartUtc) تا @PersianDateHelper.ToJalaliDate(warranty.EndUtc)</td>
+                        <td>
+                            <span class="badge @(valid ? "bg-label-success" : "bg-label-danger")">
+                                @(valid ? "معتبر" : "منقضی")
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

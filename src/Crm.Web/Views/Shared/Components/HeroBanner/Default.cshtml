@@ -1,0 +1,16 @@
+@model Crm.Web.ViewComponents.HeroBannerViewModel
+
+<section class="taben-hero" style="background-image: url('@Model.BackgroundUrl')">
+    <div class="taben-hero-inner">
+        <h1>@Model.Headline</h1>
+        <p>@Model.Subtitle</p>
+        <div class="taben-hero-actions">
+            <a asp-area="App" asp-controller="Account" asp-action="Register" class="taben-btn taben-btn-primary">
+                <i class="fas fa-rocket"></i> شروع رایگان
+            </a>
+            <a asp-controller="Articles" asp-action="Index" class="taben-btn taben-btn-outline">
+                <i class="fas fa-book-open"></i> مطالعه مقالات
+            </a>
+        </div>
+    </div>
+</section>

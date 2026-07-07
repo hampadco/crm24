@@ -1,0 +1,41 @@
+@model IReadOnlyList<Crm.Web.Models.Article>
+@{
+    const int visibleCount = 3;
+    var scrollable = Model.Count > 1;
+}
+
+<section class="taben-section-box taben-section-box--home">
+    <div class="taben-section-head">
+        <h2 class="taben-section-title"><i class="fas fa-newspaper"></i> آخرین مقالات</h2>
+        <a asp-controller="Articles" asp-action="Index" class="taben-view-all">مشاهده همه <i class="fas fa-chevron-left"></i></a>
+    </div>
+
+    <div class="taben-carousel@(scrollable ? " is-scrollable" : "")" data-taben-carousel data-visible="@visibleCount">
+        <button type="button" class="taben-carousel-arrow taben-carousel-arrow--prev" data-carousel-prev aria-label="قبلی">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+
+        <div class="taben-carousel-viewport">
+            <div class="taben-carousel-track">
+                @foreach (var article in Model)
+                {
+                    <div class="taben-carousel-slide">
+                        <a asp-controller="Articles" asp-action="Detail" asp-route-slug="@article.Slug" class="taben-hcard taben-hcard--article">
+                            <span class="taben-hcard-media">
+                                <img src="@article.ThumbnailUrl" alt="@article.Title" loading="lazy" />
+                            </span>
+                            <span class="taben-hcard-body">
+                                <span class="taben-hcard-title">@article.Title</span>
+                                <span class="taben-hcard-meta"><i class="far fa-calendar"></i> @PersianDateHelper.ToJalaliDate(article.PublishedAt)</span>
+                            </span>
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <button type="button" class="taben-carousel-arrow taben-carousel-arrow--next" data-carousel-next aria-label="بعدی">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+    </div>
+</section>

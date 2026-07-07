@@ -1,0 +1,75 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model List<Crm.Web.Areas.Owner.Controllers.TenantListItem>
+@{
+    ViewData["Title"] = "مدیریت Tenant ها";
+    ViewData["PanelTitle"] = "پنل مالک CRM24";
+    var status = ViewData["Status"] as TenantStatus?;
+}
+
+<h4 class="mb-4"><i class="bx bx-buildings text-primary me-1"></i> مدیریت Tenant ها</h4>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-header pb-0">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" name="q" value="@ViewData["Search"]" class="form-control" placeholder="جستجوی نام یا شناسه..." />
+                    <button class="btn btn-outline-primary" type="submit"><i class="bx bx-search"></i></button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select" onchange="this.form.submit()">
+                    <option value="">همه وضعیت‌ها</option>
+                    <option value="Trial" selected="@(status == TenantStatus.Trial)">آزمایشی</option>
+                    <option value="Active" selected="@(status == TenantStatus.Active)">فعال</option>
+                    <option value="Suspended" selected="@(status == TenantStatus.Suspended)">معلق</option>
+                    <option value="Expired" selected="@(status == TenantStatus.Expired)">منقضی</option>
+                </select>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>نام</th>
+                    <th>شناسه</th>
+                    <th>وضعیت</th>
+                    <th>کاربر</th>
+                    <th>رکورد</th>
+                    <th>تاریخ ثبت</th>
+                    <th>پایان تریال</th>
+                    <th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-5">موردی یافت نشد.</td></tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="text-muted">@item.Tenant.Id</td>
+                        <td><a asp-action="Details" asp-route-id="@item.Tenant.Id" class="fw-semibold">@item.Tenant.Name</a></td>
+                        <td dir="ltr"><code>@item.Tenant.Slug</code></td>
+                        <td><partial name="_TenantStatusBadge" model="item.Tenant.Status" /></td>
+                        <td>@item.UserCount</td>
+                        <td>@item.RecordCount</td>
+                        <td>@PersianDateHelper.ToJalaliDate(item.Tenant.CreatedAtUtc)</td>
+                        <td>@(item.Tenant.TrialEndsAtUtc is DateTime t ? PersianDateHelper.ToJalaliDate(t) : "—")</td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@item.Tenant.Id" class="btn btn-sm btn-icon btn-text-secondary" title="جزئیات">
+                                <i class="bx bx-show"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

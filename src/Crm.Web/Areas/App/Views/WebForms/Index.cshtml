@@ -1,0 +1,50 @@
+@using Crm.Core.Entities
+@model List<WebForm>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-layout text-primary me-1"></i> وب‌فرم‌ها</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> وب‌فرم جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>نام</th><th>ماژول</th><th>ارسال‌ها</th><th>وضعیت</th><th>لینک عمومی</th><th></th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">وب‌فرمی ساخته نشده است.</td></tr>
+                }
+                @foreach (var form in Model)
+                {
+                    var publicUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/f/{form.PublicKey}";
+                    <tr>
+                        <td><strong>@form.Name</strong></td>
+                        <td class="text-muted">@form.Module.PluralLabel</td>
+                        <td>@form.SubmissionCount</td>
+                        <td><span class="badge @(form.IsActive ? "bg-label-success" : "bg-label-secondary")">@(form.IsActive ? "فعال" : "غیرفعال")</span></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1">
+                                <a href="@publicUrl" target="_blank" class="text-truncate" style="max-width:220px" dir="ltr">@publicUrl</a>
+                                <button type="button" class="btn btn-sm btn-text-secondary" title="کپی کد iFrame"
+                                        onclick="navigator.clipboard.writeText('<iframe src=&quot;@publicUrl&quot; width=&quot;100%&quot; height=&quot;520&quot; frameborder=&quot;0&quot;></iframe>')">
+                                    <i class="bx bx-code-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@form.Id" class="btn btn-sm btn-outline-primary"><i class="bx bx-edit"></i></a>
+                            <form asp-action="Delete" asp-route-id="@form.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('حذف شود؟')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

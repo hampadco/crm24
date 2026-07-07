@@ -1,0 +1,20 @@
+@using Crm.Core.Entities
+@model KbArticle
+@{
+    ViewData["PanelTitle"] = "پورتال مشتری";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-book-open text-primary me-1"></i> @Model.Title</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+</div>
+
+<div class="card" style="max-width:900px">
+    <div class="card-body">
+        @if (Model.Category is not null)
+        {
+            <span class="badge bg-label-info mb-3">@Model.Category</span>
+        }
+        <div style="white-space:pre-wrap">@Model.Body</div>
+    </div>
+</div>

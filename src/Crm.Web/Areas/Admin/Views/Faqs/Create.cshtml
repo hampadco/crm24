@@ -1,0 +1,42 @@
+@model FaqItem
+@{
+    ViewData["Title"] = "سؤال جدید";
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">بازگشت به لیست</a>
+    </div>
+</div>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="All" class="admin-alert admin-alert-danger"></div>
+
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2><i class="fas fa-question-circle ms-1"></i> سؤال متداول</h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="admin-form-grid">
+                <div class="admin-form-group col-12">
+                    <label asp-for="Question" class="admin-form-label">سؤال</label>
+                    <input asp-for="Question" class="form-control admin-form-control" />
+                    <span asp-validation-for="Question" class="text-danger small"></span>
+                </div>
+                <div class="admin-form-group col-12">
+                    <label asp-for="Answer" class="admin-form-label">پاسخ</label>
+                    <textarea asp-for="Answer" class="form-control admin-form-control" rows="5"></textarea>
+                </div>
+                <div class="admin-form-group col-4">
+                    <label asp-for="SortOrder" class="admin-form-label">ترتیب نمایش</label>
+                    <input asp-for="SortOrder" class="form-control admin-form-control" type="number" />
+                </div>
+            </div>
+            <div class="admin-form-actions mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save ms-1"></i> ذخیره</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </div>
+    </div>
+</form>

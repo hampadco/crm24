@@ -1,0 +1,101 @@
+@model Crm.Web.Areas.App.Controllers.ReportRunViewModel
+@{
+    ViewData["PanelTitle"] = "گزارش‌ها";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-bar-chart-alt-2 text-primary me-1"></i>
+        @Model.Report.Name
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount رکورد</span>
+    </h4>
+    <div class="d-flex gap-2">
+        <a href="/App/reports/@Model.Report.Id/excel" class="btn btn-outline-success">
+            <i class="bx bx-download me-1"></i> خروجی اکسل
+        </a>
+        <a asp-action="Edit" asp-route-id="@Model.Report.Id" class="btn btn-outline-secondary">
+            <i class="bx bx-edit me-1"></i> ویرایش گزارش
+        </a>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+@if (Model.Groups.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">خلاصه گروه‌بندی</h5></div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>گروه</th>
+                        <th>تعداد</th>
+                        @if (Model.Report.SumField is not null)
+                        {
+                            <th>جمع</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (group, count, sum) in Model.Groups)
+                    {
+                        <tr>
+                            <td>@group</td>
+                            <td>@count</td>
+                            @if (Model.Report.SumField is not null)
+                            {
+                                <td>@sum.ToString("N0")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <td><strong>جمع کل</strong></td>
+                        <td><strong>@Model.TotalCount</strong></td>
+                        @if (Model.Report.SumField is not null)
+                        {
+                            <td><strong>@Model.TotalSum.ToString("N0")</strong></td>
+                        }
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">@Model.Report.Module.PluralLabel</h5></div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    @foreach (var column in Model.Columns)
+                    {
+                        <th>@column.Label</th>
+                    }
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr><td colspan="@Model.Columns.Count" class="text-center text-muted py-5">رکوردی مطابق فیلترها یافت نشد.</td></tr>
+                }
+                @foreach (var row in Model.Rows.Take(500))
+                {
+                    <tr>
+                        @foreach (var column in Model.Columns)
+                        {
+                            <td>@(row.Values.GetValueOrDefault(column.Name) ?? "—")</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Rows.Count > 500)
+    {
+        <div class="card-footer text-muted small">۵۰۰ ردیف اول نمایش داده شد — برای همه ردیف‌ها خروجی اکسل بگیرید.</div>
+    }
+</div>

@@ -1,0 +1,15 @@
+@model Crm.Web.Models.Admin.ContentListQuery
+
+<form method="get" class="admin-list-toolbar">
+    <div class="input-group admin-list-search">
+        <input type="search" name="search" value="@Model.Search" class="form-control admin-form-control"
+               placeholder="جستجو…" autocomplete="off" />
+        <button type="submit" class="btn btn-outline-secondary">
+            <i class="fas fa-search"></i>
+        </button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Search))
+    {
+        <a asp-action="Index" class="btn btn-sm btn-link text-muted">پاک کردن جستجو</a>
+    }
+</form>

@@ -1,0 +1,32 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model List<SlaPolicy>
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+}
+
+<h4 class="mb-4"><i class="bx bx-timer text-primary me-1"></i> تنظیمات SLA (مهلت پاسخ)</h4>
+
+<partial name="_Alerts" />
+
+<div class="card" style="max-width:520px">
+    <div class="card-body">
+        <form asp-action="SaveSla" method="post">
+            @Html.AntiForgeryToken()
+            @foreach (var policy in Model)
+            {
+                <div class="row g-2 align-items-center mb-3">
+                    <div class="col-5"><partial name="_PriorityBadge" model="policy.Priority" /></div>
+                    <div class="col-7">
+                        <div class="input-group">
+                            <input type="number" name="hours[@((int)policy.Priority)]" class="form-control"
+                                   value="@policy.ResponseHours" min="1" max="720" />
+                            <span class="input-group-text">ساعت</span>
+                        </div>
+                    </div>
+                </div>
+            }
+            <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,101 @@
+@using Crm.Core.Entities
+@model Crm.Web.Areas.App.Models.RecordFormViewModel
+
+@* فرم داینامیک: از روی FieldDef های ماژول ساخته می‌شود؛ دسترسی per-field پروفایل اعمال می‌شود. *@
+<div class="row g-3">
+    @foreach (var field in Model.Fields)
+    {
+        var access = Model.AccessFor(field);
+        if (access == FieldAccess.Hidden)
+        {
+            continue;
+        }
+
+        var readOnly = access == FieldAccess.ReadOnly;
+        var name = $"f_{field.Name}";
+        var value = Model.Values.GetValueOrDefault(field.Name) ?? field.DefaultValue;
+        var hasError = Model.Errors.TryGetValue(field.Name, out var error);
+        var inputClass = $"form-control{(hasError ? " is-invalid" : "")}";
+        var colClass = field.Type == FieldType.MultilineText ? "col-12" : "col-md-6";
+
+        <div class="@colClass">
+            <label class="form-label" for="@name">
+                @field.Label
+                @if (field.IsRequired)
+                {
+                    <span class="text-danger">*</span>
+                }
+            </label>
+
+            @switch (field.Type)
+            {
+                case FieldType.MultilineText:
+                    <textarea id="@name" name="@name" rows="4" class="@inputClass" readonly="@readOnly">@value</textarea>
+                    break;
+
+                case FieldType.Picklist:
+                    <select id="@name" name="@name" class="form-select @(hasError ? "is-invalid" : "")" disabled="@readOnly">
+                        @if (!field.IsRequired)
+                        {
+                            <option value="">— انتخاب کنید —</option>
+                        }
+                        @foreach (var pick in field.PicklistValues.OrderBy(p => p.SortOrder))
+                        {
+                            <option value="@pick.Value" selected="@(pick.Value == value)">@pick.Label</option>
+                        }
+                    </select>
+                    break;
+
+                case FieldType.Lookup:
+                    <select id="@name" name="@name" class="form-select @(hasError ? "is-invalid" : "")" disabled="@readOnly">
+                        <option value="">— انتخاب کنید —</option>
+                        @if (Model.LookupOptions.TryGetValue(field.Name, out var options))
+                        {
+                            @foreach (var (optId, optTitle) in options)
+                            {
+                                <option value="@optId" selected="@(optId.ToString() == value)">@optTitle</option>
+                            }
+                        }
+                    </select>
+                    break;
+
+                case FieldType.Checkbox:
+                    <div class="form-check mt-2">
+                        <input type="hidden" name="@name" value="@(value == "true" ? "true" : "false")" />
+                        <input type="checkbox" class="form-check-input" checked="@(value == "true")" disabled="@readOnly"
+                               onchange="this.previousElementSibling.value = this.checked ? 'true' : 'false'" />
+                    </div>
+                    break;
+
+                case FieldType.Number:
+                case FieldType.Decimal:
+                case FieldType.Currency:
+                    <input type="text" inputmode="numeric" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    break;
+
+                case FieldType.Date:
+                    <input type="date" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    break;
+
+                case FieldType.DateTime:
+                    <input type="datetime-local" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    break;
+
+                case FieldType.Email:
+                case FieldType.Phone:
+                case FieldType.Url:
+                    <input type="text" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    break;
+
+                default:
+                    <input type="text" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" />
+                    break;
+            }
+
+            @if (hasError)
+            {
+                <div class="invalid-feedback d-block">@error</div>
+            }
+        </div>
+    }
+</div>

@@ -1,0 +1,91 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model List<WorkflowRule>
+@{
+    ViewData["PanelTitle"] = "گردش‌کار";
+    Dictionary<int, (int Count, int Failed)> logCounts = ViewBag.LogCounts;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0"><i class="bx bx-git-branch text-primary me-1"></i> قوانین گردش‌کار</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> قانون جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>نام</th><th>ماژول</th><th>محرک</th><th>اکشن‌ها</th><th>اجراها</th><th>وضعیت</th><th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-5">هنوز قانونی تعریف نشده است.</td></tr>
+                }
+                @foreach (var rule in Model)
+                {
+                    var stats = logCounts.GetValueOrDefault(rule.Id);
+                    <tr>
+                        <td><strong>@rule.Name</strong></td>
+                        <td>@rule.Module.PluralLabel</td>
+                        <td>
+                            @(rule.Trigger switch
+                            {
+                                WorkflowTrigger.RecordCreated => "ایجاد رکورد",
+                                WorkflowTrigger.RecordUpdated => "ویرایش رکورد",
+                                _ => "زمان‌بندی " + (rule.Schedule switch
+                                {
+                                    WorkflowSchedule.Hourly => "(ساعتی)",
+                                    WorkflowSchedule.Monthly => "(ماهانه)",
+                                    _ => "(روزانه)"
+                                })
+                            })
+                        </td>
+                        <td>
+                            @foreach (var action in rule.Actions.OrderBy(a => a.SortOrder))
+                            {
+                                <span class="badge bg-label-primary me-1">@WorkflowsController.ActionLabel(action.Type)</span>
+                            }
+                        </td>
+                        <td>
+                            <a asp-action="Logs" asp-route-id="@rule.Id">
+                                @stats.Count اجرا
+                                @if (stats.Failed > 0)
+                                {
+                                    <span class="text-danger">(@stats.Failed خطا)</span>
+                                }
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge @(rule.IsActive ? "bg-label-success" : "bg-label-secondary")">
+                                @(rule.IsActive ? "فعال" : "غیرفعال")
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <form asp-action="Toggle" asp-route-id="@rule.Id" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-icon btn-text-warning" title="فعال/غیرفعال">
+                                    <i class="bx bx-power-off"></i>
+                                </button>
+                            </form>
+                            <a asp-action="Edit" asp-route-id="@rule.Id" class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
+                                <i class="bx bx-edit"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@rule.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('این قانون حذف شود؟');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

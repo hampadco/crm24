@@ -1,0 +1,7 @@
+@model dynamic
+@{
+    var from = (int)Model.FromIndex;
+    var to = (int)Model.ToIndex;
+    var total = (int)Model.TotalCount;
+}
+<span class="admin-list-meta">@from.ToFa()–@to.ToFa() از @total.ToFa() مورد</span>

@@ -1,0 +1,173 @@
+@model Crm.Web.Areas.App.Models.RecordListViewModel
+@{
+    ViewData["PanelTitle"] = Model.Module.PluralLabel;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx @Model.Module.Icon text-primary me-1"></i>
+        @Model.Module.PluralLabel
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount</span>
+    </h4>
+    <div class="d-flex gap-2">
+        @if (Model.HasKanban)
+        {
+            <a href="/App/kanban/@Model.Module.Name" class="btn btn-outline-primary">
+                <i class="bx bx-columns me-1"></i> نمای کاریز
+            </a>
+        }
+        @if (Model.Module.Name == "leads" && Model.CanEdit)
+        {
+            <span class="align-self-center text-muted small d-none d-lg-inline">برای تبدیل سرنخ از دکمه <i class="bx bx-transfer-alt"></i> هر ردیف استفاده کنید</span>
+        }
+        <a asp-action="Export" asp-route-moduleName="@Model.Module.Name" asp-route-q="@Model.Search" class="btn btn-outline-secondary">
+            <i class="bx bx-download me-1"></i> خروجی اکسل
+        </a>
+        @if (Model.CanCreate)
+        {
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="bx bx-upload me-1"></i> ورود CSV
+            </button>
+            <a asp-action="Create" asp-route-moduleName="@Model.Module.Name" class="btn btn-primary">
+                <i class="bx bx-plus me-1"></i> @Model.Module.SingularLabel جدید
+            </a>
+        }
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-header pb-0">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" name="q" value="@Model.Search" class="form-control" placeholder="جستجو..." />
+                    <button class="btn btn-outline-primary" type="submit"><i class="bx bx-search"></i></button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    @foreach (var field in Model.Fields)
+                    {
+                        <th>@field.Label</th>
+                    }
+                    <th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Records.Count == 0)
+                {
+                    <tr>
+                        <td colspan="@(Model.Fields.Count + 2)" class="text-center text-muted py-5">
+                            هنوز رکوردی ثبت نشده است.
+                        </td>
+                    </tr>
+                }
+                @foreach (var record in Model.Records)
+                {
+                    var data = Model.RecordData[record.Id];
+                    <tr>
+                        <td class="text-muted">@record.Id</td>
+                        @foreach (var field in Model.Fields)
+                        {
+                            var value = data.GetValueOrDefault(field.Name);
+                            <td>
+                                @if (field.Type == Crm.Core.Entities.FieldType.Picklist && value is not null)
+                                {
+                                    var pick = field.PicklistValues.FirstOrDefault(p => p.Value == value);
+                                    <span class="badge rounded-pill" style="background-color:@(pick?.Color ?? "#69809a")">@(pick?.Label ?? value)</span>
+                                }
+                                else if (field.Type == Crm.Core.Entities.FieldType.Lookup && value is not null)
+                                {
+                                    @(Model.LookupTitles.TryGetValue(field.Name, out var titles) && titles.TryGetValue(value, out var title) ? title : value)
+                                }
+                                else if (field.Type == Crm.Core.Entities.FieldType.Checkbox)
+                                {
+                                    @(value == "true" ? "✓" : "—")
+                                }
+                                else
+                                {
+                                    @(value ?? "—")
+                                }
+                            </td>
+                        }
+                        <td class="text-end">
+                            @if (Model.Module.Name == "leads" && Model.CanEdit)
+                            {
+                                <form action="/App/m/leads/@record.Id/convert" method="post" class="d-inline"
+                                      onsubmit="return confirm('این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-icon btn-text-success" title="تبدیل سرنخ">
+                                        <i class="bx bx-transfer-alt"></i>
+                                    </button>
+                                </form>
+                            }
+                            @if (Model.CanEdit)
+                            {
+                                <a asp-action="Edit" asp-route-moduleName="@Model.Module.Name" asp-route-id="@record.Id"
+                                   class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
+                                    <i class="bx bx-edit"></i>
+                                </a>
+                            }
+                            @if (Model.CanDelete)
+                            {
+                                <form asp-action="Delete" asp-route-moduleName="@Model.Module.Name" asp-route-id="@record.Id"
+                                      method="post" class="d-inline"
+                                      onsubmit="return confirm('این رکورد به سطل بازیابی منتقل شود؟');">
+                                    <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
+                                        <i class="bx bx-trash"></i>
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    @for (var p = 1; p <= Model.TotalPages; p++)
+                    {
+                        <li class="page-item @(p == Model.Page ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-moduleName="@Model.Module.Name"
+                               asp-route-q="@Model.Search" asp-route-page="@p">@p</a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="Import" asp-route-moduleName="@Model.Module.Name" method="post" enctype="multipart/form-data" class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ورود از فایل CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">
+                    ردیف اول باید نام ستون‌ها باشد. ستون‌ها با نام سیستمی یا برچسب فیلد تطبیق داده می‌شوند:
+                    @string.Join("، ", Model.Fields.Select(f => f.Label))
+                </p>
+                <input type="file" name="file" class="form-control" accept=".csv" required />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">شروع ورود</button>
+            </div>
+        </form>
+    </div>
+</div>

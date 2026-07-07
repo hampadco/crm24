@@ -1,0 +1,94 @@
+@model Crm.Web.Models.PaginationViewModel
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="taben-pagination" aria-label="صفحه‌بندی">
+        @if (Model.TotalCount > 0)
+        {
+            <p class="taben-pagination-info">
+                نمایش @Model.FromIndex.ToFa() تا @Model.ToIndex.ToFa() از @Model.TotalCount.ToFa() مورد
+            </p>
+        }
+
+        <ul class="taben-pagination-list">
+            <li class="@(Model.Page <= 1 ? "is-disabled" : "")">
+                @if (Model.Page > 1)
+                {
+                    <a asp-controller="@Model.ControllerName"
+                       asp-action="@Model.ActionName"
+                       asp-all-route-data="@Model.RouteForPage(Model.Page - 1)"
+                       aria-label="صفحه قبلی">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                }
+                else
+                {
+                    <span aria-hidden="true"><i class="fas fa-chevron-right"></i></span>
+                }
+            </li>
+
+            @{
+                var start = Math.Max(1, Model.Page - 2);
+                var end = Math.Min(Model.TotalPages, Model.Page + 2);
+            }
+
+            @if (start > 1)
+            {
+                <li>
+                    <a asp-controller="@Model.ControllerName"
+                       asp-action="@Model.ActionName"
+                       asp-all-route-data="@Model.RouteForPage(1)">@(1.ToFa())</a>
+                </li>
+                @if (start > 2)
+                {
+                    <li class="is-ellipsis"><span>…</span></li>
+                }
+            }
+
+            @for (var i = start; i <= end; i++)
+            {
+                <li class="@(i == Model.Page ? "is-active" : "")">
+                    @if (i == Model.Page)
+                    {
+                        <span aria-current="page">@i.ToFa()</span>
+                    }
+                    else
+                    {
+                        <a asp-controller="@Model.ControllerName"
+                           asp-action="@Model.ActionName"
+                           asp-all-route-data="@Model.RouteForPage(i)">@i.ToFa()</a>
+                    }
+                </li>
+            }
+
+            @if (end < Model.TotalPages)
+            {
+                @if (end < Model.TotalPages - 1)
+                {
+                    <li class="is-ellipsis"><span>…</span></li>
+                }
+                <li>
+                    <a asp-controller="@Model.ControllerName"
+                       asp-action="@Model.ActionName"
+                       asp-all-route-data="@Model.RouteForPage(Model.TotalPages)">@Model.TotalPages.ToFa()</a>
+                </li>
+            }
+
+            <li class="@(Model.Page >= Model.TotalPages ? "is-disabled" : "")">
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a asp-controller="@Model.ControllerName"
+                       asp-action="@Model.ActionName"
+                       asp-all-route-data="@Model.RouteForPage(Model.Page + 1)"
+                       aria-label="صفحه بعدی">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                }
+                else
+                {
+                    <span aria-hidden="true"><i class="fas fa-chevron-left"></i></span>
+                }
+            </li>
+        </ul>
+    </nav>
+}

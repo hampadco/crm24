@@ -1,0 +1,69 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model Crm.Web.Areas.Portal.Controllers.PortalDashboardViewModel
+@{
+    ViewData["PanelTitle"] = "پورتال مشتری";
+}
+
+<partial name="_Alerts" />
+
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h4 class="card-title mb-1">@Model.FullName عزیز، خوش آمدید</h4>
+                    <p class="text-muted mb-0">از این پورتال می‌توانید تیکت ثبت کنید و فاکتورهای خود را ببینید.</p>
+                </div>
+                <a href="/Portal/tickets/create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> تیکت جدید</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="avatar mb-3"><span class="avatar-initial rounded bg-label-primary"><i class="bx bx-support"></i></span></div>
+                <h5 class="mb-1">تیکت‌های باز</h5>
+                <h3 class="mb-0">@Model.OpenTickets <small class="text-muted fs-6">از @Model.TotalTickets</small></h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="avatar mb-3"><span class="avatar-initial rounded bg-label-info"><i class="bx bx-receipt"></i></span></div>
+                <h5 class="mb-1">فاکتورها</h5>
+                <h3 class="mb-0">@Model.InvoiceCount</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="avatar mb-3"><span class="avatar-initial rounded bg-label-warning"><i class="bx bx-wallet"></i></span></div>
+                <h5 class="mb-1">مانده پرداخت</h5>
+                <h3 class="mb-0">@Model.UnpaidAmount.ToString("N0") <small class="text-muted fs-6">تومان</small></h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">آخرین تیکت‌ها</h5></div>
+            <ul class="list-group list-group-flush">
+                @foreach (var ticket in Model.RecentTickets)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="/Portal/tickets/@ticket.Id">#@ticket.Number — @ticket.Subject</a>
+                        <span class="text-muted small">@PersianDateHelper.ToJalaliDate(ticket.CreatedAtUtc)</span>
+                    </li>
+                }
+                @if (Model.RecentTickets.Count == 0)
+                {
+                    <li class="list-group-item text-muted text-center py-4">هنوز تیکتی ثبت نکرده‌اید.</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

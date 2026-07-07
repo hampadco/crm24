@@ -1,0 +1,156 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model Crm.Web.Areas.App.Controllers.SalesDocFormModel
+@{
+    ViewData["PanelTitle"] = "مالی";
+    var kindLabel = FinanceController.KindLabel(Model.Kind);
+}
+
+<h4 class="mb-4"><i class="bx bx-receipt text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<form asp-action="Save" method="post" id="docForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Kind" />
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">نام مشتری *</label>
+                    <input asp-for="CustomerName" class="form-control" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">مخاطب مرتبط</label>
+                    <select asp-for="ContactRecordId" class="form-select">
+                        <option value="">— انتخاب کنید —</option>
+                        @foreach (var (id, title) in Model.ContactOptions)
+                        {
+                            <option value="@id">@title</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">تخفیف کلی (٪)</label>
+                    <input asp-for="DiscountPercent" class="form-control" type="number" step="any" min="0" max="100" />
+                </div>
+                @if (Model.Kind == SalesDocumentKind.Quote)
+                {
+                    <div class="col-md-2">
+                        <label class="form-label">اعتبار تا</label>
+                        <input asp-for="ValidUntil" class="form-control" type="date" />
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">آیتم‌ها</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLine()">
+                <i class="bx bx-plus"></i> افزودن ردیف
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table" id="linesTable">
+                <thead>
+                    <tr>
+                        <th style="min-width:220px">شرح / محصول</th>
+                        <th style="width:100px">تعداد</th>
+                        <th style="width:150px">قیمت واحد</th>
+                        <th style="width:100px">تخفیف ٪</th>
+                        <th style="width:100px">مالیات ٪</th>
+                        <th style="width:150px">جمع ردیف</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
+                <tbody id="linesBody"></tbody>
+            </table>
+        </div>
+        <div class="card-footer text-end">
+            <span class="text-muted me-3">جمع کل: <strong id="grandTotal">0</strong> تومان</span>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <label class="form-label">یادداشت</label>
+            <textarea asp-for="Note" class="form-control" rows="2"></textarea>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره @kindLabel</button>
+        <a href="/App/finance/@FinanceController.KindSlug(Model.Kind)" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Products.Select(p => new { id = p.Id, name = p.Name, price = p.SalePrice, tax = p.TaxPercent })));
+    const existingLines = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.Lines.Select(l => new { productId = l.ProductId, title = l.Title, qty = l.Quantity, price = l.UnitPrice, disc = l.DiscountPercent, tax = l.TaxPercent })));
+
+    let lineIndex = 0;
+
+    function addLine(data) {
+        data = data || { productId: null, title: '', qty: 1, price: 0, disc: 0, tax: 0 };
+        const i = lineIndex++;
+        const options = ['<option value="">— دستی —</option>']
+            .concat(products.map(p => `<option value="${p.id}" ${p.id === data.productId ? 'selected' : ''}>${p.name}</option>`))
+            .join('');
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="Lines[${i}].ProductId" class="form-select form-select-sm mb-1" onchange="pickProduct(this, ${i})">${options}</select>
+                <input name="Lines[${i}].Title" class="form-control form-control-sm" placeholder="شرح آیتم" value="${escapeHtml(data.title)}" />
+            </td>
+            <td><input name="Lines[${i}].Quantity" type="number" step="any" min="0" class="form-control form-control-sm calc" value="${data.qty}" /></td>
+            <td><input name="Lines[${i}].UnitPrice" type="number" step="any" min="0" class="form-control form-control-sm calc" value="${data.price}" /></td>
+            <td><input name="Lines[${i}].DiscountPercent" type="number" step="any" min="0" max="100" class="form-control form-control-sm calc" value="${data.disc}" /></td>
+            <td><input name="Lines[${i}].TaxPercent" type="number" step="any" min="0" max="100" class="form-control form-control-sm calc" value="${data.tax}" /></td>
+            <td class="line-total text-nowrap">0</td>
+            <td><button type="button" class="btn btn-sm btn-icon btn-text-danger" onclick="this.closest('tr').remove(); recalc();"><i class="bx bx-x"></i></button></td>`;
+        document.getElementById('linesBody').appendChild(row);
+        recalc();
+    }
+
+    function escapeHtml(s) {
+        return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    }
+
+    function pickProduct(select, i) {
+        const p = products.find(x => x.id === parseInt(select.value));
+        const row = select.closest('tr');
+        if (p) {
+            row.querySelector(`[name="Lines[${i}].Title"]`).value = p.name;
+            row.querySelector(`[name="Lines[${i}].UnitPrice"]`).value = p.price;
+            row.querySelector(`[name="Lines[${i}].TaxPercent"]`).value = p.tax;
+        }
+        recalc();
+    }
+
+    function recalc() {
+        let grand = 0;
+        const globalDisc = parseFloat(document.querySelector('[name="DiscountPercent"]').value) || 0;
+        document.querySelectorAll('#linesBody tr').forEach(row => {
+            const val = name => parseFloat(row.querySelector(`[name$=".${name}"]`).value) || 0;
+            const total = Math.round(val('Quantity') * val('UnitPrice') * (1 - val('DiscountPercent') / 100) * (1 + val('TaxPercent') / 100));
+            row.querySelector('.line-total').textContent = total.toLocaleString('fa-IR');
+            grand += total;
+        });
+        grand = Math.round(grand * (1 - globalDisc / 100));
+        document.getElementById('grandTotal').textContent = grand.toLocaleString('fa-IR');
+    }
+
+    document.addEventListener('input', e => { if (e.target.classList.contains('calc') || e.target.name === 'DiscountPercent') recalc(); });
+
+    if (existingLines.length) existingLines.forEach(l => addLine(l));
+    else addLine();
+</script>
+}

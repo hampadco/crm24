@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CRM24</title>
+    <link rel="icon" href="~/favicon.ico" />
+    <link rel="stylesheet" href="~/lib/vazirmatn/vazirmatn.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/5.3.3/css/bootstrap.rtl.min.css" />
+    <link rel="stylesheet" href="~/lib/fontawesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/taben-tokens.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/taben-bootstrap-overrides.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/taben-base.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/taben-layout.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/taben-components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/taben-home.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    @{
+        var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    }
+    <div class="taben-top-bar">
+    <header class="taben-header">
+        <div class="taben-header-inner">
+            <div class="taben-header-start">
+                <button type="button" class="taben-icon-btn taben-mobile-menu-btn" id="tabenMenuToggle" title="منو" aria-label="منو" aria-expanded="false" aria-controls="tabenNav">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <a asp-controller="Home" asp-action="Index" class="taben-brand taben-header-brand text-decoration-none">
+                <span class="fw-bold fs-4">CRM<span class="text-primary">24</span></span>
+            </a>
+
+            <div class="taben-header-actions">
+                <a asp-area="App" asp-controller="Account" asp-action="Login" class="taben-btn taben-btn-outline btn-sm" title="ورود">
+                    <i class="fas fa-user"></i> ورود
+                </a>
+                <a asp-area="App" asp-controller="Account" asp-action="Register" class="taben-btn taben-btn-primary btn-sm" title="شروع رایگان">
+                    شروع رایگان
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="taben-nav-backdrop" id="tabenNavBackdrop" aria-hidden="true"></div>
+    <nav class="taben-nav-wrap" id="tabenNav" aria-label="منوی اصلی">
+        <div class="taben-nav-panel-head">
+            <span class="taben-nav-panel-title">منو</span>
+            <button type="button" class="taben-icon-btn taben-nav-close" id="tabenNavClose" aria-label="بستن منو">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul class="taben-nav">
+            <li><a asp-controller="Home" asp-action="Index" class="@(currentController == "Home" ? "active" : "")">خانه</a></li>
+            <li><a asp-controller="Pricing" asp-action="Index" class="@(currentController == "Pricing" ? "active" : "")">تعرفه‌ها</a></li>
+            <li><a asp-controller="Articles" asp-action="Index" class="@(currentController == "Articles" ? "active" : "")">مقالات</a></li>
+            <li><a asp-controller="Faq" asp-action="Index" class="@(currentController == "Faq" ? "active" : "")">سوالات متداول</a></li>
+            <li><a asp-controller="Pages" asp-action="About" class="@(currentController == "Pages" && currentAction == "About" ? "active" : "")">درباره ما</a></li>
+            <li><a asp-controller="Pages" asp-action="Contact" class="@(currentController == "Pages" && currentAction == "Contact" ? "active" : "")">تماس با ما</a></li>
+        </ul>
+    </nav>
+    </div>
+
+    <main>
+        @RenderBody()
+    </main>
+
+    <partial name="_Footer" />
+
+    <script src="~/lib/jquery/3.7.1/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

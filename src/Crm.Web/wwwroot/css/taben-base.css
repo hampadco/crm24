@@ -1,0 +1,171 @@
+html {
+    scroll-behavior: smooth;
+    overflow-x: clip;
+    max-width: 100%;
+}
+
+body {
+    font-family: var(--taben-font);
+    font-size: var(--text-body);
+    line-height: 1.65;
+    color: var(--taben-text-body);
+    background: var(--taben-bg-page);
+    direction: rtl;
+    text-align: right;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+    max-width: 100%;
+}
+
+main {
+    overflow-x: clip;
+    max-width: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--taben-text);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+a {
+    color: var(--taben-primary);
+    text-decoration: none;
+    transition: color 0.18s ease;
+}
+
+a:hover {
+    color: var(--taben-primary-hover);
+}
+
+img {
+    max-width: 100%;
+}
+
+::selection {
+    background: var(--taben-primary-light);
+    color: var(--taben-primary-dark);
+}
+
+/* Page section wrapper used across customer pages */
+.taben-page {
+    padding-block: 1.5rem 2.5rem;
+}
+
+/* Shared horizontal gutter — matches homepage cards/footer (40px desktop, responsive) */
+.taben-home-fluid {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4vw, 40px);
+    box-sizing: border-box;
+}
+
+.taben-price {
+    font-size: var(--text-price);
+    font-weight: 600;
+    color: var(--taben-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.taben-section-title {
+    font-size: var(--text-h2);
+    font-weight: 700;
+    color: var(--taben-text);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.taben-section-title i {
+    color: var(--taben-primary);
+    font-size: 0.85rem;
+}
+
+.taben-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding-bottom: 0.55rem;
+    margin-bottom: 0.85rem;
+    border-bottom: 1px solid var(--taben-border-light);
+}
+
+.taben-view-all {
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--taben-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+    transition: gap 0.18s ease;
+}
+
+.taben-view-all:hover {
+    gap: 0.45rem;
+}
+
+.taben-view-all i {
+    font-size: 0.62rem;
+}
+
+/* ===== Shared page header (listing pages) ===== */
+.taben-page-head {
+    margin-bottom: 1.25rem;
+}
+
+.taben-page-head-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--taben-text);
+    margin: 0 0 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.taben-page-head-title i {
+    color: var(--taben-primary);
+    font-size: 1.05rem;
+}
+
+.taben-page-head-sub {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+    margin: 0;
+}
+
+/* ===== Breadcrumb ===== */
+.taben-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--text-tiny);
+    color: var(--taben-text-muted);
+    margin-bottom: 0.85rem;
+}
+
+.taben-breadcrumb a {
+    color: var(--taben-text-muted);
+}
+
+.taben-breadcrumb a:hover {
+    color: var(--taben-primary);
+}
+
+.taben-breadcrumb .sep {
+    color: var(--taben-text-light);
+    font-size: 0.55rem;
+}
+
+.taben-breadcrumb .current {
+    color: var(--taben-text-body);
+    font-weight: 500;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}

@@ -1,0 +1,70 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@using Crm.Web.Areas.App.Controllers
+@model List<Project>
+@{
+    var wonOpportunities = (Dictionary<int, string>)ViewBag.WonOpportunities;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-briefcase-alt-2 text-primary me-1"></i> پروژه‌ها</h4>
+    <div class="d-flex gap-2">
+        @if (wonOpportunities.Count > 0)
+        {
+            <div class="dropdown">
+                <button class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bx bx-transfer me-1"></i> تبدیل فرصت برنده
+                </button>
+                <ul class="dropdown-menu">
+                    @foreach (var opportunity in wonOpportunities)
+                    {
+                        <li>
+                            <form asp-action="FromOpportunity" asp-route-recordId="@opportunity.Key" method="post" class="dropdown-item p-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-link dropdown-item">@opportunity.Value</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> پروژه جدید</a>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>نام</th><th>مشتری</th><th>وضعیت</th><th>بازه</th><th>بودجه</th><th>پیشرفت</th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">پروژه‌ای ثبت نشده است.</td></tr>
+                }
+                @foreach (var project in Model)
+                {
+                    var progress = project.Tasks.Count == 0 ? 0 : (int)project.Tasks.Average(t => t.ProgressPercent);
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@project.Id"><strong>@project.Name</strong></a></td>
+                        <td>@(project.CustomerName ?? "—")</td>
+                        <td>
+                            <span class="badge @(project.Status switch { ProjectStatus.Active => "bg-label-success", ProjectStatus.OnHold => "bg-label-warning", ProjectStatus.Completed => "bg-label-info", _ => "bg-label-secondary" })">
+                                @ProjectsController.StatusLabel(project.Status)
+                            </span>
+                        </td>
+                        <td class="text-muted">@PersianDateHelper.ToJalaliDate(project.StartUtc) تا @PersianDateHelper.ToJalaliDate(project.EndUtc)</td>
+                        <td>@project.Budget.ToString("N0")</td>
+                        <td style="min-width:120px">
+                            <div class="progress" style="height:8px">
+                                <div class="progress-bar" style="width:@(progress)%"></div>
+                            </div>
+                            <small class="text-muted">@progress%</small>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

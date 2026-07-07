@@ -1,0 +1,57 @@
+@{
+    var currentPath = Context.Request.Path.Value ?? "";
+}
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand demo">
+        <a asp-area="Portal" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
+            <span class="app-brand-logo demo">
+                <i class="bx bxs-user-circle fs-3 text-primary"></i>
+            </span>
+            <span class="app-brand-text demo menu-text fw-bold ms-2">پورتال مشتری</span>
+        </a>
+
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
+            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
+        </a>
+    </div>
+
+    <div class="menu-divider mt-0"></div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <ul class="menu-inner py-1">
+        <li class="menu-item @(currentPath == "/Portal" || currentPath.StartsWith("/Portal/Dashboard") ? "active" : "")">
+            <a asp-area="Portal" asp-controller="Dashboard" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div>داشبورد</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">خدمات</span></li>
+        <li class="menu-item @(currentPath.StartsWith("/Portal/tickets") ? "active" : "")">
+            <a href="/Portal/tickets" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-support"></i>
+                <div>تیکت‌های من</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/Portal/projects") ? "active" : "")">
+            <a href="/Portal/projects" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-briefcase-alt-2"></i>
+                <div>پروژه‌های من</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/Portal/invoices") ? "active" : "")">
+            <a href="/Portal/invoices" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-receipt"></i>
+                <div>فاکتورهای من</div>
+            </a>
+        </li>
+        <li class="menu-item @(currentPath.StartsWith("/Portal/kb") ? "active" : "")">
+            <a href="/Portal/kb" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-book-open"></i>
+                <div>پایگاه دانش</div>
+            </a>
+        </li>
+    </ul>
+</aside>

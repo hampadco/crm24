@@ -1,0 +1,76 @@
+@model Crm.Web.Areas.App.Controllers.ProductFormModel
+@{
+    ViewData["PanelTitle"] = "محصولات و سرویس‌ها";
+}
+
+<h4 class="mb-4"><i class="bx bx-package text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" asp-for="Name"></label>
+                    <input asp-for="Name" class="form-control" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" asp-for="Sku"></label>
+                    <input asp-for="Sku" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" asp-for="Unit"></label>
+                    <input asp-for="Unit" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="SalePrice"></label>
+                    <input asp-for="SalePrice" class="form-control" type="number" step="any" min="0" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="TaxPercent"></label>
+                    <input asp-for="TaxPercent" class="form-control" type="number" step="any" min="0" max="100" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-4">
+                    <div class="form-check">
+                        <input asp-for="IsService" class="form-check-input" />
+                        <label class="form-check-label" asp-for="IsService"></label>
+                    </div>
+                    <div class="form-check">
+                        <input asp-for="IsActive" class="form-check-input" />
+                        <label class="form-check-label" asp-for="IsActive"></label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check mt-2">
+                        <input asp-for="TrackInventory" class="form-check-input" />
+                        <label class="form-check-label" asp-for="TrackInventory"></label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="StockQty"></label>
+                    <input asp-for="StockQty" class="form-control" type="number" step="any" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" asp-for="ReorderPoint"></label>
+                    <input asp-for="ReorderPoint" class="form-control" type="number" step="any" min="0" />
+                    <div class="form-text">با رسیدن موجودی به این عدد هشدار کمبود نمایش داده می‌شود.</div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" asp-for="Description"></label>
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

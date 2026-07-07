@@ -1,0 +1,48 @@
+@model Crm.Web.Areas.App.Models.RecycleBinViewModel
+@{
+    ViewData["PanelTitle"] = "سطل بازیابی";
+}
+
+<h4 class="mb-4"><i class="bx bx-recycle text-primary me-1"></i> سطل بازیابی</h4>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>عنوان</th>
+                    <th>ماژول</th>
+                    <th>تاریخ حذف</th>
+                    <th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Records.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">سطل بازیابی خالی است.</td>
+                    </tr>
+                }
+                @foreach (var record in Model.Records)
+                {
+                    <tr>
+                        <td class="text-muted">@record.Id</td>
+                        <td>@record.Title</td>
+                        <td>@record.Module.PluralLabel</td>
+                        <td dir="ltr">@record.DeletedAtUtc?.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                        <td class="text-end">
+                            <form asp-action="Restore" asp-route-id="@record.Id" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success">
+                                    <i class="bx bx-undo me-1"></i> بازیابی
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

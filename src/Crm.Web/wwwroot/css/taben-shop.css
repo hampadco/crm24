@@ -1,0 +1,459 @@
+/* ===== Shop page shell ===== */
+.taben-shop-page {
+    background:
+        radial-gradient(ellipse 70% 50% at 100% 0%, rgba(26, 86, 219, 0.08) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 0% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    min-height: 60vh;
+}
+
+.taben-shop-header {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(26, 86, 219, 0.08);
+}
+
+.taben-shop-toolbar {
+    background: var(--taben-bg);
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius-lg);
+    padding: 0.85rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--taben-shadow-xs);
+}
+
+.taben-shop-toolbar .taben-list-search {
+    margin-bottom: 0.65rem;
+}
+
+.taben-shop-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+}
+
+.taben-shop-filter-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--text-small);
+    color: var(--taben-text-body);
+    cursor: pointer;
+    margin: 0;
+}
+
+.taben-shop-filter-check input {
+    accent-color: var(--taben-primary);
+}
+
+.taben-shop-filter-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+    margin: 0;
+}
+
+.taben-shop-filter-sort select {
+    border: 1px solid var(--taben-border);
+    border-radius: var(--taben-radius-sm);
+    padding: 0.35rem 0.55rem;
+    font-family: var(--taben-font);
+    font-size: var(--text-small);
+    background: var(--taben-bg);
+    color: var(--taben-text-body);
+}
+
+.taben-shop-filter-sort select:focus {
+    outline: none;
+    border-color: var(--taben-primary);
+}
+
+.taben-hcard--product {
+    position: relative;
+}
+
+.taben-badge--featured {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    background: var(--taben-primary);
+    color: #fff;
+    border: none;
+    font-size: 0.58rem;
+    padding: 0.15rem 0.45rem;
+}
+
+/* ===== Product detail ===== */
+.taben-product-detail {
+    margin-bottom: 2rem;
+}
+
+.taben-product-gallery {
+    background: #fff;
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius-lg);
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(16, 24, 40, 0.08);
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.taben-product-gallery-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.taben-product-gallery-placeholder {
+    color: var(--taben-text-light);
+    font-size: 3rem;
+}
+
+.taben-product-buybox {
+    background: #fff;
+    border: 1px solid rgba(26, 86, 219, 0.12);
+    border-radius: var(--taben-radius-lg);
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 8px 28px rgba(26, 86, 219, 0.08);
+    position: sticky;
+    top: 88px;
+}
+
+.taben-product-buybox-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.taben-product-buybox-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+}
+
+.taben-product-buybox-price .taben-price {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--taben-primary);
+}
+
+.taben-product-buybox-currency {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+}
+
+.taben-product-buybox-note {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+    margin-bottom: 1.1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--taben-border-light);
+}
+
+.taben-product-buybox-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.taben-qty-label {
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--taben-text-body);
+    margin-bottom: -0.35rem;
+}
+
+.taben-qty-control {
+    max-width: 120px;
+}
+
+.taben-qty-input {
+    width: 100%;
+    border: 1px solid var(--taben-border);
+    border-radius: var(--taben-radius-sm);
+    padding: 0.45rem 0.65rem;
+    font-family: var(--taben-font);
+    font-size: var(--text-body);
+    text-align: center;
+}
+
+.taben-qty-input:focus {
+    outline: none;
+    border-color: var(--taben-primary);
+    box-shadow: 0 0 0 3px var(--taben-primary-soft);
+}
+
+.taben-qty-input--sm {
+    max-width: 72px;
+    padding: 0.35rem 0.5rem;
+}
+
+.taben-btn-add-cart {
+    padding: 0.65rem 1rem;
+    font-size: var(--text-body);
+}
+
+.taben-product-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 1rem;
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+}
+
+.taben-product-back-link:hover {
+    color: var(--taben-primary);
+}
+
+.taben-product-description,
+.taben-related-products {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--taben-border-light);
+}
+
+.taben-product-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--taben-text);
+}
+
+.taben-product-card--compact h3 {
+    font-size: var(--text-small);
+    line-height: 1.45;
+    margin-bottom: 0;
+    padding: 0 0.25rem;
+}
+
+.taben-product-card--compact img {
+    margin-bottom: 0.45rem;
+}
+
+/* ===== Add to cart button (listing cards) ===== */
+.taben-add-to-cart-form {
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.taben-product-cart-btn {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--taben-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--taben-radius-full);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.taben-product-cart-btn:hover {
+    background: var(--taben-primary-hover);
+    transform: scale(1.05);
+}
+
+/* ===== Cart page ===== */
+.taben-cart-empty {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    background: #fff;
+    border: 1px dashed var(--taben-border);
+    border-radius: var(--taben-radius-lg);
+}
+
+.taben-cart-empty i {
+    font-size: 3rem;
+    color: var(--taben-text-light);
+    margin-bottom: 1rem;
+}
+
+.taben-cart-empty h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.taben-cart-empty p {
+    color: var(--taben-text-muted);
+    margin-bottom: 1.25rem;
+}
+
+.taben-cart-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.taben-cart-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.taben-cart-item {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) auto auto auto;
+    align-items: center;
+    gap: 0.85rem;
+    background: #fff;
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius);
+    padding: 0.85rem 1rem;
+    box-shadow: var(--taben-shadow-sm);
+}
+
+.taben-cart-item-thumb {
+    display: block;
+    width: 72px;
+    height: 72px;
+    border-radius: var(--taben-radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.taben-cart-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.taben-cart-item-thumb-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: var(--taben-bg-muted);
+    color: var(--taben-text-light);
+}
+
+.taben-cart-item-body {
+    min-width: 0;
+}
+
+.taben-cart-item-title {
+    display: block;
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--taben-text);
+    margin-bottom: 0.25rem;
+    line-height: 1.45;
+}
+
+.taben-cart-item-title:hover {
+    color: var(--taben-primary);
+}
+
+.taben-cart-item-unit-price {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+}
+
+.taben-cart-item-total {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.taben-cart-item-currency {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+    margin-right: 0.15rem;
+}
+
+.taben-cart-remove-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: var(--taben-text-light);
+    border-radius: var(--taben-radius-sm);
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+}
+
+.taben-cart-remove-btn:hover {
+    color: var(--taben-danger);
+    background: #fef2f2;
+}
+
+.taben-cart-summary {
+    background: #fff;
+    border: 1px solid rgba(26, 86, 219, 0.12);
+    border-radius: var(--taben-radius-lg);
+    padding: 1.25rem;
+    box-shadow: 0 8px 24px rgba(26, 86, 219, 0.08);
+    position: sticky;
+    top: 88px;
+}
+
+.taben-cart-summary-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.taben-cart-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--text-small);
+    color: var(--taben-text-body);
+    margin-bottom: 0.65rem;
+}
+
+.taben-cart-summary-total {
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    border-top: 1px solid var(--taben-border-light);
+    font-size: var(--text-body);
+}
+
+.taben-cart-summary-note {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+@media (max-width: 991.98px) {
+    .taben-product-buybox,
+    .taben-cart-summary {
+        position: static;
+    }
+
+    .taben-cart-page {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .taben-cart-item {
+        grid-template-columns: 64px minmax(0, 1fr);
+        grid-template-rows: auto auto;
+    }
+
+    .taben-cart-item-qty,
+    .taben-cart-item-total,
+    .taben-cart-item-remove {
+        grid-column: 2;
+    }
+
+    .taben-cart-item-remove {
+        justify-self: end;
+    }
+}

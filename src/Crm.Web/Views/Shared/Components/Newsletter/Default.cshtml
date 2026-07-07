@@ -1,0 +1,24 @@
+<section class="taben-section-box taben-section-box--home taben-section-box--gray">
+    <div class="taben-section-head">
+        <h2 class="taben-section-title"><i class="fas fa-envelope-open-text"></i> خبرنامه CRM24</h2>
+    </div>
+    <p class="taben-newsletter-desc taben-newsletter-desc--compact">
+        با عضویت در خبرنامه، از جدیدترین مقالات تغذیه، تخفیف‌های ویژه و اخبار محصولات باخبر شوید.
+    </p>
+
+    <form asp-controller="Newsletter" asp-action="Subscribe" method="post" class="taben-newsletter-form taben-newsletter-form--compact">
+        <input type="email" name="email" placeholder="ایمیل خود را وارد کنید" required aria-label="ایمیل" />
+        <button type="submit" class="taben-btn taben-btn-primary">عضویت</button>
+    </form>
+
+    <div class="taben-newsletter-perks taben-newsletter-perks--compact">
+        <div class="taben-newsletter-perk">
+            <i class="fas fa-check-circle"></i>
+            <span>مقالات علمی تغذیه</span>
+        </div>
+        <div class="taben-newsletter-perk">
+            <i class="fas fa-check-circle"></i>
+            <span>تخفیف‌های اختصاصی</span>
+        </div>
+    </div>
+</section>

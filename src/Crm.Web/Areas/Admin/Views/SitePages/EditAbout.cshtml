@@ -1,0 +1,70 @@
+@model SitePage
+@using ElementorBuilder.Models
+@{
+    ViewData["Title"] = "ویرایش صفحه درباره ما";
+    ViewData["FormId"] = "aboutPageForm";
+    ViewData["CancelUrl"] = Url.Action("Index", "Dashboard");
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-area="" asp-controller="Pages" asp-action="About" target="_blank" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-external-link-alt ms-1"></i> مشاهده صفحه
+        </a>
+    </div>
+</div>
+
+@if (TempData["AdminSuccess"] is string successMessage)
+{
+    <div class="admin-alert admin-alert-success">@successMessage</div>
+}
+
+<form method="post" id="aboutPageForm" asp-action="EditAbout" data-elementor-form>
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="Key" />
+    <div asp-validation-summary="All" class="admin-alert admin-alert-danger"></div>
+
+    <div class="admin-editor-shell">
+        <partial name="_AdminEditorTabBar" />
+
+        <div class="tab-content admin-editor-tab-panels">
+            <div class="tab-pane fade show active admin-basic-pane" id="tab-basic" role="tabpanel" aria-labelledby="tab-basic-btn">
+                <div class="admin-basic-form">
+                    <div class="admin-basic-block admin-basic-block--hero">
+                        <div class="admin-form-group">
+                            <label asp-for="Title" class="admin-form-label">عنوان صفحه</label>
+                            <input asp-for="Title" class="form-control admin-form-control" />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
+                        </div>
+                        <div class="admin-form-group">
+                            <label asp-for="Subtitle" class="admin-form-label">زیرعنوان (روی بنر)</label>
+                            <input asp-for="Subtitle" class="form-control admin-form-control" />
+                        </div>
+                    </div>
+
+                    <div class="admin-basic-block">
+                        <div class="admin-basic-block-head"><i class="fas fa-image"></i> تصویر بنر</div>
+                        <div class="admin-basic-block-body">
+                            <partial name="_AdminImageField" model="Model.HeroImageUrl"
+                                     view-data='new ViewDataDictionary(ViewData) { { "FieldName", "HeroImageUrl" }, { "Label", "تصویر بنر" } }' />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-content" role="tabpanel" aria-labelledby="tab-content-btn">
+                <input asp-for="Content" type="hidden" id="Content" />
+                @await Component.InvokeAsync("ElementorEditor", new ElementorEditorViewModel
+                {
+                    Content = Model.Content,
+                    CancelUrl = Url.Action("Index", "Dashboard")!
+                })
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

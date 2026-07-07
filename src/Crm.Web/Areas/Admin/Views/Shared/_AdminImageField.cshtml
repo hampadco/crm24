@@ -1,0 +1,34 @@
+@using Crm.Web.Services
+@model string?
+@{
+    var fieldName = ViewData["FieldName"] as string ?? "ThumbnailUrl";
+    var fieldId = ViewData["FieldId"] as string ?? fieldName;
+    var label = ViewData["Label"] as string ?? "تصویر";
+    var url = Model ?? string.Empty;
+}
+
+<div class="admin-form-group admin-image-field">
+    <label class="admin-form-label" for="@fieldId">@label</label>
+    <div class="admin-image-field-inner">
+        <div class="admin-image-preview @(string.IsNullOrEmpty(url) ? "is-empty" : "")">
+            <img src="@url" alt="" />
+            <div class="admin-image-placeholder">
+                <i class="fas fa-image"></i>
+                <span>بدون تصویر</span>
+            </div>
+        </div>
+        <div class="admin-image-controls">
+            <div class="admin-image-actions">
+                <button type="button" class="btn btn-primary btn-sm admin-image-upload-btn">
+                    <i class="fas fa-upload ms-1"></i> آپلود تصویر
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm admin-image-clear-btn">حذف</button>
+            </div>
+            <input type="file" class="admin-image-file d-none" accept="image/*" />
+            <input type="text" name="@fieldName" id="@fieldId" class="form-control admin-form-control admin-image-url"
+                   value="@url" placeholder="یا آدرس تصویر را وارد کنید…" />
+            <div class="admin-image-status"></div>
+            <div class="admin-form-text">فرمت‌های مجاز: jpg, png, gif, webp — حداکثر ۱۰ مگابایت</div>
+        </div>
+    </div>
+</div>

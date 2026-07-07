@@ -1,0 +1,66 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@{
+    ViewData["PanelTitle"] = "پشتیبانی";
+    Dictionary<int, string> contacts = ViewBag.Contacts;
+    Dictionary<int, string> contracts = ViewBag.Contracts;
+}
+
+<h4 class="mb-4"><i class="bx bx-support text-primary me-1"></i> تیکت جدید</h4>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">موضوع *</label>
+                    <input type="text" name="subject" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">اولویت</label>
+                    <select name="priority" class="form-select">
+                        @foreach (var p in Enum.GetValues<TicketPriority>())
+                        {
+                            <option value="@p" selected="@(p == TicketPriority.Normal)">@TicketsController.PriorityLabel(p)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">دسته‌بندی</label>
+                    <input type="text" name="category" class="form-control" placeholder="مثلاً فنی، مالی..." />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">مخاطب مرتبط</label>
+                    <select name="contactRecordId" class="form-select">
+                        <option value="">— انتخاب کنید —</option>
+                        @foreach (var (id, title) in contacts)
+                        {
+                            <option value="@id">@title</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">قرارداد خدمات</label>
+                    <select name="serviceContractId" class="form-select">
+                        <option value="">— بدون قرارداد —</option>
+                        @foreach (var (id, name) in contracts)
+                        {
+                            <option value="@id">@name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">متن تیکت *</label>
+                    <textarea name="body" class="form-control" rows="5" required></textarea>
+                </div>
+            </div>
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-send me-1"></i> ثبت تیکت</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

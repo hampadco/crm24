@@ -1,0 +1,1342 @@
+.taben-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    font-size: var(--text-small);
+    font-weight: 500;
+    border-radius: var(--taben-radius-sm);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.taben-btn-primary {
+    background: var(--taben-primary);
+    color: #fff;
+    border-color: var(--taben-primary);
+}
+
+.taben-btn-primary:hover {
+    background: var(--taben-primary-hover);
+    border-color: var(--taben-primary-hover);
+    color: #fff;
+}
+
+.taben-btn-outline-light {
+    background: transparent;
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.85);
+}
+
+.taben-btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+.taben-btn-outline {
+    background: transparent;
+    color: var(--taben-primary);
+    border-color: var(--taben-primary);
+}
+
+.taben-btn-outline:hover {
+    background: var(--taben-primary-soft);
+    border-color: var(--taben-primary);
+    color: var(--taben-primary);
+}
+
+.taben-card {
+    background: var(--taben-bg);
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius);
+    box-shadow: var(--taben-shadow-sm);
+    overflow: hidden;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.taben-card:hover {
+    box-shadow: var(--taben-shadow-md);
+    transform: translateY(-2px);
+}
+
+.taben-product-card {
+    padding: 0.55rem;
+}
+
+.taben-product-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--taben-radius-sm);
+    margin-bottom: 0.5rem;
+}
+
+.taben-product-card h3 {
+    font-size: var(--text-small);
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    line-height: 1.45;
+}
+
+.taben-product-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.35rem;
+}
+
+.taben-product-cart-btn {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--taben-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--taben-radius-full);
+    font-size: 0.7rem;
+    transition: all 0.2s;
+}
+
+.taben-product-cart-btn:hover {
+    background: var(--taben-primary-hover);
+    color: #fff;
+}
+
+.taben-article-card img {
+    width: 100%;
+    aspect-ratio: 16/10;
+    object-fit: cover;
+}
+
+.taben-article-card-body {
+    padding: 1rem;
+}
+
+.taben-article-card h3 {
+    font-size: var(--text-h3);
+    margin-bottom: 0.5rem;
+}
+
+.taben-article-meta {
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+}
+
+/* Article row (compact list in narrow column) */
+.taben-article-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.taben-article-row {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius-sm);
+    background: var(--taben-bg-muted);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.taben-article-row:hover {
+    border-color: rgba(26, 86, 219, 0.22);
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.08);
+    transform: translateY(-1px);
+}
+
+.taben-article-row img {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--taben-radius-sm);
+    object-fit: cover;
+}
+
+.taben-article-row-body {
+    min-width: 0;
+}
+
+.taben-article-row-body h3 {
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--taben-text);
+    margin-bottom: 0.2rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.taben-news-item {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius-sm);
+    background: var(--taben-bg-muted);
+    margin-bottom: 0.55rem;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.taben-news-item:last-child {
+    margin-bottom: 0;
+}
+
+.taben-news-item:hover {
+    border-color: rgba(26, 86, 219, 0.22);
+    box-shadow: 0 4px 12px rgba(26, 86, 219, 0.08);
+    transform: translateY(-1px);
+}
+
+.taben-news-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--taben-radius-sm);
+    object-fit: cover;
+}
+
+.taben-news-title {
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--taben-text);
+    margin-bottom: 0.15rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.taben-lab-card {
+    text-align: center;
+}
+
+.taben-lab-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--taben-radius-sm);
+    transition: transform 0.2s;
+}
+
+.taben-lab-card:hover img {
+    transform: scale(1.03);
+}
+
+.taben-lab-card h3 {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--taben-text-body);
+    margin-top: 0.5rem;
+    line-height: 1.4;
+}
+
+/* ===== Coming soon / under construction ===== */
+.taben-coming-soon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 2.5rem 15px;
+}
+
+.taben-coming-soon-inner {
+    text-align: center;
+    max-width: 560px;
+}
+
+.taben-coming-soon-img {
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    margin-bottom: 1.25rem;
+}
+
+.taben-coming-soon-title {
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 700;
+    color: var(--taben-text);
+    margin-bottom: 0.6rem;
+}
+
+.taben-coming-soon-text {
+    font-size: var(--text-body);
+    line-height: 1.8;
+    color: var(--taben-text-muted);
+    margin-bottom: 1.4rem;
+}
+
+.taben-section-box {
+    background: var(--taben-bg);
+    border: none;
+    border-radius: var(--taben-radius-lg);
+    padding: 1rem 1.1rem;
+    width: 100%;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 20px rgba(16, 24, 40, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.taben-section-box::before {
+    content: none;
+}
+
+.taben-section-box--products .taben-product-card {
+    padding: 0.5rem;
+}
+
+.taben-section-light {
+    background: transparent;
+    padding: 0 0 2rem;
+    margin-top: 0;
+}
+
+.taben-page-header {
+    background: var(--taben-bg);
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--taben-border);
+}
+
+.taben-detail-meta {
+    background: var(--taben-bg);
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--taben-shadow-sm);
+}
+
+.taben-detail-meta img {
+    border-radius: var(--taben-radius) !important;
+}
+
+.taben-detail-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--text-small);
+    color: var(--taben-text-muted);
+    margin-bottom: 0.6rem;
+}
+
+.taben-detail-date i {
+    color: var(--taben-primary);
+}
+
+/* ===== Content detail pages (article, news, etc.) ===== */
+.taben-content-detail {
+    background: #ffffff;
+    padding-bottom: clamp(2rem, 5vw, 3rem);
+    overflow-x: clip;
+    max-width: 100%;
+}
+
+.taben-content-detail__top {
+    padding-top: 1rem;
+    padding-bottom: 0.75rem;
+}
+
+.taben-content-hero {
+    position: relative;
+    min-height: clamp(240px, 34vw, 420px);
+    background-color: #eef3fb;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+
+.taben-content-hero--fallback {
+    background-color: #e8eef8;
+}
+
+.taben-content-hero__overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to top, rgba(17, 24, 39, 0.88) 0%, rgba(17, 24, 39, 0.45) 42%, rgba(17, 24, 39, 0.15) 100%),
+        linear-gradient(to left, rgba(17, 24, 39, 0.25) 0%, transparent 55%);
+    pointer-events: none;
+}
+
+.taben-content-hero__inner {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 52rem;
+    padding-block: clamp(1.35rem, 4vw, 2.5rem);
+}
+
+.taben-content-hero__title {
+    font-size: clamp(1.25rem, 3.2vw, 2rem);
+    font-weight: 800;
+    line-height: 1.4;
+    color: #ffffff;
+    margin: 0.55rem 0 0.45rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.taben-content-hero__summary {
+    font-size: clamp(0.82rem, 1.3vw, 0.98rem);
+    font-weight: 500;
+    line-height: 1.75;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 0.75rem;
+    max-width: 40rem;
+}
+
+.taben-content-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.taben-content-hero__date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.taben-content-hero__date i {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.75rem;
+}
+
+.taben-content-hero .taben-detail-badges {
+    margin-bottom: 0;
+}
+
+.taben-content-hero .taben-badge {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    backdrop-filter: blur(4px);
+}
+
+.taben-content-hero .taben-badge:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+}
+
+.taben-content-hero .taben-badge--category {
+    background: rgba(26, 86, 219, 0.55);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.taben-content-hero__type-icon {
+    margin-inline-end: 0.35rem;
+    font-size: 0.85em;
+    opacity: 0.9;
+}
+
+.taben-content-detail__player {
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1rem;
+    background: var(--taben-bg-muted);
+    border-radius: var(--taben-radius);
+    border: 1px solid var(--taben-border-light);
+}
+
+.taben-content-detail__player-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--taben-text);
+    margin-bottom: 0.55rem;
+}
+
+.taben-content-detail__player-label i {
+    color: var(--taben-primary);
+}
+
+.taben-content-detail__player-audio {
+    width: 100%;
+    max-width: 100%;
+    height: 42px;
+}
+
+.taben-podcast-content {
+    margin-top: 0;
+}
+
+/* ===== About page ===== */
+.taben-about-hero .taben-content-hero__inner {
+    text-align: center;
+    max-width: 40rem;
+    margin-inline: auto;
+}
+
+.taben-about-hero__brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.85rem;
+}
+
+.taben-about-hero__logo {
+    height: clamp(42px, 8vw, 58px);
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.25));
+}
+
+.taben-about-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+    min-width: 0;
+}
+
+.taben-about-aside {
+    display: none;
+}
+
+.taben-about-values {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.taben-about-values li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--taben-text-body);
+    padding: 0.35rem 0.4rem;
+    border-radius: var(--taben-radius-sm);
+}
+
+.taben-about-values li i {
+    color: var(--taben-primary);
+    width: 1rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.taben-about-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.taben-about-link {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.5rem;
+    border-radius: var(--taben-radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--taben-text);
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.taben-about-link:hover {
+    background: var(--taben-bg-muted);
+    color: var(--taben-primary);
+}
+
+.taben-about-link i {
+    color: var(--taben-primary);
+    width: 1rem;
+    text-align: center;
+}
+
+@media (min-width: 992px) {
+    .taben-about-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(15.5rem, 18.5rem);
+        gap: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .taben-about-aside {
+        display: block;
+        position: sticky;
+        top: 5rem;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .taben-about-aside {
+        display: grid;
+        gap: 0.85rem;
+        margin-top: 1rem;
+    }
+}
+
+.taben-content-detail__main {
+    margin-top: clamp(-1.75rem, -3vw, -1.25rem);
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.taben-content-detail__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    align-items: start;
+    min-width: 0;
+}
+
+.taben-content-detail__card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+    box-sizing: border-box;
+    background: #ffffff;
+    border: none;
+    border-radius: var(--taben-radius-lg);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 28px rgba(16, 24, 40, 0.1);
+    padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.taben-content-detail__aside {
+    display: none;
+}
+
+.taben-content-detail__bottom {
+    display: block;
+    margin-top: clamp(1rem, 3vw, 1.5rem);
+    min-width: 0;
+}
+
+.taben-content-detail__bottom .taben-detail-aside-panel + .taben-detail-aside-panel {
+    margin-top: 0.85rem;
+}
+
+.taben-detail-bottom-foot {
+    margin-top: 1rem;
+}
+
+.taben-detail-aside-panel {
+    background: #ffffff;
+    border: none;
+    border-radius: var(--taben-radius-lg);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 20px rgba(16, 24, 40, 0.08);
+    padding: 0.85rem 0.9rem;
+}
+
+.taben-detail-aside-panel + .taben-detail-aside-panel {
+    margin-top: 0.85rem;
+}
+
+.taben-detail-aside-title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--taben-text);
+    margin: 0 0 0.65rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--taben-border-light);
+}
+
+.taben-detail-aside-title i {
+    color: var(--taben-primary);
+    font-size: 0.72rem;
+}
+
+.taben-detail-aside-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.taben-detail-aside-item {
+    display: grid;
+    grid-template-columns: 4.25rem minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: center;
+    padding: 0.35rem;
+    border-radius: var(--taben-radius-sm);
+    color: inherit;
+    text-decoration: none;
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.taben-detail-aside-item:hover {
+    background: var(--taben-bg-muted);
+    color: inherit;
+}
+
+.taben-detail-aside-item__thumb {
+    display: block;
+    width: 4.25rem;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--taben-radius-sm);
+    overflow: hidden;
+    background: var(--taben-bg-muted);
+}
+
+.taben-detail-aside-item__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.taben-detail-aside-item__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.taben-detail-aside-item__title {
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.55;
+    color: var(--taben-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.taben-detail-aside-item__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.68rem;
+    color: var(--taben-text-muted);
+}
+
+.taben-detail-aside-item__meta i {
+    color: var(--taben-primary);
+    font-size: 0.62rem;
+}
+
+.taben-detail-aside-foot {
+    margin-top: 0.85rem;
+}
+
+.taben-detail-aside-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--taben-primary);
+    background: var(--taben-primary-soft);
+    border-radius: var(--taben-radius-sm);
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+.taben-detail-aside-all:hover {
+    background: var(--taben-primary-light);
+    color: var(--taben-primary-dark);
+}
+
+@media (min-width: 992px) {
+    .taben-content-detail__layout {
+        grid-template-columns: minmax(0, 1fr) minmax(15.5rem, 18.5rem);
+        gap: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .taben-content-detail__aside {
+        display: block;
+        position: sticky;
+        top: 5rem;
+    }
+
+    .taben-content-detail__bottom {
+        display: none;
+    }
+}
+
+.taben-content-detail__card .taben-elementor-content {
+    margin-top: 0;
+    max-width: 100%;
+    overflow-x: clip;
+    overflow-wrap: anywhere;
+}
+
+.taben-content-detail__card .taben-elementor-content .widget-text p {
+    font-size: clamp(0.85rem, 1.1vw, 0.95rem);
+    line-height: 1.85;
+}
+
+.taben-content-detail__card .taben-elementor-content .widget-heading h2 {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    margin-bottom: 0.35rem;
+}
+
+@media (max-width: 767.98px) {
+    .taben-content-hero {
+        min-height: clamp(220px, 58vw, 300px);
+    }
+
+    .taben-content-hero__inner {
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .taben-content-detail__main {
+        margin-top: -1rem;
+    }
+
+    .taben-content-detail__card {
+        padding: 1rem;
+    }
+
+    .taben-content-detail__bottom .taben-detail-aside-item {
+        grid-template-columns: 5rem minmax(0, 1fr);
+        gap: 0.65rem;
+        padding: 0.45rem 0.35rem;
+    }
+
+    .taben-content-detail__bottom .taben-detail-aside-item__thumb {
+        width: 5rem;
+    }
+
+    .taben-content-detail__bottom .taben-detail-aside-item__title {
+        font-size: 0.82rem;
+        line-height: 1.6;
+    }
+
+    .taben-content-detail__bottom .taben-detail-aside-item__meta {
+        font-size: 0.72rem;
+    }
+
+    .taben-content-detail__bottom .taben-detail-aside-title {
+        font-size: 0.88rem;
+    }
+}
+
+.taben-alert-success {
+    background: #ecfdf5;
+    color: var(--taben-success);
+    border: 1px solid #a7f3d0;
+    border-radius: var(--taben-radius-sm);
+    padding: 0.75rem 1rem;
+}
+
+/* ===== Content listing pages (Articles, Podcasts, News, Lab) ===== */
+.taben-listing-page {
+    background: #ffffff;
+    min-height: 60vh;
+    padding-bottom: 2rem;
+}
+
+.taben-listing-page > .container.taben-page {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding-inline: clamp(16px, 4vw, 40px);
+}
+
+.taben-listing-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: clamp(0.75rem, 2vw, 1.25rem);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    align-items: stretch;
+    position: relative;
+}
+
+.taben-listing-shell::before {
+    content: none;
+}
+
+.taben-list-layout {
+    display: contents;
+}
+
+.taben-list-filters {
+    position: sticky;
+    top: 4.5rem;
+    align-self: start;
+    max-height: calc(100vh - 5.5rem);
+    overflow-y: auto;
+    background: #fff;
+    border: none;
+    border-radius: var(--taben-radius-lg);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 20px rgba(16, 24, 40, 0.08);
+    padding: 1rem 0.9rem;
+}
+
+.taben-list-main {
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+}
+
+.taben-filter-group + .taben-filter-group {
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--taben-border-light);
+}
+
+.taben-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--text-tiny);
+    font-weight: 700;
+    color: var(--taben-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.5rem;
+}
+
+.taben-filter-label i {
+    color: var(--taben-primary);
+    font-size: 0.7rem;
+}
+
+.taben-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.taben-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.6rem;
+    font-size: var(--text-tiny);
+    font-weight: 500;
+    color: var(--taben-text-body);
+    background: var(--taben-bg-muted);
+    border: 1px solid var(--taben-border-light);
+    border-radius: var(--taben-radius-full);
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+.taben-filter-chip:hover {
+    border-color: var(--taben-primary-light);
+    color: var(--taben-primary);
+    background: var(--taben-primary-soft);
+}
+
+.taben-filter-chip.is-active {
+    background: var(--taben-primary);
+    border-color: var(--taben-primary);
+    color: #fff;
+}
+
+.taben-filter-chip--tag.is-active {
+    background: var(--taben-primary-dark);
+}
+
+.taben-filter-clear {
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid var(--taben-border-light);
+}
+
+.taben-list-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--taben-text-muted);
+    background: var(--taben-bg-muted);
+    border: 1px dashed var(--taben-border);
+    border-radius: var(--taben-radius-lg);
+    font-size: var(--text-small);
+}
+
+.taben-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.taben-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.45rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    line-height: 1.4;
+    border-radius: var(--taben-radius-full);
+    white-space: nowrap;
+}
+
+.taben-badge--category {
+    background: var(--taben-primary-soft);
+    color: var(--taben-primary);
+    border: 1px solid rgba(26, 86, 219, 0.15);
+}
+
+.taben-badge--tag {
+    background: var(--taben-bg-muted);
+    color: var(--taben-text-muted);
+    border: 1px solid var(--taben-border);
+}
+
+.taben-hcard-excerpt {
+    font-size: var(--text-tiny);
+    color: var(--taben-text-muted);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.taben-detail-badges {
+    margin-bottom: 0.65rem;
+}
+
+.taben-detail-badges .taben-badge:hover {
+    opacity: 0.85;
+}
+
+.taben-faq-page {
+    max-width: 760px;
+}
+
+@media (max-width: 991.98px) {
+    .taben-listing-shell {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .taben-list-filters {
+        position: static;
+        max-height: none;
+        border-bottom: none;
+    }
+
+    .taben-list-main {
+        padding: 0;
+    }
+}
+
+/* ===== Search toolbar ===== */
+.taben-list-search-form {
+    margin-bottom: 0;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--taben-border-light);
+}
+
+.taben-list-filters .taben-filter-group:first-of-type {
+    margin-top: 0.85rem;
+}
+
+.taben-list-filters .taben-list-search {
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.taben-list-filters .taben-list-search-icon {
+    right: 0.65rem;
+    top: 1.05rem;
+    transform: none;
+}
+
+.taben-list-filters .taben-list-search input[type="search"] {
+    width: 100%;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.taben-list-filters .taben-list-search-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+.taben-list-main .taben-list-count {
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.85rem;
+    border-bottom: 1px solid var(--taben-border-light);
+}
+
+/* Responsive listing card grid (Articles, News, Lab, Podcasts) */
+.taben-listing-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: clamp(0.65rem, 2vw, 0.9rem);
+}
+
+@media (min-width: 480px) {
+    .taben-listing-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 768px) {
+    .taben-listing-grid {
+        grid-template-columns: repeat(auto-fill, minmax(11.25rem, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .taben-listing-grid {
+        grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    }
+}
+
+.taben-listing-grid > .taben-hcard,
+.taben-listing-grid > article.taben-hcard {
+    min-width: 0;
+}
+
+.taben-list-main .taben-hcard--article .taben-hcard-media {
+    aspect-ratio: 16 / 10;
+}
+
+.taben-list-main .taben-hcard-body {
+    padding: 0.5rem 0.6rem 0.6rem;
+    gap: 0.28rem;
+}
+
+.taben-list-main .taben-hcard-title {
+    font-size: clamp(0.72rem, 1.5vw, 0.82rem);
+    font-weight: 600;
+    line-height: 1.5;
+    min-height: 0;
+    -webkit-line-clamp: 2;
+}
+
+.taben-list-main .taben-hcard-excerpt {
+    font-size: clamp(0.64rem, 1.2vw, 0.72rem);
+    -webkit-line-clamp: 2;
+    line-height: 1.5;
+}
+
+.taben-list-main .taben-hcard-meta {
+    font-size: clamp(0.6rem, 1.1vw, 0.68rem);
+    margin-top: auto;
+}
+
+.taben-list-main .taben-card-badges {
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.taben-list-main .taben-badge {
+    font-size: 0.58rem;
+    padding: 0.1rem 0.38rem;
+}
+
+.taben-list-main .taben-hcard-media-placeholder {
+    font-size: 1.5rem;
+}
+
+.taben-list-main .taben-hcard-podcast-player {
+    padding: 0 0.5rem 0.5rem;
+}
+
+.taben-list-main .taben-hcard-podcast-player audio {
+    height: 28px;
+}
+
+.taben-list-main .taben-podcast-list {
+    gap: 0.75rem;
+}
+
+.taben-list-main .taben-podcast-card {
+    border: none;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 14px rgba(16, 24, 40, 0.08);
+}
+
+/* Cards use homepage shadow via .taben-hcard — no weaker override here */
+
+.taben-hcard--podcast {
+    display: flex;
+    flex-direction: column;
+}
+
+.taben-hcard-link {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    color: inherit;
+}
+
+.taben-hcard-link:hover {
+    color: inherit;
+}
+
+.taben-hcard-media-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: var(--taben-primary-soft);
+    color: var(--taben-primary);
+    font-size: 2rem;
+}
+
+.taben-hcard-podcast-player {
+    padding: 0 0.55rem 0.55rem;
+    margin-top: auto;
+}
+
+.taben-hcard-podcast-player audio {
+    width: 100%;
+    height: 32px;
+}
+
+.taben-list-main .taben-vrow--lg {
+    box-shadow: var(--taben-shadow-xs);
+}
+
+.taben-news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.taben-listing-page .taben-page-head {
+    margin-bottom: 1rem;
+}
+
+.taben-list-search {
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    position: relative;
+}
+
+.taben-list-search-icon {
+    position: absolute;
+    right: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--taben-text-light);
+    font-size: 0.75rem;
+    pointer-events: none;
+}
+
+.taben-list-search input[type="search"] {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--taben-border);
+    border-radius: var(--taben-radius-sm);
+    padding: 0.45rem 1.75rem 0.45rem 0.55rem;
+    font-family: var(--taben-font);
+    font-size: var(--text-small);
+    background: var(--taben-bg);
+}
+
+.taben-list-search input[type="search"]:focus {
+    outline: none;
+    border-color: var(--taben-primary);
+    box-shadow: 0 0 0 3px var(--taben-primary-soft);
+}
+
+.taben-list-search-btn {
+    padding: 0.45rem 0.75rem;
+    font-size: var(--text-tiny);
+    white-space: nowrap;
+}
+
+.taben-list-count {
+    font-size: var(--text-tiny);
+    color: var(--taben-text-muted);
+    margin: 0 0 0.75rem;
+}
+
+/* ===== Customer pagination ===== */
+.taben-pagination {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--taben-border-light);
+}
+
+.taben-pagination-info {
+    font-size: var(--text-tiny);
+    color: var(--taben-text-muted);
+    text-align: center;
+    margin: 0 0 0.65rem;
+}
+
+.taben-pagination-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.taben-pagination-list li a,
+.taben-pagination-list li span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 0.5rem;
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--taben-text-body);
+    background: var(--taben-bg);
+    border: 1px solid var(--taben-border);
+    border-radius: var(--taben-radius-sm);
+    text-decoration: none;
+    transition: all 0.18s ease;
+}
+
+.taben-pagination-list li a:hover {
+    border-color: var(--taben-primary);
+    color: var(--taben-primary);
+    background: var(--taben-primary-soft);
+}
+
+.taben-pagination-list li.is-active span {
+    background: var(--taben-primary);
+    border-color: var(--taben-primary);
+    color: #fff;
+}
+
+.taben-pagination-list li.is-disabled span {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.taben-pagination-list li.is-ellipsis span {
+    border: none;
+    background: transparent;
+    min-width: auto;
+    padding: 0 0.2rem;
+}

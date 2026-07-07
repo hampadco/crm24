@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fa" class="light-style" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="vertical-menu-template">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] | CRM24</title>
+    <link rel="icon" type="image/x-icon" href="~/panel-assets/img/favicon/favicon.ico" />
+
+    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/boxicons.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/fontawesome.css" />
+
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/core.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/theme-default.css" />
+    <link rel="stylesheet" href="~/panel-assets/css/demo.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/rtl.css" />
+    <link rel="stylesheet" href="~/panel-assets/vendor/css/pages/page-auth.css" />
+
+    <script src="~/panel-assets/vendor/js/helpers.js"></script>
+    <script src="~/panel-assets/js/config.js"></script>
+
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div class="container-xxl">
+        <div class="authentication-wrapper authentication-basic container-p-y">
+            <div class="authentication-inner py-4">
+                @RenderBody()
+            </div>
+        </div>
+    </div>
+
+    <script src="~/panel-assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="~/panel-assets/vendor/libs/popper/popper.js"></script>
+    <script src="~/panel-assets/vendor/js/bootstrap.js"></script>
+    <script src="~/panel-assets/js/main.js"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

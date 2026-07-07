@@ -1,0 +1,130 @@
+@using System.Text.Json
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model Survey
+
+<h4 class="mb-4"><i class="bx bx-poll text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<form asp-action="Save" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+
+    <div class="card mb-4" style="max-width:860px">
+        <div class="card-body row g-3">
+            <div class="col-md-6">
+                <label class="form-label">عنوان *</label>
+                <input type="text" name="title" value="@Model.Title" class="form-control" required />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">توضیح</label>
+                <input type="text" name="description" value="@Model.Description" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-check">
+                    <input type="checkbox" name="isActive" value="true" class="form-check-input" checked="@(Model.Id == 0 || Model.IsActive)" />
+                    <span class="form-check-label">فعال</span>
+                </label>
+            </div>
+            <div class="col-md-4">
+                <label class="form-check">
+                    <input type="checkbox" name="convertToLead" value="true" class="form-check-input" checked="@Model.ConvertToLead" />
+                    <span class="form-check-label">تبدیل شرکت‌کننده به سرنخ</span>
+                </label>
+            </div>
+            <div class="col-md-4">
+                <label class="form-check">
+                    <input type="checkbox" name="isTicketSurvey" value="true" class="form-check-input" checked="@Model.IsTicketSurvey" />
+                    <span class="form-check-label">نظرسنجی پس از بستن تیکت</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4" style="max-width:860px">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">سوالات</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addQuestion()"><i class="bx bx-plus me-1"></i> سوال جدید</button>
+        </div>
+        <div class="card-body d-flex flex-column gap-3" id="questions">
+            @{
+                var questionIndex = 0;
+            }
+            @foreach (var question in Model.Questions)
+            {
+                var options = JsonSerializer.Deserialize<List<string>>(question.OptionsJson) ?? new List<string>();
+                <div class="border rounded p-3 question-row">
+                    <div class="row g-2">
+                        <div class="col-md-7">
+                            <input type="text" name="questions[@questionIndex].Text" value="@question.Text" class="form-control" placeholder="متن سوال" />
+                        </div>
+                        <div class="col-md-5">
+                            <select name="questions[@questionIndex].Type" class="form-select" onchange="toggleOptions(this)">
+                                @foreach (SurveyQuestionType type in Enum.GetValues<SurveyQuestionType>())
+                                {
+                                    <option value="@type" selected="@(question.Type == type)">@SurveysController.TypeLabel(type)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <textarea name="questions[@questionIndex].Options" class="form-control question-options" rows="3"
+                                      placeholder="گزینه‌ها (هر خط یک گزینه)"
+                                      style="@(question.Type is SurveyQuestionType.SingleChoice or SurveyQuestionType.MultiChoice ? "" : "display:none")">@string.Join("\n", options)</textarea>
+                        </div>
+                    </div>
+                </div>
+                questionIndex++;
+            }
+            @if (Model.Questions.Count == 0)
+            {
+                <div class="border rounded p-3 question-row">
+                    <div class="row g-2">
+                        <div class="col-md-7">
+                            <input type="text" name="questions[0].Text" class="form-control" placeholder="متن سوال" />
+                        </div>
+                        <div class="col-md-5">
+                            <select name="questions[0].Type" class="form-select" onchange="toggleOptions(this)">
+                                @foreach (SurveyQuestionType type in Enum.GetValues<SurveyQuestionType>())
+                                {
+                                    <option value="@type">@SurveysController.TypeLabel(type)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <textarea name="questions[0].Options" class="form-control question-options" rows="3"
+                                      placeholder="گزینه‌ها (هر خط یک گزینه)" style="display:none"></textarea>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+    function toggleOptions(select) {
+        const textarea = select.closest('.question-row').querySelector('.question-options');
+        textarea.style.display = (select.value === 'SingleChoice' || select.value === 'MultiChoice') ? '' : 'none';
+    }
+    function addQuestion() {
+        const container = document.getElementById('questions');
+        const rows = container.querySelectorAll('.question-row');
+        const clone = rows[rows.length - 1].cloneNode(true);
+        clone.querySelector('input').value = '';
+        clone.querySelector('textarea').value = '';
+        container.appendChild(clone);
+        container.querySelectorAll('.question-row').forEach((row, idx) => {
+            row.querySelectorAll('input, select, textarea').forEach(el => {
+                el.name = el.name.replace(/questions\[\d+\]/, `questions[${idx}]`);
+            });
+        });
+    }
+</script>
+}

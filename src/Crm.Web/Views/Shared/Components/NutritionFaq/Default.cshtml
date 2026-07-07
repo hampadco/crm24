@@ -1,0 +1,28 @@
+@model IReadOnlyList<Crm.Web.Models.FaqItem>
+
+<section class="taben-section-box taben-section-box--home taben-section-box--gray">
+    <div class="taben-section-head">
+        <h2 class="taben-section-title"><i class="fas fa-comments"></i> سوالات متداول</h2>
+    </div>
+
+    <p class="taben-faq-subtitle taben-faq-subtitle--compact">سوال دارید؟ ما پاسخ می‌دهیم.</p>
+
+    <div class="taben-faq-list taben-faq-list--home" data-taben-faq>
+        @foreach (var item in Model)
+        {
+            <div class="taben-faq-item">
+                <button type="button" class="taben-faq-q" aria-expanded="false">
+                    <span>@item.Question</span>
+                    <i class="fas fa-chevron-down taben-faq-arrow"></i>
+                </button>
+                <div class="taben-faq-a">
+                    <div class="taben-faq-a-inner">@item.Answer</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="text-center mt-2">
+        <a asp-controller="Faq" asp-action="Index" class="taben-view-all">مشاهده همه سوالات <i class="fas fa-chevron-left"></i></a>
+    </div>
+</section>

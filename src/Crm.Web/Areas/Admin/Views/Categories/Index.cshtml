@@ -1,0 +1,64 @@
+@model IReadOnlyList<ContentCategory>
+@{
+    ViewData["Title"] = "دسته‌بندی محتوا";
+    var selectedType = (ContentCategoryType)(ViewBag.SelectedType ?? ContentCategoryType.Article);
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Create" asp-route-type="@selectedType" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus ms-1"></i> دسته جدید
+        </a>
+    </div>
+</div>
+
+<ul class="nav nav-pills admin-type-tabs mb-3">
+    @foreach (ContentCategoryType type in Enum.GetValues<ContentCategoryType>())
+    {
+        <li class="nav-item">
+            <a class="nav-link @(selectedType == type ? "active" : "")"
+               asp-action="Index" asp-route-type="@type">
+                @ContentCategoryTypeLabels.GetLabel(type)
+            </a>
+        </li>
+    }
+</ul>
+
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="table admin-table mb-0">
+            <thead>
+                <tr>
+                    <th>نام</th>
+                    <th class="admin-slug-col">Slug</th>
+                    <th>ترتیب</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">دسته‌ای ثبت نشده است.</td>
+                    </tr>
+                }
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Name</td>
+                        <td class="admin-slug-cell text-muted small">@item.Slug</td>
+                        <td>@item.SortOrder.ToFa()</td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">ویرایش</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('این دسته حذف شود؟');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,15 @@
+@model ContentDetailRelatedSectionsModel
+
+<div class="taben-content-detail__bottom">
+    <partial name="_ContentDetailSidebarPanel"
+             model="@(Model.RelatedTitle, Model.RelatedIcon, Model.ControllerName, Model.DetailRouteName, Model.Related)" />
+    <partial name="_ContentDetailSidebarPanel"
+             model="@(Model.LatestTitle, Model.LatestIcon, Model.ControllerName, Model.DetailRouteName, Model.Latest)" />
+
+    <div class="taben-detail-bottom-foot">
+        <a asp-controller="@Model.ControllerName" asp-action="Index" class="taben-detail-aside-all">
+            مشاهده همه @Model.IndexActionLabel
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+        </a>
+    </div>
+</div>

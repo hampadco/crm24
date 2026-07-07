@@ -1,0 +1,67 @@
+@model List<Crm.Core.Entities.Plan>
+@{
+    ViewData["Title"] = "پلن‌ها و تعرفه";
+    ViewData["PanelTitle"] = "پنل مالک CRM24";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-purchase-tag text-primary me-1"></i> پلن‌ها و تعرفه</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> پلن جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>نام</th>
+                    <th>ماهانه</th>
+                    <th>سالانه</th>
+                    <th>کاربر</th>
+                    <th>رکورد</th>
+                    <th>فضا</th>
+                    <th>وضعیت</th>
+                    <th class="text-end">عملیات</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-5">پلنی تعریف نشده است.</td></tr>
+                }
+                @foreach (var plan in Model)
+                {
+                    <tr>
+                        <td>
+                            <span class="fw-semibold">@plan.Name</span>
+                            @if (plan.IsFeatured)
+                            {
+                                <span class="badge bg-label-primary ms-1">پیشنهادی</span>
+                            }
+                        </td>
+                        <td>@plan.PriceMonthly.ToString("N0") تومان</td>
+                        <td>@plan.PriceYearly.ToString("N0") تومان</td>
+                        <td>@plan.MaxUsers</td>
+                        <td>@plan.MaxRecords.ToString("N0")</td>
+                        <td>@(plan.MaxStorageMb >= 1024 ? $"{plan.MaxStorageMb / 1024} GB" : $"{plan.MaxStorageMb} MB")</td>
+                        <td>
+                            @if (plan.IsActive)
+                            {
+                                <span class="badge bg-label-success">فعال</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-label-secondary">غیرفعال</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@plan.Id" class="btn btn-sm btn-icon btn-text-secondary"><i class="bx bx-edit"></i></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

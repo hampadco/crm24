@@ -1,0 +1,22 @@
+@using Crm.Web.Services
+@model DateTime
+@{
+    var fieldName = ViewData["FieldName"] as string ?? "PublishedAt";
+    var fieldId = ViewData["FieldId"] as string ?? fieldName;
+    var label = ViewData["Label"] as string ?? "تاریخ انتشار";
+    var hiddenValue = Model.ToString("yyyy-MM-ddTHH:mm");
+    var displayValue = PersianDateHelper.ToJalaliDateTime(Model);
+}
+
+<div class="admin-form-group admin-jalali-field">
+    <label class="admin-form-label" for="@(fieldId)_display">@label</label>
+    <div class="admin-jalali-input-wrap">
+        <button type="button" class="admin-jalali-trigger" tabindex="-1" aria-hidden="true">
+            <i class="fas fa-calendar-alt"></i>
+        </button>
+        <input type="text" id="@(fieldId)_display" class="form-control admin-form-control admin-jalali-input"
+               value="@displayValue" autocomplete="off" data-target="#@fieldId" readonly />
+    </div>
+    <input type="hidden" name="@fieldName" id="@fieldId" value="@hiddenValue" />
+    <div class="admin-form-text">تقویم شمسی — تاریخ و ساعت انتشار</div>
+</div>

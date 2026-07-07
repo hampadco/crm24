@@ -1,0 +1,77 @@
+@model Article
+@using ElementorBuilder.Models
+@{
+    ViewData["Title"] = "مقاله جدید";
+    ViewData["FormId"] = "articleForm";
+    ViewData["CancelUrl"] = Url.Action("Index");
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">بازگشت به لیست</a>
+    </div>
+</div>
+
+<form method="post" id="articleForm" asp-action="Create" data-elementor-form>
+    <div asp-validation-summary="All" class="admin-alert admin-alert-danger"></div>
+
+    <div class="admin-editor-shell">
+        <partial name="_AdminEditorTabBar" />
+
+        <div class="tab-content admin-editor-tab-panels">
+            <div class="tab-pane fade show active admin-basic-pane" id="tab-basic" role="tabpanel" aria-labelledby="tab-basic-btn">
+                <div class="admin-basic-form">
+                    <div class="admin-basic-block admin-basic-block--hero">
+                        <div class="admin-form-group">
+                            <label asp-for="Title" class="admin-form-label">عنوان</label>
+                            <input asp-for="Title" class="form-control admin-form-control" />
+                            <span asp-validation-for="Title" class="text-danger small"></span>
+                        </div>
+                        <div class="admin-form-group admin-form-group--slug">
+                            <label asp-for="Slug" class="admin-form-label">Slug</label>
+                            <input asp-for="Slug" class="form-control admin-form-control admin-slug-input" />
+                            <div class="admin-form-text">در صورت خالی بودن، از عنوان ساخته می‌شود.</div>
+                        </div>
+                    </div>
+
+                    <div class="admin-basic-block">
+                        <div class="admin-basic-block-head"><i class="fas fa-align-right"></i> خلاصه</div>
+                        <div class="admin-basic-block-body admin-basic-block-body--stack">
+                            <div class="admin-form-group">
+                                <label asp-for="Summary" class="admin-form-label">خلاصه مقاله</label>
+                                <textarea asp-for="Summary" class="form-control admin-form-control" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="admin-basic-block">
+                        <div class="admin-basic-block-head"><i class="fas fa-tags"></i> دسته‌بندی و انتشار</div>
+                        <div class="admin-basic-block-body admin-basic-block-body--meta">
+                            <partial name="_AdminCategoryField" model="Model.CategoryId" />
+                            <partial name="_AdminTagsField" />
+                            <partial name="_AdminJalaliDateField" model="Model.PublishedAt" />
+                        </div>
+                    </div>
+
+                    <div class="admin-basic-block">
+                        <div class="admin-basic-block-head"><i class="fas fa-image"></i> تصویر شاخص</div>
+                        <div class="admin-basic-block-body">
+                            <partial name="_AdminImageField" model="Model.ThumbnailUrl"
+                                     view-data='new ViewDataDictionary(ViewData) { { "Label", "تصویر شاخص" } }' />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="tab-content" role="tabpanel" aria-labelledby="tab-content-btn">
+                <input asp-for="Content" type="hidden" id="Content" />
+                @await Component.InvokeAsync("ElementorEditor", new ElementorEditorViewModel
+                {
+                    Content = Model.Content,
+                    CancelUrl = Url.Action("Index")!
+                })
+            </div>
+        </div>
+    </div>
+</form>

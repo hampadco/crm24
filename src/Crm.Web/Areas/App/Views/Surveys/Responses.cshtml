@@ -1,0 +1,46 @@
+@using System.Text.Json
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model Survey
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-poll text-primary me-1"></i> پاسخ‌های «@Model.Title»</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+</div>
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>شرکت‌کننده</th>
+                    <th>تماس</th>
+                    @foreach (var question in Model.Questions)
+                    {
+                        <th>@question.Text</th>
+                    }
+                    <th>تاریخ</th>
+                </tr>
+            </thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Responses.Count == 0)
+                {
+                    <tr><td colspan="@(Model.Questions.Count + 3)" class="text-center text-muted py-5">پاسخی ثبت نشده است.</td></tr>
+                }
+                @foreach (var response in Model.Responses)
+                {
+                    var answers = JsonSerializer.Deserialize<Dictionary<int, string?>>(response.AnswersJson) ?? new Dictionary<int, string?>();
+                    <tr>
+                        <td>@(response.RespondentName ?? "ناشناس")</td>
+                        <td class="text-muted">@(response.RespondentPhone ?? "—")</td>
+                        @foreach (var question in Model.Questions)
+                        {
+                            <td>@(answers.GetValueOrDefault(question.Id) ?? "—")</td>
+                        }
+                        <td class="text-muted">@PersianDateHelper.ToJalaliDate(response.CreatedAtUtc)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

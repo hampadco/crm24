@@ -1,0 +1,52 @@
+@using Crm.Core.Entities
+@model List<ReportDef>
+@{
+    ViewData["PanelTitle"] = "گزارش‌ها";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0"><i class="bx bx-bar-chart-alt-2 text-primary me-1"></i> گزارش‌های ذخیره‌شده</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> گزارش جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>نام</th><th>ماژول</th><th>گروه‌بندی</th><th class="text-end">عملیات</th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="4" class="text-center text-muted py-5">هنوز گزارشی ساخته نشده است.</td></tr>
+                }
+                @foreach (var report in Model)
+                {
+                    <tr>
+                        <td><a href="/App/reports/@report.Id"><strong>@report.Name</strong></a></td>
+                        <td>@report.Module.PluralLabel</td>
+                        <td>@(report.GroupByField ?? "—")</td>
+                        <td class="text-end">
+                            <a href="/App/reports/@report.Id" class="btn btn-sm btn-icon btn-text-primary" title="اجرا">
+                                <i class="bx bx-play"></i>
+                            </a>
+                            <a href="/App/reports/@report.Id/excel" class="btn btn-sm btn-icon btn-text-success" title="اکسل">
+                                <i class="bx bx-download"></i>
+                            </a>
+                            <a asp-action="Edit" asp-route-id="@report.Id" class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
+                                <i class="bx bx-edit"></i>
+                            </a>
+                            <form asp-action="Delete" asp-route-id="@report.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('این گزارش حذف شود؟');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

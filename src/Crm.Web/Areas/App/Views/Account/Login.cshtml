@@ -1,0 +1,44 @@
+@model Crm.Web.Areas.App.Models.LoginViewModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "ورود به پنل CRM";
+}
+
+<div class="card">
+    <div class="card-body">
+        <div class="app-brand justify-content-center mb-4">
+            <a asp-area="" asp-controller="Home" asp-action="Index" class="app-brand-link gap-2">
+                <span class="app-brand-logo demo"><i class="bx bxs-analyse fs-2 text-primary"></i></span>
+                <span class="app-brand-text demo text-body fw-bold fs-4">CRM24</span>
+            </a>
+        </div>
+
+        <h4 class="mb-1 text-center">خوش آمدید 👋</h4>
+        <p class="mb-4 text-center text-muted">برای ورود به پنل CRM اطلاعات حساب خود را وارد کنید.</p>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+        <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" dir="ltr" autofocus autocomplete="username" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-control" dir="ltr" autocomplete="current-password" />
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+            <div class="mb-3 form-check">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+            <button type="submit" class="btn btn-primary d-grid w-100">ورود</button>
+        </form>
+
+        <p class="text-center mt-3 mb-0">
+            <span>حساب ندارید؟</span>
+            <a asp-action="Register">ثبت‌نام رایگان</a>
+        </p>
+    </div>
+</div>

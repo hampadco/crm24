@@ -1,0 +1,85 @@
+@model SitePage?
+@{
+    var page = Model;
+    ViewData["Title"] = page?.Title ?? "درباره ما";
+    var heroImage = !string.IsNullOrWhiteSpace(page?.HeroImageUrl)
+        ? page!.HeroImageUrl
+        : Url.Content("~/images/home/hero.jpg")!;
+    var title = page?.Title ?? "درباره ما";
+    var subtitle = page?.Subtitle ?? "بستری برای رشد کسب‌وکار شما";
+}
+
+<div class="taben-content-detail taben-about-page">
+    <div class="taben-content-detail__top taben-home-fluid">
+        <nav class="taben-breadcrumb" aria-label="breadcrumb">
+            <a asp-controller="Home" asp-action="Index">خانه</a>
+            <i class="fas fa-chevron-left sep"></i>
+            <span class="current">@title</span>
+        </nav>
+    </div>
+
+    <header class="taben-content-hero taben-about-hero @(string.IsNullOrWhiteSpace(page?.HeroImageUrl) ? "taben-content-hero--fallback" : "")"
+            style="background-image: url('@heroImage')">
+        <div class="taben-content-hero__overlay" aria-hidden="true"></div>
+        <div class="taben-content-hero__inner taben-home-fluid">
+            <h1 class="taben-content-hero__title">
+                <i class="fas fa-building taben-content-hero__type-icon" aria-hidden="true"></i>
+                @title
+            </h1>
+            @if (!string.IsNullOrWhiteSpace(subtitle))
+            {
+                <p class="taben-content-hero__summary">@subtitle</p>
+            }
+        </div>
+    </header>
+
+    <div class="taben-content-detail__main taben-home-fluid">
+        <div class="taben-about-layout">
+            <article class="taben-content-detail__card taben-about-card">
+                @if (page is not null && !string.IsNullOrWhiteSpace(page.Content))
+                {
+                    @await Component.InvokeAsync("ElementorContent", new { html = page.Content, wrapperClass = "taben-elementor-content" })
+                }
+                else
+                {
+                    <div class="taben-elementor-content">
+                        <p>محتوای این صفحه هنوز تنظیم نشده است.</p>
+                    </div>
+                }
+            </article>
+
+            <aside class="taben-about-aside" aria-label="ارزش‌های ما">
+                <section class="taben-detail-aside-panel taben-about-aside-panel">
+                    <h2 class="taben-detail-aside-title">
+                        <i class="fas fa-heart" aria-hidden="true"></i>
+                        چرا ما؟
+                    </h2>
+                    <ul class="taben-about-values">
+                        <li><i class="fas fa-headset" aria-hidden="true"></i> پشتیبانی و آموزش رایگان</li>
+                        <li><i class="fas fa-shield-alt" aria-hidden="true"></i> امنیت و حفاظت از داده‌ها</li>
+                        <li><i class="fas fa-sliders-h" aria-hidden="true"></i> سفارشی‌سازی کامل فرآیندها</li>
+                        <li><i class="fas fa-sync-alt" aria-hidden="true"></i> به‌روزرسانی‌های دوره‌ای</li>
+                    </ul>
+                </section>
+
+                <section class="taben-detail-aside-panel taben-about-aside-panel">
+                    <h2 class="taben-detail-aside-title">
+                        <i class="fas fa-link" aria-hidden="true"></i>
+                        دسترسی سریع
+                    </h2>
+                    <div class="taben-about-links">
+                        <a asp-controller="Articles" asp-action="Index" class="taben-about-link">
+                            <i class="fas fa-newspaper" aria-hidden="true"></i> مقالات
+                        </a>
+                        <a asp-controller="Faq" asp-action="Index" class="taben-about-link">
+                            <i class="fas fa-question-circle" aria-hidden="true"></i> سوالات متداول
+                        </a>
+                        <a asp-controller="Pages" asp-action="Contact" class="taben-about-link">
+                            <i class="fas fa-envelope" aria-hidden="true"></i> تماس با ما
+                        </a>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+</div>

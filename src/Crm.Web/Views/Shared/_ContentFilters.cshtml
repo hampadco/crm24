@@ -1,0 +1,74 @@
+@model Crm.Web.Models.ContentFilterBarViewModel
+
+@{
+    var hasFilter = !string.IsNullOrEmpty(Model.SelectedCategorySlug)
+        || !string.IsNullOrEmpty(Model.SelectedTagSlug)
+        || !string.IsNullOrEmpty(Model.Search);
+}
+
+<aside class="taben-list-filters">
+    <partial name="_ListingSearch" model="Model" />
+
+    @if (Model.Categories.Count > 0)
+    {
+        <div class="taben-filter-group">
+            <span class="taben-filter-label"><i class="fas fa-folder-open"></i> دسته‌بندی</span>
+            <div class="taben-filter-chips">
+                <a asp-controller="@Model.ControllerName"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-tag="@Model.SelectedTagSlug"
+                   class="taben-filter-chip@(Model.SelectedCategorySlug is null ? " is-active" : "")">
+                    همه
+                </a>
+                @foreach (var cat in Model.Categories)
+                {
+                    <a asp-controller="@Model.ControllerName"
+                       asp-action="Index"
+                       asp-route-search="@Model.Search"
+                       asp-route-category="@cat.Slug"
+                       asp-route-tag="@Model.SelectedTagSlug"
+                       class="taben-filter-chip@(Model.SelectedCategorySlug == cat.Slug ? " is-active" : "")">
+                        @cat.Name
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.ShowTags && Model.Tags.Count > 0)
+    {
+        <div class="taben-filter-group">
+            <span class="taben-filter-label"><i class="fas fa-tags"></i> برچسب‌ها</span>
+            <div class="taben-filter-chips">
+                <a asp-controller="@Model.ControllerName"
+                   asp-action="Index"
+                   asp-route-search="@Model.Search"
+                   asp-route-category="@Model.SelectedCategorySlug"
+                   class="taben-filter-chip@(Model.SelectedTagSlug is null ? " is-active" : "")">
+                    همه
+                </a>
+                @foreach (var tag in Model.Tags)
+                {
+                    <a asp-controller="@Model.ControllerName"
+                       asp-action="Index"
+                       asp-route-search="@Model.Search"
+                       asp-route-category="@Model.SelectedCategorySlug"
+                       asp-route-tag="@tag.Slug"
+                       class="taben-filter-chip taben-filter-chip--tag@(Model.SelectedTagSlug == tag.Slug ? " is-active" : "")">
+                        @tag.Name
+                    </a>
+                }
+            </div>
+        </div>
+    }
+
+    @if (hasFilter)
+    {
+        <div class="taben-filter-clear">
+            <a asp-controller="@Model.ControllerName" asp-action="Index" class="taben-view-all">
+                <i class="fas fa-times"></i> پاک کردن فیلترها
+            </a>
+        </div>
+    }
+</aside>

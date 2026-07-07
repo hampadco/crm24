@@ -1,0 +1,99 @@
+.taben-podcast-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.taben-podcast-card {
+    background: var(--taben-bg);
+    border: 1px solid var(--taben-border);
+    border-radius: var(--taben-radius-lg);
+    box-shadow: var(--taben-shadow-sm);
+    overflow: hidden;
+}
+
+.taben-podcast-card-link {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+@media (max-width: 575.98px) {
+    .taben-podcast-card-link {
+        grid-template-columns: 1fr;
+    }
+}
+
+.taben-podcast-card-media img,
+.taben-podcast-card-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--taben-radius);
+    object-fit: cover;
+}
+
+.taben-podcast-card-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--taben-primary-soft);
+    color: var(--taben-primary);
+    font-size: 2rem;
+}
+
+.taben-podcast-card-body h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.taben-podcast-meta {
+    font-size: 0.75rem;
+    color: var(--taben-text-muted);
+}
+
+.taben-podcast-summary {
+    font-size: 0.8125rem;
+    color: var(--taben-text-body);
+    margin: 0.5rem 0 0;
+}
+
+.taben-podcast-card-player {
+    padding: 0 1rem 1rem;
+}
+
+.taben-podcast-card-player audio {
+    width: 100%;
+}
+
+.taben-podcast-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--taben-text-muted);
+    background: var(--taben-bg-muted);
+    border-radius: var(--taben-radius-lg);
+}
+
+.taben-podcast-detail-hero {
+    background: var(--taben-bg);
+    border: 1px solid var(--taben-border);
+    border-radius: var(--taben-radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--taben-shadow-sm);
+}
+
+.taben-podcast-detail-cover {
+    width: 100%;
+    border-radius: var(--taben-radius);
+    object-fit: cover;
+}
+
+.taben-podcast-player {
+    width: 100%;
+    max-width: 520px;
+}
+
+.taben-podcast-content {
+    margin-top: 0.5rem;
+}

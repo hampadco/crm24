@@ -1,0 +1,77 @@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand demo">
+        <a asp-area="Owner" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
+            <span class="app-brand-logo demo">
+                <i class="bx bxs-crown fs-3 text-primary"></i>
+            </span>
+            <span class="app-brand-text demo menu-text fw-bold ms-2">CRM24 مالک</span>
+        </a>
+
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
+            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
+        </a>
+    </div>
+
+    <div class="menu-divider mt-0"></div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <ul class="menu-inner py-1">
+        <li class="menu-item @(controller == "Dashboard" ? "active" : "")">
+            <a asp-area="Owner" asp-controller="Dashboard" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div>داشبورد</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">مشتریان</span></li>
+        <li class="menu-item @(controller == "Tenants" ? "active" : "")">
+            <a asp-area="Owner" asp-controller="Tenants" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-buildings"></i>
+                <div>Tenant ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Plans" ? "active" : "")">
+            <a asp-area="Owner" asp-controller="Plans" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-purchase-tag"></i>
+                <div>پلن‌ها و تعرفه</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Subscriptions" ? "active" : "")">
+            <a asp-area="Owner" asp-controller="Subscriptions" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-receipt"></i>
+                <div>اشتراک‌ها</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">محتوای سایت</span></li>
+        <li class="menu-item">
+            <a href="/Admin/Articles" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-news"></i>
+                <div>مقالات وبلاگ</div>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="/Admin/SitePages" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-layout"></i>
+                <div>صفحات سایت</div>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="/Admin/Faq" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-help-circle"></i>
+                <div>سوالات متداول</div>
+            </a>
+        </li>
+        <li class="menu-item">
+            <a href="/Admin" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-cog"></i>
+                <div>پنل کامل محتوا</div>
+            </a>
+        </li>
+    </ul>
+</aside>

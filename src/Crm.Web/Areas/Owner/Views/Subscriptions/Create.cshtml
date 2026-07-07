@@ -1,0 +1,93 @@
+@model Crm.Web.Areas.Owner.Controllers.SubscriptionCreateModel
+@{
+    var tenant = (Crm.Core.Entities.Tenant)ViewData["Tenant"]!;
+    var plans = (List<Crm.Core.Entities.Plan>)ViewData["Plans"]!;
+    ViewData["Title"] = $"ثبت اشتراک — {tenant.Name}";
+    ViewData["PanelTitle"] = "پنل مالک CRM24";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-purchase-tag text-primary me-1"></i> ثبت اشتراک برای «@tenant.Name»</h4>
+    <a asp-controller="Tenants" asp-action="Details" asp-route-id="@tenant.Id" class="btn btn-outline-secondary">
+        <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
+    </a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="card-body">
+        @if (plans.Count == 0)
+        {
+            <div class="alert alert-warning">ابتدا از بخش «پلن‌ها و تعرفه» حداقل یک پلن فعال تعریف کنید.</div>
+        }
+        else
+        {
+            <form asp-action="Create" method="post">
+                <input type="hidden" asp-for="TenantId" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="PlanId" class="form-label"></label>
+                        <select asp-for="PlanId" class="form-select" id="planSelect">
+                            @foreach (var plan in plans)
+                            {
+                                <option value="@plan.Id" data-monthly="@plan.PriceMonthly" data-yearly="@plan.PriceYearly">
+                                    @plan.Name — ماهانه @plan.PriceMonthly.ToString("N0") تومان
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Months" class="form-label"></label>
+                        <select asp-for="Months" class="form-select" id="monthsSelect">
+                            <option value="1">۱ ماه</option>
+                            <option value="3">۳ ماه</option>
+                            <option value="6">۶ ماه</option>
+                            <option value="12" selected>۱۲ ماه</option>
+                            <option value="24">۲۴ ماه</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Amount" class="form-label"></label>
+                        <input asp-for="Amount" class="form-control" dir="ltr" id="amountInput" />
+                        <span asp-validation-for="Amount" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="PaymentReference" class="form-label"></label>
+                        <input asp-for="PaymentReference" class="form-control" dir="ltr" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Note" class="form-label"></label>
+                        <input asp-for="Note" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="RecordPayment" class="form-check-input" />
+                            <label asp-for="RecordPayment" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary"><i class="bx bx-check me-1"></i> ثبت اشتراک</button>
+                </div>
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function updateAmount() {
+            const plan = document.querySelector('#planSelect').selectedOptions[0];
+            const months = parseInt(document.querySelector('#monthsSelect').value);
+            if (!plan) return;
+            const monthly = parseFloat(plan.dataset.monthly);
+            const yearly = parseFloat(plan.dataset.yearly);
+            const amount = months >= 12 ? (yearly * months / 12) : (monthly * months);
+            document.querySelector('#amountInput').value = Math.round(amount);
+        }
+        document.querySelector('#planSelect')?.addEventListener('change', updateAmount);
+        document.querySelector('#monthsSelect')?.addEventListener('change', updateAmount);
+        updateAmount();
+    </script>
+}

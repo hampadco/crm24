@@ -1,0 +1,27 @@
+@model string?
+@{
+    var fieldName = ViewData["FieldName"] as string ?? "AudioUrl";
+    var fieldId = ViewData["FieldId"] as string ?? fieldName;
+    var label = ViewData["Label"] as string ?? "فایل صوتی";
+    var url = Model ?? string.Empty;
+}
+
+<div class="admin-form-group admin-audio-field">
+    <label class="admin-form-label" for="@fieldId">@label</label>
+    <div class="admin-audio-field-inner">
+        <div class="admin-audio-preview @(string.IsNullOrEmpty(url) ? "is-empty" : "")">
+            <audio controls preload="none" src="@url"></audio>
+        </div>
+        <div class="admin-image-actions">
+            <button type="button" class="btn btn-primary btn-sm admin-audio-upload-btn">
+                <i class="fas fa-upload ms-1"></i> آپلود فایل صوتی
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm admin-audio-clear-btn">حذف</button>
+        </div>
+        <input type="file" class="admin-audio-file d-none" accept="audio/*,.mp3,.wav,.m4a,.ogg,.aac" />
+        <input type="text" name="@fieldName" id="@fieldId" class="form-control admin-form-control admin-audio-url"
+               value="@url" placeholder="یا آدرس فایل صوتی را وارد کنید…" />
+        <div class="admin-audio-status"></div>
+        <div class="admin-form-text">فرمت‌های مجاز: mp3, wav, m4a, ogg — حداکثر ۲۰ مگابایت</div>
+    </div>
+</div>

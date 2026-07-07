@@ -1,0 +1,27 @@
+@{
+    var formId = ViewData["FormId"]?.ToString() ?? "contentForm";
+    var cancelUrl = ViewData["CancelUrl"]?.ToString() ?? "#";
+}
+
+<div class="admin-editor-tabbar">
+    <ul class="nav nav-tabs admin-editor-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-basic-btn" data-bs-toggle="tab" data-bs-target="#tab-basic"
+                    type="button" role="tab" aria-controls="tab-basic" aria-selected="true">
+                <i class="fas fa-info-circle ms-1"></i> اطلاعات پایه
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-content-btn" data-bs-toggle="tab" data-bs-target="#tab-content"
+                    type="button" role="tab" aria-controls="tab-content" aria-selected="false">
+                <i class="fas fa-layer-group ms-1"></i> محتوا
+            </button>
+        </li>
+    </ul>
+    <div class="admin-editor-tabbar-actions">
+        <button type="submit" form="@formId" class="btn btn-primary btn-sm">
+            <i class="fas fa-save ms-1"></i> ذخیره
+        </button>
+        <a href="@cancelUrl" class="btn btn-outline-secondary btn-sm">انصراف</a>
+    </div>
+</div>

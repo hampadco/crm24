@@ -1,0 +1,60 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@model Ticket
+@{
+    ViewData["PanelTitle"] = "پورتال مشتری";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bx bx-support text-primary me-1"></i>
+        تیکت #@Model.Number — @Model.Subject
+        <partial name="_TicketBadges" model="Model" />
+    </h4>
+    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card mb-4" style="max-width:900px">
+    <div class="card-body">
+        @foreach (var message in Model.Messages)
+        {
+            <div class="d-flex mb-3 @(message.IsFromCustomer ? "flex-row-reverse" : "")">
+                <div class="p-3 rounded @(message.IsFromCustomer ? "bg-label-primary" : "bg-lighter")" style="max-width:80%">
+                    <div class="small text-muted mb-1">
+                        <strong>@message.AuthorName</strong>
+                        — @PersianDateHelper.ToJalaliDate(message.CreatedAtUtc) @message.CreatedAtUtc.ToString("HH:mm")
+                    </div>
+                    <div style="white-space:pre-wrap">@message.Body</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (Model.Status != TicketStatus.Closed)
+{
+    <div class="card" style="max-width:900px">
+        <div class="card-body">
+            <form action="/Portal/tickets/@Model.Id/reply" method="post">
+                @Html.AntiForgeryToken()
+                <label class="form-label">پاسخ شما</label>
+                <textarea name="body" class="form-control mb-3" rows="4" required></textarea>
+                <button type="submit" class="btn btn-primary"><i class="bx bx-send me-1"></i> ارسال</button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-secondary" style="max-width:900px">این تیکت بسته شده است.</div>
+}
+
+@if (ViewBag.TicketSurveyKey is string surveyKey)
+{
+    <div class="alert alert-info d-flex justify-content-between align-items-center" style="max-width:900px">
+        <span>نظر شما درباره کیفیت پشتیبانی برای ما مهم است.</span>
+        <a href="/s/@surveyKey" target="_blank" class="btn btn-sm btn-primary">شرکت در نظرسنجی</a>
+    </div>
+}

@@ -1,0 +1,34 @@
+@model int?
+@using System.Text.Json
+@{
+    var categories = ViewBag.Categories as IEnumerable<ContentCategory> ?? Enumerable.Empty<ContentCategory>();
+    var categoryType = ViewBag.CategoryType as ContentCategoryType? ?? ContentCategoryType.Article;
+    var categoryItems = categories.Select(c => new { c.Id, c.Name }).ToList();
+    var categoriesJson = JsonSerializer.Serialize(categoryItems);
+}
+
+<div class="admin-form-group admin-category-picker"
+     data-category-type="@((int)categoryType)"
+     data-categories="@System.Net.WebUtility.HtmlEncode(categoriesJson)"
+     data-selected-id="@(Model?.ToString() ?? "")">
+    <label for="categorySearchInput" class="admin-form-label">دسته‌بندی</label>
+    <input type="hidden" name="CategoryId" id="CategoryId" value="@(Model?.ToString() ?? "")" />
+    <div class="admin-category-picker-wrap">
+        <div class="admin-category-selected-bar" hidden>
+            <span class="admin-category-selected-chip">
+                <span class="admin-category-selected-name"></span>
+                <button type="button" class="admin-category-clear" title="حذف دسته">&times;</button>
+            </span>
+        </div>
+        <input type="text"
+               id="categorySearchInput"
+               class="form-control admin-form-control admin-category-search"
+               placeholder="جستجو یا ایجاد دسته جدید…"
+               autocomplete="off" />
+        <div class="admin-category-dropdown" hidden>
+            <ul class="admin-category-options"></ul>
+        </div>
+    </div>
+    <div class="admin-form-text">نام دسته را جستجو کنید؛ در صورت نبود، Enter بزنید تا ساخته شود.</div>
+    <div class="admin-category-status" aria-live="polite"></div>
+</div>

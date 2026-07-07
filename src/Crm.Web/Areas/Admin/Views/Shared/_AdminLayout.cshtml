@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - پنل مدیریت CRM24</title>
+    <link rel="stylesheet" href="~/lib/vazirmatn/vazirmatn.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/5.3.3/css/bootstrap.rtl.min.css" />
+    <link rel="stylesheet" href="~/lib/fontawesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/lib/persian-datepicker/css/persian-datepicker.min.css" />
+    <link rel="stylesheet" href="~/css/taben-admin.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="admin-body">
+    <div class="admin-wrap">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-brand">
+                <div class="brand">
+                    CRM24 — مدیریت
+                    <span>پنل محتوای سایت</span>
+                </div>
+            </div>
+            <div class="admin-sidebar-scroll">
+                <nav>
+                    @{
+                        var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+                        var contentControllers = new[] { "Articles", "Faqs", "Categories", "SitePages" };
+                        var contentOpen = contentControllers.Contains(controller);
+                    }
+                    <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="@(controller == "Dashboard" ? "active" : "")">
+                        <i class="fas fa-chart-line"></i> داشبورد
+                    </a>
+
+                    <div class="admin-nav-group @(contentOpen ? "is-open" : "")" data-nav-group="content">
+                        <button type="button" class="admin-nav-group-toggle" aria-expanded="@(contentOpen ? "true" : "false")">
+                            <span class="admin-nav-group-toggle-label"><i class="fas fa-pen-nib"></i> محتوا</span>
+                            <i class="fas fa-chevron-down admin-nav-group-chevron"></i>
+                        </button>
+                        <div class="admin-nav-group-body">
+                            <a asp-area="Admin" asp-controller="Articles" asp-action="Index" class="@(controller == "Articles" ? "active" : "")">
+                                <i class="fas fa-newspaper"></i> وبلاگ / مقالات
+                            </a>
+                            <a asp-area="Admin" asp-controller="Faqs" asp-action="Index" class="@(controller == "Faqs" ? "active" : "")">
+                                <i class="fas fa-question-circle"></i> سؤالات متداول
+                            </a>
+                            <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="@(controller == "Categories" ? "active" : "")">
+                                <i class="fas fa-folder-tree"></i> دسته‌بندی محتوا
+                            </a>
+                            <a asp-area="Admin" asp-controller="SitePages" asp-action="EditAbout" class="@(controller == "SitePages" ? "active" : "")">
+                                <i class="fas fa-file-alt"></i> صفحه درباره ما
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+            <div class="admin-sidebar-footer">
+                <a asp-area="Admin" asp-controller="Account" asp-action="ChangePassword" class="admin-nav-settings @(controller == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "ChangePassword" ? "active" : "")">
+                    <i class="fas fa-key"></i> تغییر رمز عبور
+                </a>
+                <a asp-area="Admin" asp-controller="Account" asp-action="Logout" class="admin-nav-logout">
+                    <i class="fas fa-sign-out-alt"></i> خروج
+                </a>
+            </div>
+        </aside>
+        <main class="admin-main">
+            @RenderBody()
+        </main>
+    </div>
+
+    <script src="~/lib/jquery/3.7.1/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/persian-datepicker/js/persian-date.min.js"></script>
+    <script src="~/lib/persian-datepicker/js/persian-datepicker.min.js"></script>
+    <script src="~/js/admin.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

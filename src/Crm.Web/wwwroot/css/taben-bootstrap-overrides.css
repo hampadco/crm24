@@ -1,0 +1,28 @@
+:root {
+    --bs-primary: #1a56db;
+    --bs-primary-rgb: 26, 86, 219;
+    --bs-link-color: #1a56db;
+    --bs-link-hover-color: #1648b8;
+    --bs-body-font-family: 'Vazirmatn', Tahoma, 'Segoe UI', sans-serif;
+    --bs-body-color: #374151;
+    --bs-body-font-size: 0.8125rem;
+    --bs-border-radius: 9px;
+    --bs-border-radius-sm: 6px;
+    --bs-border-radius-lg: 12px;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--taben-primary);
+    --bs-btn-border-color: var(--taben-primary);
+    --bs-btn-hover-bg: var(--taben-primary-hover);
+    --bs-btn-hover-border-color: var(--taben-primary-hover);
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--taben-primary-soft);
+    color: var(--taben-primary);
+}
+
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.2rem rgba(26, 86, 219, 0.2);
+}

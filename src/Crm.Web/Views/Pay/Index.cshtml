@@ -1,0 +1,37 @@
+@using Crm.Core.Entities
+@model PaymentTransaction
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "درگاه پرداخت";
+}
+
+<div class="card">
+    <div class="card-body text-center">
+        <i class="bx bx-credit-card display-4 text-primary mb-3 d-block"></i>
+        <h4 class="mb-1">درگاه پرداخت آزمایشی</h4>
+        <p class="text-muted">@(Model.Description ?? "پرداخت")</p>
+
+        @if (Model.Status == PaymentTransactionStatus.Pending)
+        {
+            <h3 class="my-4">@Model.Amount.ToString("N0") <small class="fs-6 text-muted">تومان</small></h3>
+            <form method="post" action="/pay/@Model.Token/confirm" class="d-flex gap-2 justify-content-center">
+                @Html.AntiForgeryToken()
+                <button type="submit" name="action" value="pay" class="btn btn-success px-4">
+                    <i class="bx bx-check me-1"></i> پرداخت موفق
+                </button>
+                <button type="submit" name="action" value="cancel" class="btn btn-outline-danger px-4">
+                    انصراف
+                </button>
+            </form>
+            <p class="text-muted small mt-4 mb-0">این صفحه شبیه‌ساز درگاه است؛ در استقرار نهایی به درگاه واقعی متصل می‌شود.</p>
+        }
+        else
+        {
+            <div class="alert @(Model.Status == PaymentTransactionStatus.Paid ? "alert-success" : "alert-danger") mt-3">
+                @(Model.Status == PaymentTransactionStatus.Paid
+                    ? $"پرداخت انجام شده است. کد پیگیری: {Model.Reference}"
+                    : "پرداخت ناموفق بود یا لغو شد.")
+            </div>
+        }
+    </div>
+</div>

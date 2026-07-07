@@ -1,0 +1,59 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model Campaign
+
+<h4 class="mb-4"><i class="bx bx-broadcast text-primary me-1"></i> @ViewData["Title"]</h4>
+
+<partial name="_Alerts" />
+
+<div class="card" style="max-width:760px">
+    <div class="card-body">
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">نام کمپین *</label>
+                    <input type="text" name="name" value="@Model.Name" class="form-control" required />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">وضعیت</label>
+                    <select name="status" class="form-select">
+                        @foreach (CampaignStatus status in Enum.GetValues<CampaignStatus>())
+                        {
+                            <option value="@status" selected="@(Model.Status == status)">@CampaignsController.StatusLabel(status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">کانال</label>
+                    <input type="text" name="channel" value="@Model.Channel" class="form-control" placeholder="اینستاگرام، گوگل، پیامک..." />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">تاریخ شروع</label>
+                    <input type="date" name="startUtc" value="@Model.StartUtc.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">تاریخ پایان</label>
+                    <input type="date" name="endUtc" value="@Model.EndUtc.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">بودجه (تومان)</label>
+                    <input type="number" name="budget" value="@Model.Budget.ToString("0")" class="form-control" min="0" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">هزینه واقعی (تومان)</label>
+                    <input type="number" name="actualCost" value="@Model.ActualCost.ToString("0")" class="form-control" min="0" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">توضیحات</label>
+                    <textarea name="description" class="form-control" rows="3">@Model.Description</textarea>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>

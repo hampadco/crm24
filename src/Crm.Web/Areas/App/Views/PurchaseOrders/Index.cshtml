@@ -1,0 +1,40 @@
+@using Crm.Core.Entities
+@using Crm.Web.Services
+@using Crm.Web.Areas.App.Controllers
+@model List<PurchaseOrder>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bx bx-cart-download text-primary me-1"></i> سفارش‌های خرید</h4>
+    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> سفارش جدید</a>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="card">
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
+            <thead><tr><th>شماره</th><th>تأمین‌کننده</th><th>تاریخ</th><th>مبلغ</th><th>پرداخت‌شده</th><th>وضعیت</th></tr></thead>
+            <tbody class="table-border-bottom-0">
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-5">سفارش خریدی ثبت نشده است.</td></tr>
+                }
+                @foreach (var order in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@order.Id"><strong>@order.Number</strong></a></td>
+                        <td>@order.Vendor.Name</td>
+                        <td class="text-muted">@PersianDateHelper.ToJalaliDate(order.IssueDateUtc)</td>
+                        <td>@order.Total.ToString("N0")</td>
+                        <td>@order.Payments.Sum(p => p.Amount).ToString("N0")</td>
+                        <td>
+                            <span class="badge @(order.Status switch { PurchaseOrderStatus.Draft => "bg-label-secondary", PurchaseOrderStatus.Ordered => "bg-label-warning", PurchaseOrderStatus.Received => "bg-label-success", _ => "bg-label-danger" })">
+                                @PurchaseOrdersController.StatusLabel(order.Status)
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

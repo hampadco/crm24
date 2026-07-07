@@ -1,0 +1,15 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model SalesDocumentStatus
+@{
+    var cls = Model switch
+    {
+        SalesDocumentStatus.Draft => "bg-label-secondary",
+        SalesDocumentStatus.Confirmed => "bg-label-info",
+        SalesDocumentStatus.Converted => "bg-label-primary",
+        SalesDocumentStatus.PartiallyPaid => "bg-label-warning",
+        SalesDocumentStatus.Paid => "bg-label-success",
+        _ => "bg-label-danger"
+    };
+}
+<span class="badge @cls">@FinanceController.StatusLabel(Model)</span>

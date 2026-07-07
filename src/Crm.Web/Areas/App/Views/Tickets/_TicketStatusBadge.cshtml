@@ -1,0 +1,14 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model TicketStatus
+@{
+    var cls = Model switch
+    {
+        TicketStatus.Open => "bg-label-primary",
+        TicketStatus.InProgress => "bg-label-info",
+        TicketStatus.WaitingCustomer => "bg-label-warning",
+        TicketStatus.Resolved => "bg-label-success",
+        _ => "bg-label-secondary"
+    };
+}
+<span class="badge @cls">@TicketsController.StatusLabel(Model)</span>

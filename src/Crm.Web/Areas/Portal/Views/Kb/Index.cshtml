@@ -1,0 +1,44 @@
+@using Crm.Core.Entities
+@model List<KbArticle>
+@{
+    ViewData["PanelTitle"] = "پورتال مشتری";
+}
+
+<h4 class="mb-4"><i class="bx bx-book-open text-primary me-1"></i> پایگاه دانش</h4>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" name="q" value="@ViewBag.Query" class="form-control" placeholder="جستجو در مقالات..." />
+                    <button class="btn btn-primary" type="submit"><i class="bx bx-search"></i></button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    @if (Model.Count == 0)
+    {
+        <div class="col-12 text-center text-muted py-5">مقاله‌ای یافت نشد.</div>
+    }
+    @foreach (var article in Model)
+    {
+        <div class="col-md-6 col-lg-4">
+            <a href="/Portal/kb/@article.Id" class="text-decoration-none">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="mb-2">@article.Title</h5>
+                        @if (article.Category is not null)
+                        {
+                            <span class="badge bg-label-info mb-2">@article.Category</span>
+                        }
+                        <p class="text-muted mb-0">@(article.Body.Length > 120 ? article.Body[..120] + "…" : article.Body)</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    }
+</div>

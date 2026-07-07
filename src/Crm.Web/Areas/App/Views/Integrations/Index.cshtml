@@ -1,0 +1,128 @@
+@using Crm.Core.Entities
+@using Crm.Infrastructure.Services
+@using Crm.Web.Services
+@{
+    var config = (IntegrationConfig)ViewBag.Config;
+    var apiKeys = (List<ApiKey>)ViewBag.ApiKeys;
+}
+
+<h4 class="mb-4"><i class="bx bx-plug text-primary me-1"></i> یکپارچگی‌ها و API</h4>
+
+<partial name="_Alerts" />
+
+@if (TempData["NewApiKey"] is string newKey)
+{
+    <div class="alert alert-warning">
+        <strong>کلید جدید (فقط همین یک بار نمایش داده می‌شود):</strong>
+        <code dir="ltr" class="user-select-all d-block mt-2 fs-5">@newKey</code>
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form asp-action="Save" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bx bx-envelope me-1"></i> ایمیل (SMTP)</h5></div>
+                <div class="card-body row g-3">
+                    <div class="col-md-8"><label class="form-label">سرور SMTP</label><input type="text" name="SmtpHost" value="@config.SmtpHost" class="form-control" dir="ltr" /></div>
+                    <div class="col-md-4"><label class="form-label">پورت</label><input type="number" name="SmtpPort" value="@config.SmtpPort" class="form-control" dir="ltr" /></div>
+                    <div class="col-md-4"><label class="form-label">نام کاربری</label><input type="text" name="SmtpUser" value="@config.SmtpUser" class="form-control" dir="ltr" /></div>
+                    <div class="col-md-4"><label class="form-label">رمز عبور</label><input type="password" name="SmtpPassword" value="@config.SmtpPassword" class="form-control" dir="ltr" /></div>
+                    <div class="col-md-4"><label class="form-label">فرستنده</label><input type="text" name="SmtpFrom" value="@config.SmtpFrom" class="form-control" dir="ltr" /></div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bx bx-message me-1"></i> پنل پیامک</h5></div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6"><label class="form-label">آدرس وب‌سرویس</label><input type="text" name="SmsApiUrl" value="@config.SmsApiUrl" class="form-control" dir="ltr" placeholder="https://api.kavenegar.com/..." /></div>
+                    <div class="col-md-3"><label class="form-label">کلید API</label><input type="text" name="SmsApiKey" value="@config.SmsApiKey" class="form-control" dir="ltr" /></div>
+                    <div class="col-md-3"><label class="form-label">شماره فرستنده</label><input type="text" name="SmsFrom" value="@config.SmsFrom" class="form-control" dir="ltr" /></div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bx bx-chat me-1"></i> پیام‌رسان بله</h5></div>
+                <div class="card-body">
+                    <label class="form-label">توکن بات</label>
+                    <input type="text" name="BaleBotToken" value="@config.BaleBotToken" class="form-control" dir="ltr" />
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bx bx-calculator me-1"></i> حسابداری</h5></div>
+                <div class="card-body">
+                    <label class="form-label">آدرس وب‌سرویس مقصد (فاکتورهای تأییدشده با صف و retry ارسال می‌شوند)</label>
+                    <input type="text" name="AccountingWebhookUrl" value="@config.AccountingWebhookUrl" class="form-control" dir="ltr" />
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bx bx-phone-call me-1"></i> VoIP سانترال</h5></div>
+                <div class="card-body">
+                    <label class="form-check">
+                        <input type="checkbox" name="VoipEnabled" value="true" class="form-check-input" checked="@config.VoipEnabled" />
+                        <span class="form-check-label">فعال — سانترال رویداد تماس ورودی را به <code dir="ltr">POST /api/v1/voip/incoming</code> (با X-Api-Key) بفرستد</span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره تنظیمات</button>
+        </form>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0"><i class="bx bx-key me-1"></i> کلیدهای API</h5></div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    مستندات: <code dir="ltr">GET/POST/PUT/DELETE /api/v1/{module}</code> با هدر <code dir="ltr">X-Api-Key</code>
+                    — OpenAPI: <a href="/openapi/v1.json" target="_blank" dir="ltr">/openapi/v1.json</a>
+                </p>
+                <form asp-action="CreateApiKey" method="post" class="d-flex gap-2 mb-3">
+                    @Html.AntiForgeryToken()
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="نام کلید (مثلاً وب‌سایت)" />
+                    <label class="form-check text-nowrap mb-0 align-self-center">
+                        <input type="checkbox" name="canWrite" value="true" class="form-check-input" />
+                        <span class="form-check-label small">نوشتن</span>
+                    </label>
+                    <button type="submit" class="btn btn-sm btn-primary text-nowrap"><i class="bx bx-plus"></i></button>
+                </form>
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var key in apiKeys)
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>@key.Name</strong>
+                                <span class="badge @(key.IsActive ? "bg-label-success" : "bg-label-secondary") ms-1">@(key.IsActive ? "فعال" : "غیرفعال")</span>
+                                <span class="badge bg-label-info ms-1">@(key.CanWrite ? "خواندن/نوشتن" : "فقط خواندن")</span>
+                                <div class="text-muted small mt-1">
+                                    <code dir="ltr">@(key.Key[..12])…</code>
+                                    — @key.RequestCount درخواست
+                                    @if (key.LastUsedAtUtc is DateTime lastUsed)
+                                    {
+                                        <span> — آخرین استفاده @PersianDateHelper.ToJalaliDate(lastUsed)</span>
+                                    }
+                                </div>
+                            </div>
+                            <form asp-action="ToggleApiKey" asp-route-id="@key.Id" method="post">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm @(key.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                    @(key.IsActive ? "غیرفعال" : "فعال")
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                }
+                @if (apiKeys.Count == 0)
+                {
+                    <li class="list-group-item text-muted text-center py-3">کلیدی ساخته نشده است.</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,61 @@
+@model PagedList<FaqItem>
+@{
+    ViewData["Title"] = "سؤالات متداول";
+    var listQuery = ViewBag.ListQuery as ContentListQuery ?? new ContentListQuery();
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fas fa-plus ms-1"></i> سؤال جدید</a>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <partial name="_AdminListToolbar" model="listQuery" />
+        @if (Model.TotalCount > 0)
+        {
+            <partial name="_AdminListMeta" model="Model" />
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="table admin-table mb-0">
+            <thead>
+                <tr>
+                    <th>سؤال</th>
+                    <th>ترتیب</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Items.Any())
+                {
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">موردی یافت نشد.</td>
+                    </tr>
+                }
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td>@item.Question</td>
+                        <td>@item.SortOrder.ToFa()</td>
+                        <td class="text-end">
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">ویرایش</a>
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                                  onsubmit="return confirm('حذف شود؟');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="admin-card-footer">
+            <partial name="_AdminPagination" model="Model" />
+        </div>
+    }
+</div>
