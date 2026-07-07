@@ -79,3 +79,37 @@
 .taben-elementor-content .elementor-section {
     margin-bottom: 0.5rem;
 }
+
+/* ===== ریسپانسیو محتوای CMS ===== */
+.taben-elementor-content img,
+.taben-elementor-content video,
+.taben-elementor-content iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+.taben-elementor-content table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767.98px) {
+    .taben-elementor-content .elementor-row,
+    .taben-elementor-content .elementor-columns {
+        flex-direction: column;
+    }
+
+    .taben-elementor-content .elementor-column,
+    .taben-elementor-content [class*="elementor-col-"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+
+    .taben-elementor-content h1 { font-size: 1.5rem; }
+    .taben-elementor-content h2 { font-size: 1.3rem; }
+    .taben-elementor-content h3 { font-size: 1.15rem; }
+}

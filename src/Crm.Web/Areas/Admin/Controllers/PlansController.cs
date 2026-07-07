@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Web.Models.Admin;
+using Crm.Web.Services;
 
 namespace Crm.Web.Areas.Admin.Controllers;
 
@@ -18,10 +19,15 @@ public class PlansController : Controller
         _db = db;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var plans = await _db.Plans.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
-        return View(plans);
+        var listQuery = new ContentListQuery { Page = page, PageSize = 20 };
+        var model = await _db.Plans.AsNoTracking()
+            .OrderBy(p => p.SortOrder)
+            .ThenBy(p => p.Id)
+            .ToPagedListAsync(listQuery);
+        ViewBag.ListQuery = listQuery;
+        return View(model);
     }
 
     [HttpGet]

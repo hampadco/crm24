@@ -1,20 +1,33 @@
-@model List<Crm.Core.Entities.Plan>
+@using Crm.Web.Models.Admin
+@model PagedList<Crm.Core.Entities.Plan>
 @{
     ViewData["Title"] = "پلن‌ها و تعرفه";
 }
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title">@ViewData["Title"]</h1>
-    <div class="admin-topbar-actions">
-        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fas fa-plus ms-1"></i> پلن جدید</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-purchase-tag text-primary me-1"></i>
+        @ViewData["Title"]
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount.ToFa()</span>
+    </h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bx bx-plus me-1"></i> پلن جدید
+        </a>
     </div>
 </div>
 
 <partial name="_AdminAlerts" />
 
-<div class="admin-card">
-    <div class="table-responsive">
-        <table class="table admin-table mb-0">
+<div class="card">
+    @if (Model.TotalCount > 0)
+    {
+        <div class="card-header pb-0">
+            <partial name="_AdminListMeta" model="Model" />
+        </div>
+    }
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
             <thead>
                 <tr>
                     <th>نام</th>
@@ -24,15 +37,15 @@
                     <th>رکورد</th>
                     <th>فضا</th>
                     <th>وضعیت</th>
-                    <th></th>
+                    <th class="text-end">عملیات</th>
                 </tr>
             </thead>
-            <tbody>
-                @if (Model.Count == 0)
+            <tbody class="table-border-bottom-0">
+                @if (!Model.Items.Any())
                 {
-                    <tr><td colspan="8" class="text-center text-muted py-4">پلنی تعریف نشده است.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-5">پلنی تعریف نشده است.</td></tr>
                 }
-                @foreach (var plan in Model)
+                @foreach (var plan in Model.Items)
                 {
                     <tr>
                         <td>
@@ -65,4 +78,10 @@
             </tbody>
         </table>
     </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer">
+            <partial name="_AdminPagination" model="Model" />
+        </div>
+    }
 </div>

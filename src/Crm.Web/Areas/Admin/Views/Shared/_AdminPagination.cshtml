@@ -3,14 +3,28 @@
     var page = (int)Model.Page;
     var totalPages = (int)Model.TotalPages;
     var search = Model.Search as string;
+    var extraRoutes = ViewBag.PaginationRoutes as IDictionary<string, object?> ?? new Dictionary<string, object?>();
+
+    Dictionary<string, string> PageRoute(int p)
+    {
+        var routes = new Dictionary<string, string> { ["page"] = p.ToString() };
+        foreach (var kv in extraRoutes)
+        {
+            if (kv.Value is not null)
+                routes[kv.Key] = kv.Value.ToString()!;
+        }
+        if (!string.IsNullOrWhiteSpace(search) && !routes.ContainsKey("q") && !routes.ContainsKey("search"))
+            routes["search"] = search;
+        return routes;
+    }
 }
 
 @if (totalPages > 1)
 {
-    <nav class="admin-pagination" aria-label="صفحه‌بندی">
+    <nav aria-label="صفحه‌بندی">
         <ul class="pagination pagination-sm mb-0">
             <li class="page-item @(page <= 1 ? "disabled" : "")">
-                <a class="page-link" asp-action="Index" asp-route-page="@(page - 1)" asp-route-search="@search">قبلی</a>
+                <a class="page-link" asp-action="Index" asp-all-route-data="PageRoute(page - 1)">قبلی</a>
             </li>
 
             @{
@@ -21,7 +35,7 @@
             @if (start > 1)
             {
                 <li class="page-item">
-                    <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-search="@search">@(1.ToFa())</a>
+                    <a class="page-link" asp-action="Index" asp-all-route-data="PageRoute(1)">@(1.ToFa())</a>
                 </li>
                 @if (start > 2)
                 {
@@ -32,7 +46,7 @@
             @for (var i = start; i <= end; i++)
             {
                 <li class="page-item @(i == page ? "active" : "")">
-                    <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-search="@search">@i.ToFa()</a>
+                    <a class="page-link" asp-action="Index" asp-all-route-data="PageRoute(i)">@i.ToFa()</a>
                 </li>
             }
 
@@ -43,12 +57,12 @@
                     <li class="page-item disabled"><span class="page-link">…</span></li>
                 }
                 <li class="page-item">
-                    <a class="page-link" asp-action="Index" asp-route-page="@totalPages" asp-route-search="@search">@totalPages.ToFa()</a>
+                    <a class="page-link" asp-action="Index" asp-all-route-data="PageRoute(totalPages)">@totalPages.ToFa()</a>
                 </li>
             }
 
             <li class="page-item @(page >= totalPages ? "disabled" : "")">
-                <a class="page-link" asp-action="Index" asp-route-page="@(page + 1)" asp-route-search="@search">بعدی</a>
+                <a class="page-link" asp-action="Index" asp-all-route-data="PageRoute(page + 1)">بعدی</a>
             </li>
         </ul>
     </nav>

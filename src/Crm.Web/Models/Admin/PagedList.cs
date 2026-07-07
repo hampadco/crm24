@@ -21,4 +21,18 @@ public class PagedList<T>
         PageSize = query.NormalizedPageSize,
         Search = query.Search
     };
+
+    public static PagedList<T> Empty(PlatformListQuery query) => new()
+    {
+        Page = query.NormalizedPage,
+        PageSize = query.NormalizedPageSize,
+        Search = query.Q
+    };
+
+    public static PagedList<T> Empty(TenantListQuery query) => new()
+    {
+        Page = query.NormalizedPage,
+        PageSize = query.NormalizedPageSize,
+        Search = query.Q
+    };
 }

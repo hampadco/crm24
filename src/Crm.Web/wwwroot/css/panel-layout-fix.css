@@ -1,0 +1,86 @@
+/*
+ * اصلاح چیدمان Frest در حالت RTL فارسی.
+ * نوار بالا (navbar) نباید روی هدر سایدبار (app-brand) بیفتد.
+ */
+
+@media (min-width: 1200px) {
+    html[dir="rtl"].layout-menu-fixed:not(.layout-menu-collapsed) .layout-wrapper.layout-content-navbar .layout-page {
+        padding-right: 16.25rem !important;
+        padding-left: 0 !important;
+    }
+
+    html[dir="rtl"].layout-menu-fixed.layout-navbar-fixed:not(.layout-menu-collapsed) .layout-wrapper.layout-content-navbar .layout-navbar {
+        right: 16.25rem !important;
+        left: 0 !important;
+        width: auto !important;
+    }
+
+    html[dir="rtl"].layout-menu-fixed:not(.layout-menu-collapsed) .layout-menu {
+        right: 0 !important;
+        left: auto !important;
+        z-index: 1080;
+    }
+
+    html[dir="rtl"].layout-menu-fixed.layout-menu-collapsed .layout-wrapper.layout-content-navbar .layout-page {
+        padding-right: 5rem !important;
+        padding-left: 0 !important;
+    }
+
+    html[dir="rtl"].layout-menu-fixed.layout-navbar-fixed.layout-menu-collapsed .layout-wrapper.layout-content-navbar .layout-navbar {
+        right: 5rem !important;
+        left: 0 !important;
+    }
+}
+
+/* فاصله‌گذاری درست منوی کناری در RTL */
+html[dir="rtl"] .layout-menu .app-brand {
+    padding-inline: 1.15rem;
+    min-height: 4.5rem;
+}
+
+html[dir="rtl"] .layout-menu .app-brand-link {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 11rem;
+}
+
+html[dir="rtl"] .layout-menu .menu-inner > .menu-item > .menu-link {
+    padding-inline: 1.15rem 1.35rem;
+}
+
+html[dir="rtl"] .layout-menu .menu-header {
+    padding-inline: 1.15rem 1.35rem;
+}
+
+@media (max-width: 1199.98px) {
+    html[dir="rtl"].layout-menu-fixed .layout-wrapper.layout-content-navbar .layout-page {
+        padding-right: 0 !important;
+    }
+
+    html[dir="rtl"].layout-menu-fixed .layout-wrapper.layout-content-navbar .layout-navbar {
+        right: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+    }
+}
+
+/* دکمه راهنمای درون‌صفحه (مرکز آموزش) */
+.page-help-link-bar {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.page-help-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border-radius: 50rem;
+    font-weight: 500;
+}
+
+.page-help-link-label::before {
+    content: "—";
+    margin-inline: .25rem;
+    opacity: .65;
+}

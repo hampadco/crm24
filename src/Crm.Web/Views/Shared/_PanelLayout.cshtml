@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/theme-default.css" />
     <link rel="stylesheet" href="~/panel-assets/css/demo.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/rtl.css" />
+    <link rel="stylesheet" href="~/css/panel-layout-fix.css" asp-append-version="true" />
 
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/apex-charts/apex-charts.css" />
@@ -22,12 +23,24 @@
     <script src="~/panel-assets/vendor/js/helpers.js"></script>
     <script src="~/panel-assets/js/config.js"></script>
 
+    @if (ViewContext.RouteData.Values["area"]?.ToString() == "Admin")
+    {
+        <link rel="stylesheet" href="~/css/admin-frest-compat.css" asp-append-version="true" />
+    }
+    <link rel="stylesheet" href="~/css/panel-mobile.css" asp-append-version="true" />
+
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body>
+<body dir="rtl">
+    @{
+        var panelArea = ViewContext.RouteData.Values["area"]?.ToString();
+    }
     <div class="layout-wrapper layout-content-navbar">
         <div class="layout-container">
-            <partial name="_PanelMenu" />
+            @if (!string.IsNullOrEmpty(panelArea))
+            {
+                @await Html.PartialAsync($"~/Areas/{panelArea}/Views/Shared/_PanelMenu.cshtml")
+            }
 
             <div class="layout-page">
                 <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
@@ -39,10 +52,6 @@
                         </div>
 
                         <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-                            <div class="navbar-nav align-items-center">
-                                <span class="fw-semibold">@ViewData["PanelTitle"]</span>
-                            </div>
-
                             <ul class="navbar-nav flex-row align-items-center ms-auto">
                                 <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
                                     <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -101,6 +110,21 @@
                                                 </a>
                                             </li>
                                         }
+                                        else if (ViewContext.RouteData.Values["area"]?.ToString() == "Admin")
+                                        {
+                                            <li>
+                                                <a class="dropdown-item" href="/Admin/Account/ChangePassword">
+                                                    <i class="bx bx-key me-2"></i>
+                                                    <span class="align-middle">تغییر رمز عبور</span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="/Admin/Account/Logout">
+                                                    <i class="bx bx-power-off me-2"></i>
+                                                    <span class="align-middle">خروج</span>
+                                                </a>
+                                            </li>
+                                        }
                                         else if (ViewContext.RouteData.Values["area"]?.ToString() == "Portal")
                                         {
                                             <li>
@@ -133,6 +157,7 @@
                                 </form>
                             </div>
                         }
+                        @await Component.InvokeAsync("PageHelpLink")
                         @RenderBody()
                     </div>
 
@@ -166,6 +191,11 @@
     <script src="~/panel-assets/vendor/libs/flatpickr/flatpickr-jdate.js"></script>
     <script src="~/panel-assets/vendor/libs/flatpickr/l10n/fa-jdate.js"></script>
     <script src="~/js/panel-jalali.js" asp-append-version="true"></script>
+
+    @if (ViewContext.RouteData.Values["area"]?.ToString() == "Admin")
+    {
+        <script src="~/js/admin.js" asp-append-version="true"></script>
+    }
 
     @if (ViewContext.RouteData.Values["area"]?.ToString() == "App" && User.Identity?.IsAuthenticated == true)
     {

@@ -1,0 +1,98 @@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+}
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand demo">
+        <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
+            <span class="app-brand-logo demo">
+                <i class="bx bxs-shield-alt-2 fs-3 text-primary"></i>
+            </span>
+            <span class="app-brand-text demo menu-text fw-bold ms-2">BaMaCRM مدیریت</span>
+        </a>
+
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
+            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
+        </a>
+    </div>
+
+    <div class="menu-divider mt-0"></div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <ul class="menu-inner py-1">
+        <li class="menu-item @(controller == "Dashboard" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div>داشبورد</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">پلتفرم SaaS</span></li>
+        <li class="menu-item @(controller == "Tenants" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Tenants" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-buildings"></i>
+                <div>مشتریان</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Subscriptions" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Subscriptions" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-id-card"></i>
+                <div>اشتراک‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Transactions" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Transactions" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-money"></i>
+                <div>تراکنش‌ها</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Plans" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Plans" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-purchase-tag-alt"></i>
+                <div>پلن‌ها و تعرفه</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">محتوای سایت</span></li>
+        <li class="menu-item @(controller == "Articles" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Articles" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-news"></i>
+                <div>وبلاگ / مقالات</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Faqs" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Faqs" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-help-circle"></i>
+                <div>سؤالات متداول</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Categories" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Categories" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-folder-open"></i>
+                <div>دسته‌بندی محتوا</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "SitePages" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="SitePages" asp-action="EditAbout" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-file"></i>
+                <div>صفحه درباره ما</div>
+            </a>
+        </li>
+
+        <li class="menu-header small text-uppercase"><span class="menu-header-text">آموزش و حساب</span></li>
+        <li class="menu-item @(controller == "Help" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Help" asp-action="Index" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-book-open"></i>
+                <div>آموزش پنل</div>
+            </a>
+        </li>
+        <li class="menu-item @(controller == "Account" && action == "ChangePassword" ? "active" : "")">
+            <a asp-area="Admin" asp-controller="Account" asp-action="ChangePassword" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-key"></i>
+                <div>تغییر رمز عبور</div>
+            </a>
+        </li>
+    </ul>
+</aside>

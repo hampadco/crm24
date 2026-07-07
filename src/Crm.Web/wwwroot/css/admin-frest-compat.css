@@ -1,0 +1,612 @@
+/*
+ * لایه سازگاری پنل ادمین با قالب Frest.
+ * ویوهای قدیمی ادمین از کلاس‌های admin-* استفاده می‌کنند؛ این فایل آن‌ها را
+ * روی متغیرهای Bootstrap/Frest سوار می‌کند تا بدون بازنویسی همه ویوها،
+ * ظاهر یکپارچه (و سازگار با دارک مود) داشته باشند.
+ */
+
+/* ===== سربرگ صفحه ===== */
+.admin-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-page-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: var(--bs-heading-color, inherit);
+    margin: 0;
+}
+
+.admin-topbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+}
+
+/* ===== کارت ===== */
+.admin-card {
+    background-color: var(--bs-card-bg, #fff);
+    border: 0;
+    border-radius: .5rem;
+    box-shadow: 0 0.25rem 1.125rem rgba(75, 70, 92, 0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+/* لیست‌های ادمین: همان ظاهر کارت سفید Frest مثل پنل App */
+.admin-card,
+.layout-content-navbar .card {
+    background-color: var(--bs-card-bg, #fff);
+}
+
+.admin-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.admin-card-header h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.admin-card-body {
+    padding: 1.25rem 1.5rem;
+}
+
+.admin-card-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+/* ===== جدول ===== */
+.admin-table {
+    margin-bottom: 0;
+}
+
+.admin-table th {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.admin-thumb {
+    width: 52px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: .375rem;
+}
+
+.admin-slug-col,
+.admin-slug-cell {
+    direction: ltr;
+    text-align: left;
+    font-family: monospace;
+    font-size: .8125rem;
+}
+
+/* ===== فرم ===== */
+.admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
+}
+
+.admin-form-grid .admin-form-group--full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 991.98px) {
+    .admin-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    margin-bottom: 1rem;
+}
+
+.admin-form-label {
+    font-size: .8125rem;
+    font-weight: 500;
+    color: var(--bs-heading-color, inherit);
+}
+
+.admin-form-control {
+    /* ظاهر از .form-control بوت‌استرپ می‌آید */
+}
+
+.admin-form-text {
+    font-size: .75rem;
+    color: var(--bs-secondary-color, #a8b1bb);
+}
+
+.admin-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+/* ===== هشدارها ===== */
+.admin-alert {
+    border-radius: .5rem;
+    padding: .75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: .875rem;
+}
+
+.admin-alert:empty {
+    display: none;
+}
+
+.admin-alert-danger {
+    background: rgba(255, 91, 92, .16);
+    color: #ff5b5c;
+}
+
+.admin-alert-danger ul {
+    margin: 0;
+    padding-inline-start: 1.25rem;
+}
+
+.admin-alert-success {
+    background: rgba(57, 218, 138, .16);
+    color: #39da8a;
+}
+
+/* ===== کارت آمار ===== */
+.admin-stat-card {
+    background-color: var(--bs-card-bg, #fff);
+    border-radius: .5rem;
+    box-shadow: 0 .25rem 1.125rem rgba(75, 70, 92, .1);
+    padding: 1.25rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+
+.admin-stat-icon {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .5rem;
+    background: rgba(90, 141, 238, .16);
+    color: #5a8dee;
+    font-size: 1.25rem;
+    margin-bottom: .35rem;
+}
+
+.admin-stat-label {
+    font-size: .8125rem;
+    color: var(--bs-secondary-color, #a8b1bb);
+}
+
+.admin-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--bs-heading-color, inherit);
+}
+
+.admin-stat-card a {
+    font-size: .8125rem;
+    text-decoration: none;
+    margin-top: auto;
+}
+
+/* ===== داشبورد ===== */
+.admin-dashboard-welcome {
+    background: linear-gradient(120deg, rgba(90, 141, 238, .16), transparent 70%);
+    border-radius: .5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-dashboard-welcome h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: .35rem;
+}
+
+.admin-dashboard-welcome p {
+    margin: 0;
+    color: var(--bs-secondary-color, #a8b1bb);
+}
+
+.admin-quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.admin-recent-type {
+    display: inline-block;
+    padding: .2rem .6rem;
+    border-radius: 50rem;
+    font-size: .75rem;
+    background: rgba(105, 128, 154, .16);
+    color: #69809a;
+}
+
+.admin-recent-type--article { background: rgba(90, 141, 238, .16); color: #5a8dee; }
+.admin-recent-type--faq { background: rgba(253, 172, 65, .16); color: #fdac41; }
+.admin-recent-type--page { background: rgba(57, 218, 138, .16); color: #39da8a; }
+
+/* ===== نوار ابزار لیست + صفحه‌بندی ===== */
+.admin-list-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: 1rem;
+}
+
+.admin-list-search {
+    max-width: 320px;
+}
+
+.admin-list-meta {
+    font-size: .8125rem;
+    color: var(--bs-secondary-color, #a8b1bb);
+}
+
+.admin-type-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+.admin-type-tabs a {
+    padding: .4rem .9rem;
+    border-radius: 50rem;
+    font-size: .8125rem;
+    text-decoration: none;
+    background: rgba(105, 128, 154, .12);
+    color: inherit;
+}
+
+.admin-type-tabs a.active {
+    background: #5a8dee;
+    color: #fff;
+}
+
+/* ===== تب‌های ویرایشگر (مقالات / صفحات) ===== */
+.admin-editor-shell {
+    background: var(--bs-card-bg, var(--bs-body-bg));
+    border-radius: .5rem;
+    box-shadow: 0 .25rem 1.125rem rgba(75, 70, 92, .1);
+    overflow: hidden;
+}
+
+.admin-editor-tabbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .5rem 1.25rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.admin-editor-tabs {
+    border-bottom: 0;
+}
+
+.admin-editor-tabbar-actions {
+    display: flex;
+    gap: .5rem;
+    padding-bottom: .5rem;
+}
+
+.admin-editor-tab-panels {
+    padding: 1.25rem;
+}
+
+.admin-basic-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 900px;
+}
+
+.admin-basic-block {
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    overflow: hidden;
+}
+
+.admin-basic-block--hero {
+    padding: 1.25rem;
+    border: 0;
+    background: rgba(90, 141, 238, .06);
+}
+
+.admin-basic-block-head {
+    padding: .75rem 1.25rem;
+    font-size: .875rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: rgba(105, 128, 154, .06);
+}
+
+.admin-basic-block-body {
+    padding: 1.25rem;
+}
+
+.admin-basic-block-body--stack,
+.admin-basic-block-body--meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* ===== ویجت تصویر ===== */
+.admin-image-field {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.admin-image-field-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.admin-image-preview {
+    position: relative;
+    width: 220px;
+    aspect-ratio: 16 / 10;
+    border: 1px dashed var(--bs-border-color);
+    border-radius: .5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: rgba(105, 128, 154, .06);
+    flex-shrink: 0;
+}
+
+.admin-image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-image-placeholder {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+    font-size: .8125rem;
+    color: var(--bs-secondary-color, #a8b1bb);
+}
+
+.admin-image-preview.is-empty img {
+    display: none;
+}
+
+.admin-image-preview.is-empty .admin-image-placeholder {
+    display: flex;
+}
+
+.admin-image-controls {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    flex: 1;
+    min-width: 220px;
+}
+
+.admin-image-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+}
+
+.admin-image-status { font-size: .75rem; }
+.admin-image-status.is-success { color: #39da8a; }
+.admin-image-status.is-error { color: #ff5b5c; }
+
+/* ===== ویجت برچسب‌ها ===== */
+.admin-tags-box {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .6rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: .375rem;
+    cursor: text;
+    background: var(--bs-body-bg);
+}
+
+.admin-tags-list {
+    display: contents;
+}
+
+.admin-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    padding: .2rem .6rem;
+    border-radius: 50rem;
+    font-size: .75rem;
+    background: rgba(90, 141, 238, .16);
+    color: #5a8dee;
+}
+
+.admin-tag-chip-remove {
+    border: 0;
+    background: none;
+    color: inherit;
+    font-size: .9rem;
+    line-height: 1;
+    padding: 0;
+    cursor: pointer;
+}
+
+.admin-tag-badge {
+    display: inline-block;
+    padding: .15rem .55rem;
+    border-radius: 50rem;
+    font-size: .72rem;
+    background: rgba(105, 128, 154, .16);
+    color: #69809a;
+    margin-inline-end: .25rem;
+}
+
+.admin-tags-input {
+    border: 0;
+    outline: 0;
+    flex: 1;
+    min-width: 120px;
+    background: transparent;
+    color: inherit;
+    font-size: .875rem;
+}
+
+/* ===== ویجت انتخاب دسته ===== */
+.admin-category-picker {
+    position: relative;
+}
+
+.admin-category-dropdown {
+    position: fixed;
+    z-index: 2600;
+    background: var(--bs-card-bg, var(--bs-body-bg));
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .18);
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.admin-category-options {
+    list-style: none;
+    margin: 0;
+    padding: .25rem;
+}
+
+.admin-category-option {
+    display: block;
+    width: 100%;
+    text-align: start;
+    border: 0;
+    background: none;
+    padding: .5rem .75rem;
+    border-radius: .375rem;
+    font-size: .8438rem;
+    color: inherit;
+    cursor: pointer;
+}
+
+.admin-category-option:hover,
+.admin-category-option.is-active {
+    background: rgba(90, 141, 238, .16);
+    color: #5a8dee;
+}
+
+.admin-category-option--create {
+    color: #39da8a;
+    font-weight: 600;
+}
+
+.admin-category-option--empty {
+    color: var(--bs-secondary-color, #a8b1bb);
+    cursor: default;
+}
+
+.admin-category-selected-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: .4rem;
+    padding: .3rem .75rem;
+    border-radius: 50rem;
+    font-size: .8125rem;
+    background: rgba(57, 218, 138, .16);
+    color: #39da8a;
+}
+
+.admin-category-clear {
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.admin-category-status { font-size: .75rem; }
+.admin-category-status.is-success { color: #39da8a; }
+.admin-category-status.is-error { color: #ff5b5c; }
+
+/* ===== فیلد تاریخ شمسی قدیمی (تا مهاجرت کامل) ===== */
+.admin-jalali-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.admin-jalali-trigger {
+    position: absolute;
+    inset-inline-start: .6rem;
+    border: 0;
+    background: none;
+    color: var(--bs-secondary-color, #a8b1bb);
+    cursor: pointer;
+}
+
+/* ===== حالت تمام‌صفحه Elementor ===== */
+body.elementor-builder-fullscreen #layout-menu,
+body.elementor-builder-fullscreen .layout-navbar,
+body.elementor-builder-fullscreen .content-footer,
+body.elementor-builder-fullscreen .admin-topbar,
+body.elementor-builder-fullscreen .admin-editor-tabbar,
+body.elementor-builder-fullscreen form > .admin-alert,
+body.elementor-builder-fullscreen #tab-basic {
+    display: none !important;
+}
+
+body.elementor-builder-fullscreen .layout-page {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+body.elementor-builder-fullscreen .content-wrapper > .container-fluid {
+    padding: 0 !important;
+    max-width: none !important;
+}
+
+body.elementor-builder-fullscreen .admin-editor-shell,
+body.elementor-builder-fullscreen .admin-editor-tab-panels,
+body.elementor-builder-fullscreen #tab-content {
+    height: 100vh;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+}
+
+body.elementor-builder-fullscreen .admin-editor-tab-panels > .tab-pane {
+    padding: 0;
+}
+
+body.elementor-builder-fullscreen .elementor-editor-host {
+    margin: 0;
+    min-height: 100vh;
+}

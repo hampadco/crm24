@@ -44,40 +44,76 @@ public class PlatformAdminService
         };
     }
 
-    public async Task<List<TenantListItem>> GetTenantsAsync(string? q, TenantStatus? status, int take = 200, CancellationToken ct = default)
+    public async Task<PagedList<TenantListItem>> GetTenantsAsync(TenantListQuery listQuery, CancellationToken ct = default)
     {
         var query = _db.Tenants.AsNoTracking().AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(q))
+        if (!string.IsNullOrWhiteSpace(listQuery.Q))
         {
-            var term = q.Trim();
+            var term = listQuery.Q.Trim();
             query = query.Where(t => EF.Functions.ILike(t.Name, $"%{term}%") || EF.Functions.ILike(t.Slug, $"%{term}%"));
         }
 
-        if (status is not null)
-            query = query.Where(t => t.Status == status);
+        if (listQuery.Status is not null)
+            query = query.Where(t => t.Status == listQuery.Status);
 
-        var tenants = await query.OrderByDescending(t => t.CreatedAtUtc).Take(take).ToListAsync(ct);
+        var ordered = query.OrderByDescending(t => t.CreatedAtUtc);
+
+        var page = listQuery.NormalizedPage;
+        var pageSize = listQuery.NormalizedPageSize;
+        var totalCount = await ordered.CountAsync(ct);
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        if (totalPages > 0 && page > totalPages)
+            page = totalPages;
+
+        List<Tenant> tenants;
+        if (totalCount == 0)
+        {
+            tenants = [];
+        }
+        else
+        {
+            tenants = await ordered
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+        }
+
         var ids = tenants.Select(t => t.Id).ToList();
 
-        var userCounts = await _db.Users.AsNoTracking()
-            .Where(u => ids.Contains(u.TenantId))
-            .GroupBy(u => u.TenantId)
-            .Select(g => new { TenantId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.TenantId, x => x.Count, ct);
+        var userCounts = ids.Count == 0
+            ? new Dictionary<int, int>()
+            : await _db.Users.AsNoTracking()
+                .Where(u => ids.Contains(u.TenantId))
+                .GroupBy(u => u.TenantId)
+                .Select(g => new { TenantId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.TenantId, x => x.Count, ct);
 
-        var recordCounts = await _db.Records.IgnoreQueryFilters().AsNoTracking()
-            .Where(r => ids.Contains(r.TenantId) && !r.IsDeleted)
-            .GroupBy(r => r.TenantId)
-            .Select(g => new { TenantId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.TenantId, x => x.Count, ct);
+        var recordCounts = ids.Count == 0
+            ? new Dictionary<int, int>()
+            : await _db.Records.IgnoreQueryFilters().AsNoTracking()
+                .Where(r => ids.Contains(r.TenantId) && !r.IsDeleted)
+                .GroupBy(r => r.TenantId)
+                .Select(g => new { TenantId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.TenantId, x => x.Count, ct);
 
-        return tenants.Select(t => new TenantListItem
+        var items = tenants.Select(t => new TenantListItem
         {
             Tenant = t,
             UserCount = userCounts.GetValueOrDefault(t.Id),
             RecordCount = recordCounts.GetValueOrDefault(t.Id)
         }).ToList();
+
+        return new PagedList<TenantListItem>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages,
+            Search = listQuery.Q
+        };
     }
 
     public async Task<TenantDetailsViewModel?> GetTenantDetailsAsync(int id, CancellationToken ct = default)
@@ -196,29 +232,28 @@ public class PlatformAdminService
         return (true, null);
     }
 
-    public async Task<List<PlatformTransactionRow>> GetTransactionsAsync(string? q, int take = 300, CancellationToken ct = default)
+    public async Task<PagedList<PlatformTransactionRow>> GetTransactionsAsync(PlatformListQuery listQuery, CancellationToken ct = default)
     {
         var tenantQuery = _db.Tenants.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(q))
+        if (!string.IsNullOrWhiteSpace(listQuery.Q))
         {
-            var term = q.Trim();
+            var term = listQuery.Q.Trim();
             tenantQuery = tenantQuery.Where(t => EF.Functions.ILike(t.Name, $"%{term}%") || EF.Functions.ILike(t.Slug, $"%{term}%"));
         }
 
         var tenantMap = await tenantQuery.ToDictionaryAsync(t => t.Id, t => t.Name, ct);
         var tenantIds = tenantMap.Keys.ToList();
 
+        if (tenantIds.Count == 0)
+            return PagedList<PlatformTransactionRow>.Empty(listQuery);
+
         var subscriptionPayments = await _db.SubscriptionPayments.AsNoTracking()
             .Include(p => p.Subscription)
             .Where(p => tenantIds.Contains(p.Subscription.TenantId))
-            .OrderByDescending(p => p.PaidAtUtc)
-            .Take(take)
             .ToListAsync(ct);
 
         var gatewayPayments = await _db.PaymentTransactions.IgnoreQueryFilters().AsNoTracking()
             .Where(p => tenantIds.Contains(p.TenantId))
-            .OrderByDescending(p => p.PaidAtUtc ?? DateTime.MinValue)
-            .Take(take)
             .ToListAsync(ct);
 
         var rows = subscriptionPayments.Select(p => new PlatformTransactionRow
@@ -255,7 +290,29 @@ public class PlatformAdminService
             Description = p.Description ?? p.Kind.ToString()
         }));
 
-        return rows.OrderByDescending(r => r.AtUtc).Take(take).ToList();
+        var ordered = rows.OrderByDescending(r => r.AtUtc).ToList();
+
+        var page = listQuery.NormalizedPage;
+        var pageSize = listQuery.NormalizedPageSize;
+        var totalCount = ordered.Count;
+        var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        if (totalPages > 0 && page > totalPages)
+            page = totalPages;
+
+        IReadOnlyList<PlatformTransactionRow> items = totalCount == 0
+            ? Array.Empty<PlatformTransactionRow>()
+            : ordered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return new PagedList<PlatformTransactionRow>
+        {
+            Items = items,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = totalCount,
+            TotalPages = totalPages,
+            Search = listQuery.Q
+        };
     }
 
     public async Task<(bool Ok, string? Error)> DeleteTenantAsync(int tenantId, string confirmSlug, string? actor, string? ip, CancellationToken ct = default)

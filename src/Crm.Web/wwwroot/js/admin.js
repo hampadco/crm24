@@ -748,12 +748,10 @@
                 if (!dropdown.hidden) positionDropdown();
             });
 
-            var adminMain = document.querySelector('.admin-main');
-            if (adminMain) {
-                adminMain.addEventListener('scroll', function () {
-                    if (!dropdown.hidden) positionDropdown();
-                }, { passive: true });
-            }
+            var scrollHost = document.querySelector('.admin-main') || window;
+            scrollHost.addEventListener('scroll', function () {
+                if (!dropdown.hidden) positionDropdown();
+            }, { passive: true });
 
             if (clearBtn) {
                 clearBtn.addEventListener('click', clearSelection);

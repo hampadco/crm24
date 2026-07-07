@@ -2,9 +2,8 @@
  * تقویم شمسی پنل CRM — flatpickr-jdate (مطابق قالب Frest / forms-pickers).
  * روی input های .jalali-date و .jalali-datetime اعمال می‌شود.
  *
- * قرارداد داده:
- *  - مقدار input اصلی (که به سرور ارسال می‌شود) همیشه ISO میلادی است: 2026-07-07 یا 2026-07-07T14:30
- *  - نمایش برای کاربر (altInput) همیشه شمسی است: 1405/04/16 یا 1405/04/16 14:30
+ * قرارداد: مقدار input اصلی (که به سرور ارسال می‌شود) همیشه ISO میلادی است
+ * (yyyy-MM-dd یا yyyy-MM-ddTHH:mm) و فقط نمایش (altInput) شمسی است.
  */
 (function () {
     'use strict';
@@ -14,65 +13,34 @@
         'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
     ];
 
-    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function two(n) { return (n < 10 ? '0' : '') + n; }
 
-    function toPersianDigits(s) {
-        var fa = '۰۱۲۳۴۵۶۷۸۹';
-        return String(s).replace(/\d/g, function (d) { return fa[+d]; });
+    /** رشته ISO میلادی → Date واقعی میلادی (یا null). */
+    function parseGregorianIso(str) {
+        var m = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{1,2}))?/.exec(String(str).trim());
+        if (!m) return null;
+        var year = +m[1];
+        // سال‌های شمسی (۱۳xx–۱۵xx) را میلادی حساب نکن
+        if (year < 1700) return null;
+        return new Date(year, +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), 0, 0);
     }
 
-    function fromPersianDigits(s) {
-        return String(s)
-            .replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); })
-            .replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); });
+    /** timestamp → رشته ISO میلادی برای ارسال به سرور. */
+    function toGregorianIso(ts, withTime) {
+        var d = new Date(ts);
+        var s = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
+        if (withTime) s += 'T' + two(d.getHours()) + ':' + two(d.getMinutes());
+        return s;
     }
 
-    /**
-     * پارس رشته تاریخ. رشته‌های سرور میلادی ISO هستند (سال >= 1700)
-     * و رشته‌های شمسی سال < 1700 دارند.
-     * خروجی: JDate (که فورک jdate ای flatpickr داخلی استفاده می‌کند).
-     */
-    function parseAny(datestr) {
-        if (datestr && typeof datestr.getTime === 'function') return new JDate(datestr.getTime());
-        if (typeof datestr === 'number') return new JDate(datestr);
-        var s = fromPersianDigits(String(datestr)).trim();
-        var m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2}))?/);
-        if (!m) {
-            if (s.toLowerCase() === 'today') return new JDate();
-            return undefined;
-        }
-        var y = +m[1], mo = +m[2] - 1, d = +m[3], h = +(m[4] || 0), mi = +(m[5] || 0);
-        if (y >= 1700) {
-            // میلادی → به Date واقعی و سپس JDate
-            return new JDate(new Date(y, mo, d, h, mi, 0, 0).getTime());
-        }
-        // شمسی
-        return new JDate(y, mo, d, h, mi, 0, 0);
+    /** JDate → نمایش شمسی. */
+    function toJalaliDisplay(jd, withTime) {
+        var s = jd.getFullYear() + '/' + two(jd.getMonth() + 1) + '/' + two(jd.getDate());
+        if (withTime) s += ' ' + two(jd.getHours()) + ':' + two(jd.getMinutes());
+        return s;
     }
 
-    /**
-     * فرمت خروجی. اگر فرمت شامل '-' باشد یعنی مقدار مخفی (سرور) → ISO میلادی؛
-     * در غیر این صورت نمایش شمسی برای کاربر.
-     */
-    function formatAny(jd, format) {
-        var withTime = format.indexOf('H') !== -1;
-        if (format.indexOf('-') !== -1) {
-            var g = new Date(jd.getTime());
-            var iso = g.getFullYear() + '-' + pad(g.getMonth() + 1) + '-' + pad(g.getDate());
-            if (withTime) iso += 'T' + pad(g.getHours()) + ':' + pad(g.getMinutes());
-            return iso;
-        }
-        var out = jd.getFullYear() + '/' + pad(jd.getMonth() + 1) + '/' + pad(jd.getDate());
-        if (withTime) out += ' ' + pad(jd.getHours()) + ':' + pad(jd.getMinutes());
-        return out;
-    }
-
-    function normalizeInitialValue(el) {
-        if (!el.value) return;
-        el.value = el.value.trim().replace(' ', 'T');
-    }
-
-    function buildOptions(el, withTime) {
+    function makeOptions(withTime, el) {
         var opts = {
             locale: 'fa',
             altInput: true,
@@ -80,8 +48,18 @@
             dateFormat: withTime ? 'Y-m-d\\TH:i' : 'Y-m-d',
             monthSelectorType: 'static',
             disableMobile: true,
-            parseDate: parseAny,
-            formatDate: formatAny
+            // مقدار ارسال‌شده به سرور میلادی است؛ نمایش شمسی.
+            parseDate: function (datestr) {
+                if (datestr instanceof Date) return new JDate(datestr);
+                var g = parseGregorianIso(datestr);
+                if (g) return new JDate(g);
+                try { return new JDate(String(datestr)); } catch (e) { return undefined; }
+            },
+            formatDate: function (date, format) {
+                // فرمت‌های حاوی '-' فرمت سیمی (input اصلی) هستند → میلادی
+                if (format.indexOf('-') !== -1) return toGregorianIso(date.getTime(), withTime);
+                return toJalaliDisplay(date, withTime);
+            }
         };
         if (withTime) {
             opts.enableTime = true;
@@ -91,21 +69,30 @@
         return opts;
     }
 
+    function initOne(el, withTime) {
+        if (el._flatpickr || el.classList.contains('form-control-alt-jalali')) return;
+        if (el.readOnly && !el.value) return;
+        el.dataset.jalaliInit = '1';
+        if (el.value) el.value = el.value.trim().replace(' ', 'T');
+
+        var fp = el.flatpickr(makeOptions(withTime, el));
+        // altInput کلاس‌های input اصلی (از جمله jalali-*) را به ارث می‌برد؛
+        // علامت‌گذاری تا در فراخوانی‌های بعدی دوباره مقداردهی نشود.
+        if (fp.altInput) {
+            fp.altInput.dataset.jalaliInit = '1';
+            fp.altInput.classList.add('form-control-alt-jalali');
+        }
+    }
+
     function initJalaliPickers(root) {
         if (typeof flatpickr === 'undefined' || typeof JDate === 'undefined') return;
 
         var scope = root || document;
-
         scope.querySelectorAll('.jalali-date:not([data-jalali-init])').forEach(function (el) {
-            el.dataset.jalaliInit = '1';
-            normalizeInitialValue(el);
-            el.flatpickr(buildOptions(el, false));
+            initOne(el, false);
         });
-
         scope.querySelectorAll('.jalali-datetime:not([data-jalali-init])').forEach(function (el) {
-            el.dataset.jalaliInit = '1';
-            normalizeInitialValue(el);
-            el.flatpickr(buildOptions(el, true));
+            initOne(el, true);
         });
     }
 
@@ -120,10 +107,6 @@
     window.jalaliDayNumber = function (date) {
         return new JDate(date).getDate();
     };
-    // برای تست/استفاده مجدد
-    window.jalaliParseAny = parseAny;
-    window.jalaliFormatAny = formatAny;
-    window.toPersianDigits = window.toPersianDigits || toPersianDigits;
 
     document.addEventListener('DOMContentLoaded', function () {
         initJalaliPickers();

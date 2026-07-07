@@ -4,19 +4,12 @@
     var fieldName = ViewData["FieldName"] as string ?? "PublishedAt";
     var fieldId = ViewData["FieldId"] as string ?? fieldName;
     var label = ViewData["Label"] as string ?? "تاریخ انتشار";
-    var hiddenValue = Model.ToString("yyyy-MM-ddTHH:mm");
-    var displayValue = PersianDateHelper.ToJalaliDateTime(Model);
+    var isoValue = Model.ToString("yyyy-MM-dd'T'HH:mm");
 }
 
-<div class="admin-form-group admin-jalali-field">
-    <label class="admin-form-label" for="@(fieldId)_display">@label</label>
-    <div class="admin-jalali-input-wrap">
-        <button type="button" class="admin-jalali-trigger" tabindex="-1" aria-hidden="true">
-            <i class="fas fa-calendar-alt"></i>
-        </button>
-        <input type="text" id="@(fieldId)_display" class="form-control admin-form-control admin-jalali-input"
-               value="@displayValue" autocomplete="off" data-target="#@fieldId" readonly />
-    </div>
-    <input type="hidden" name="@fieldName" id="@fieldId" value="@hiddenValue" />
+<div class="admin-form-group">
+    <label class="admin-form-label" for="@fieldId">@label</label>
+    <input type="text" name="@fieldName" id="@fieldId" value="@isoValue"
+           class="form-control jalali-datetime" autocomplete="off" dir="ltr" />
     <div class="admin-form-text">تقویم شمسی — تاریخ و ساعت انتشار</div>
 </div>

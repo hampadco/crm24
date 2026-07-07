@@ -1,0 +1,12 @@
+@model Crm.Web.Models.Help.PageHelpLinkModel
+
+<div class="page-help-link-bar mb-3">
+    <a href="@Model.Url" class="btn btn-sm btn-label-primary page-help-link-btn" title="راهنمای @Model.TopicTitle">
+        <i class="bx bx-help-circle"></i>
+        <span>راهنما</span>
+        @if (!string.IsNullOrWhiteSpace(Model.MatchedLabel))
+        {
+            <span class="page-help-link-label d-none d-md-inline">@Model.MatchedLabel</span>
+        }
+    </a>
+</div>

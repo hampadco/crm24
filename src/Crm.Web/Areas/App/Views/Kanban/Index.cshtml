@@ -22,10 +22,10 @@
 
 <form id="afToken">@Html.AntiForgeryToken()</form>
 
-<div class="d-flex gap-3 overflow-auto pb-3" style="min-height: 60vh">
+<div class="d-flex gap-3 overflow-auto pb-3 kanban-board" style="min-height: 60vh">
     @foreach (var (stage, cards) in Model.Columns)
     {
-        <div class="flex-shrink-0" style="width: 280px">
+        <div class="flex-shrink-0 kanban-col">
             <div class="card h-100">
                 <div class="card-header py-2 d-flex justify-content-between align-items-center"
                      style="border-top: 3px solid @(stage.Color ?? "#696cff")">

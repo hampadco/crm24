@@ -1,19 +1,30 @@
 @using Crm.Core.Entities
+@using Crm.Web.Models.Admin
 @using Crm.Web.Services
-@model List<Subscription>
+@model PagedList<Subscription>
 @{
     ViewData["Title"] = "اشتراک‌ها";
 }
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx bx-id-card text-primary me-1"></i>
+        @ViewData["Title"]
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount.ToFa()</span>
+    </h4>
 </div>
 
 <partial name="_AdminAlerts" />
 
-<div class="admin-card">
-    <div class="table-responsive">
-        <table class="table admin-table mb-0">
+<div class="card">
+    @if (Model.TotalCount > 0)
+    {
+        <div class="card-header pb-0">
+            <partial name="_AdminListMeta" model="Model" />
+        </div>
+    }
+    <div class="table-responsive text-nowrap">
+        <table class="table table-hover">
             <thead>
                 <tr>
                     <th>مشتری</th>
@@ -26,12 +37,12 @@
                     <th>وضعیت</th>
                 </tr>
             </thead>
-            <tbody>
-                @if (Model.Count == 0)
+            <tbody class="table-border-bottom-0">
+                @if (!Model.Items.Any())
                 {
-                    <tr><td colspan="8" class="text-center text-muted py-4">اشتراکی ثبت نشده است.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-5">اشتراکی ثبت نشده است.</td></tr>
                 }
-                @foreach (var sub in Model)
+                @foreach (var sub in Model.Items)
                 {
                     <tr>
                         <td><a asp-controller="Tenants" asp-action="Details" asp-route-id="@sub.TenantId">@sub.Tenant.Name</a></td>
@@ -63,4 +74,10 @@
             </tbody>
         </table>
     </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer">
+            <partial name="_AdminPagination" model="Model" />
+        </div>
+    }
 </div>

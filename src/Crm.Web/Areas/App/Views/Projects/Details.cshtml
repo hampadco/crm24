@@ -164,7 +164,7 @@
                             _ => "bg-secondary"
                         };
                         <div class="d-flex align-items-center mb-2">
-                            <div class="text-truncate" style="width:160px" title="@task.Name">@task.Name</div>
+                            <div class="text-truncate gantt-label" title="@task.Name">@task.Name</div>
                             <div class="flex-grow-1 position-relative bg-lighter rounded" style="height:22px">
                                 <div class="position-absolute rounded @barClass d-flex align-items-center justify-content-center text-white small"
                                      style="right:@(offsetPct.ToString("0.#"))%; width:@(widthPct.ToString("0.#"))%; height:22px; opacity:.85">

@@ -157,14 +157,7 @@ public class ReportsController : AppControllerBase
 
         for (var r = 0; r < model.Rows.Count; r++)
             for (var c = 0; c < model.Columns.Count; c++)
-            {
-                var column = model.Columns[c];
-                var raw = model.Rows[r].Values.GetValueOrDefault(column.Name) ?? "";
-                sheet.Cell(r + 2, c + 1).Value =
-                    column.Type is FieldType.Date or FieldType.DateTime && raw.Length > 0
-                        ? Services.PersianDateHelper.ToJalaliFromIso(raw)
-                        : raw;
-            }
+                sheet.Cell(r + 2, c + 1).Value = model.Rows[r].Values.GetValueOrDefault(model.Columns[c].Name) ?? "";
 
         sheet.Columns().AdjustToContents();
 
@@ -233,6 +226,11 @@ public class ReportsController : AppControllerBase
                 var value = data.GetValueOrDefault(column.Name);
                 if (column.Type == FieldType.Picklist && value is not null)
                     value = column.PicklistValues.FirstOrDefault(p => p.Value == value)?.Label ?? value;
+                else if ((column.Type == FieldType.Date || column.Type == FieldType.DateTime)
+                         && DateTime.TryParse(value, out var dateValue))
+                    value = column.Type == FieldType.Date
+                        ? Crm.Web.Services.PersianDateHelper.ToJalaliDate(DateTime.SpecifyKind(dateValue, DateTimeKind.Local))
+                        : Crm.Web.Services.PersianDateHelper.ToJalaliDateTime(DateTime.SpecifyKind(dateValue, DateTimeKind.Local));
                 row.Values[column.Name] = value;
             }
             model.Rows.Add(row);

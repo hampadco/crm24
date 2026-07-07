@@ -1,0 +1,228 @@
+@model Crm.Web.Models.Help.HelpTopicViewModel
+@{
+    var relatedTopics = Model.AllTopics
+        .Where(t => Model.Topic.RelatedTopicSlugs.Contains(t.Slug))
+        .ToList();
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <h4 class="mb-0">
+        <i class="bx @Model.Topic.Icon text-primary me-1"></i>
+        آموزش: @Model.Topic.Title
+    </h4>
+    <a href="@Model.BaseUrl" class="btn btn-outline-secondary">
+        <i class="bx bx-arrow-back me-1"></i> همه موضوعات
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-9">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-2"><i class="bx bx-info-circle text-primary me-1"></i> این بخش چیست؟</h5>
+                <p class="mb-0" style="white-space: pre-line">@Model.Topic.Intro</p>
+            </div>
+        </div>
+
+        @if (Model.Topic.Pages.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bx bx-link-external text-primary me-1"></i> صفحات و مسیرها</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>صفحه</th>
+                                <th>مسیر</th>
+                                <th>کاربرد</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-border-bottom-0">
+                            @foreach (var pageLink in Model.Topic.Pages)
+                            {
+                                <tr>
+                                    <td>@pageLink.Title</td>
+                                    <td dir="ltr"><a href="@pageLink.Route" class="badge bg-label-primary text-decoration-none">@pageLink.Route</a></td>
+                                    <td class="text-muted small">@pageLink.Purpose</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (Model.Topic.Fields.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bx bx-list-check text-primary me-1"></i> فیلدها و ارتباطات</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>فیلد</th>
+                                <th>کاربرد</th>
+                                <th>ارتباط با</th>
+                            </tr>
+                        </thead>
+                        <tbody class="table-border-bottom-0">
+                            @foreach (var field in Model.Topic.Fields)
+                            {
+                                <tr>
+                                    <td><strong>@field.Label</strong></td>
+                                    <td class="small">@field.Purpose</td>
+                                    <td class="small text-muted">@(field.ConnectsTo ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        @if (Model.Topic.Relations.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bx bx-git-merge text-primary me-1"></i> روابط با سایر بخش‌ها</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var rel in Model.Topic.Relations)
+                        {
+                            <li class="mb-3 pb-3 border-bottom">
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                    <strong>@rel.Target</strong>
+                                    @if (!string.IsNullOrEmpty(rel.TargetRoute))
+                                    {
+                                        <a href="@rel.TargetRoute" class="badge bg-label-secondary text-decoration-none" dir="ltr">@rel.TargetRoute</a>
+                                    }
+                                    @if (!string.IsNullOrEmpty(rel.HelpSlug))
+                                    {
+                                        <a href="@Model.BaseUrl/@rel.HelpSlug" class="badge bg-label-info text-decoration-none">آموزش</a>
+                                    }
+                                </div>
+                                <p class="text-muted small mb-0">@rel.Description</p>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+
+        @foreach (var helpSection in Model.Topic.Sections)
+        {
+            <div class="card mb-4">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0">@helpSection.Title</h5>
+                    @if (!string.IsNullOrEmpty(helpSection.Route))
+                    {
+                        <a href="@helpSection.Route" class="badge bg-label-primary text-decoration-none" dir="ltr">@helpSection.Route</a>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(helpSection.Body))
+                    {
+                        <p style="white-space: pre-line">@helpSection.Body</p>
+                    }
+                    @if (helpSection.Steps.Count > 0)
+                    {
+                        <ol class="mb-0">
+                            @foreach (var step in helpSection.Steps)
+                            {
+                                <li class="mb-2">@step</li>
+                            }
+                        </ol>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (Model.Topic.Examples.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bx bx-bulb text-warning me-1"></i> مثال‌های کاربردی</h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="helpExamples">
+                        @for (var i = 0; i < Model.Topic.Examples.Count; i++)
+                        {
+                            var example = Model.Topic.Examples[i];
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button @(i > 0 ? "collapsed" : "")" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#example-@i">
+                                        @example.Title
+                                    </button>
+                                </h2>
+                                <div id="example-@i" class="accordion-collapse collapse @(i == 0 ? "show" : "")"
+                                     data-bs-parent="#helpExamples">
+                                    <div class="accordion-body">
+                                        <ol class="mb-0">
+                                            @foreach (var step in example.Steps)
+                                            {
+                                                <li class="mb-2">@step</li>
+                                            }
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.Topic.Tips.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bx bx-error-circle text-danger me-1"></i> نکات و اشتباهات رایج</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        @foreach (var tip in Model.Topic.Tips)
+                        {
+                            <li class="mb-2">@tip</li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-3">
+        @if (relatedTopics.Count > 0)
+        {
+            <div class="card mb-3">
+                <div class="card-header py-3"><h6 class="mb-0">موضوعات مرتبط</h6></div>
+                <div class="list-group list-group-flush">
+                    @foreach (var related in relatedTopics)
+                    {
+                        <a href="@Model.BaseUrl/@related.Slug" class="list-group-item list-group-item-action py-2">
+                            <i class="bx @related.Icon me-1"></i> @related.Title
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header py-3"><h6 class="mb-0">همه موضوعات</h6></div>
+            <div class="list-group list-group-flush">
+                @foreach (var other in Model.AllTopics)
+                {
+                    <a href="@Model.BaseUrl/@other.Slug"
+                       class="list-group-item list-group-item-action py-2 @(other.Slug == Model.Topic.Slug ? "active" : "")">
+                        <i class="bx @other.Icon me-1"></i> @other.Title
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -353,7 +353,7 @@
   </table>
 
   <h3>ساختار پوشه‌ها</h3>
-  <pre>crm24/
+  <pre>BaMaCRM/
 ├── apps/
 │   ├── api/                 # NestJS Backend
 │   │   ├── src/
@@ -914,7 +914,7 @@ POST   /webhooks/inbound/accounting       # sync از حسابداری
 }</pre>
 
   <h3>Outbound Webhooks (CRM → سیستم مشتری)</h3>
-  <p>از Workflow یا Subscription API — تفاوت با REST: Push خودکار پس از رویداد (مطابق crm24.txt)</p>
+  <p>از Workflow یا Subscription API — تفاوت با REST: Push خودکار پس از رویداد (مطابق BaMaCRM.txt)</p>
   <pre>POST   /webhooks/subscriptions       # ثبت URL مقصد
 GET    /webhooks/subscriptions
 DELETE /webhooks/subscriptions/:id
@@ -1296,7 +1296,7 @@ DATA_REGION=IR</pre>
 
   <h3>صبح — Setup (۳-۴ ساعت)</h3>
   <pre># 1. ساخت monorepo
-mkdir crm24 && cd crm24
+mkdir BaMaCRM && cd BaMaCRM
 npm init -y
 
 # 2. Backend
@@ -1343,7 +1343,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: crm24
+      POSTGRES_DB: BaMaCRM
       POSTGRES_USER: crm
       POSTGRES_PASSWORD: crm123
     ports: ['5432:5432']
@@ -1489,7 +1489,7 @@ volumes:
 <!-- ========== 15. SUPPLEMENTARY MODULES ========== -->
 <section id="missing">
   <h2><span class="num">۱۵</span> ماژول‌های تکمیلی (مواردی که در نسخه اول کم‌رنگ بودند)</h2>
-  <div class="alert alert-info">این بخش بر اساس مقایسه با <code>crm24.txt</code> (۹۶ مقاله آموزشی) اضافه شده تا چیزی از قلم نیفتد.</div>
+  <div class="alert alert-info">این بخش بر اساس مقایسه با <code>BaMaCRM.txt</code> (۹۶ مقاله آموزشی) اضافه شده تا چیزی از قلم نیفتد.</div>
 
   <div class="card-grid">
     <div class="card">
@@ -1670,7 +1670,7 @@ DEPLOYMENT_MODE=cloud|local
 ENABLE_BILLING=true          # false for local
 ENABLE_MULTI_TENANT=true     # false for local
 API_RATE_LIMIT_ENABLED=true  # false for local optional
-DATABASE_URL=postgresql://crm:crm123@localhost:5432/crm24
+DATABASE_URL=postgresql://crm:crm123@localhost:5432/BaMaCRM
 REDIS_URL=redis://localhost:6379
 JWT_SECRET=change-me-in-production
 JWT_EXPIRES_IN=15m
@@ -1679,7 +1679,7 @@ MINIO_ENDPOINT=localhost
 MINIO_PORT=9000
 MINIO_ACCESS_KEY=minio
 MINIO_SECRET_KEY=minio123
-MINIO_BUCKET=crm24-files
+MINIO_BUCKET=BaMaCRM-files
 MEILISEARCH_HOST=http://localhost:7700
 MEILISEARCH_KEY=masterKey
 SMTP_HOST=smtp.example.com
@@ -1759,14 +1759,14 @@ PAYMENT_GATEWAY_KEY=</pre>
   </table>
 
   <div class="alert alert-success" style="margin-top:1.5rem;">
-    <strong>نتیجه بررسی:</strong> با بخش‌های ۱۵–۱۹، تمام <strong>۶۰ موضوع آموزشی منحصربه‌فرد</strong> در crm24.txt پوشش داده شده است. برای پیاده‌سازی فردا: بخش ۱۳ (Day 1) + فاز ۰ چک‌لیست + ERD بخش ۱۶ را دنبال کن.
+    <strong>نتیجه بررسی:</strong> با بخش‌های ۱۵–۱۹، تمام <strong>۶۰ موضوع آموزشی منحصربه‌فرد</strong> در BaMaCRM.txt پوشش داده شده است. برای پیاده‌سازی فردا: بخش ۱۳ (Day 1) + فاز ۰ چک‌لیست + ERD بخش ۱۶ را دنبال کن.
   </div>
 </section>
 
 <!-- ========== 19. FINAL AUDIT ========== -->
 <section id="audit">
-  <h2><span class="num">۱۹</span> ممیزی نهایی — ۶۰ موضوع crm24.txt</h2>
-  <p>استخراج خودکار از فایل <code>crm24.txt</code> — هر سطر = یک مقاله آموزشی منحصربه‌فرد</p>
+  <h2><span class="num">۱۹</span> ممیزی نهایی — ۶۰ موضوع BaMaCRM.txt</h2>
+  <p>استخراج خودکار از فایل <code>BaMaCRM.txt</code> — هر سطر = یک مقاله آموزشی منحصربه‌فرد</p>
 
   <h3>ابزارها (۵/۵) ✅</h3>
   <table>

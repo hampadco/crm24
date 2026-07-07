@@ -10,6 +10,39 @@ public class TenantListItem
     public int RecordCount { get; set; }
 }
 
+public class TenantListQuery
+{
+    public string? Q { get; set; }
+    public TenantStatus? Status { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+
+    public int NormalizedPage => Page < 1 ? 1 : Page;
+
+    public int NormalizedPageSize => PageSize switch
+    {
+        < 5 => 20,
+        > 100 => 100,
+        _ => PageSize
+    };
+}
+
+public class PlatformListQuery
+{
+    public string? Q { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+
+    public int NormalizedPage => Page < 1 ? 1 : Page;
+
+    public int NormalizedPageSize => PageSize switch
+    {
+        < 5 => 20,
+        > 100 => 100,
+        _ => PageSize
+    };
+}
+
 public class TenantDetailsViewModel
 {
     public Tenant Tenant { get; set; } = null!;

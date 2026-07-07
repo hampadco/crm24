@@ -91,9 +91,12 @@
                                 {
                                     @(value == "true" ? "✓" : "—")
                                 }
-                                else if (field.Type is Crm.Core.Entities.FieldType.Date or Crm.Core.Entities.FieldType.DateTime)
+                                else if ((field.Type == Crm.Core.Entities.FieldType.Date || field.Type == Crm.Core.Entities.FieldType.DateTime)
+                                         && DateTime.TryParse(value, out var dateValue))
                                 {
-                                    @Crm.Web.Services.PersianDateHelper.ToJalaliFromIso(value)
+                                    @(field.Type == Crm.Core.Entities.FieldType.Date
+                                        ? Crm.Web.Services.PersianDateHelper.ToJalaliDate(DateTime.SpecifyKind(dateValue, DateTimeKind.Local))
+                                        : Crm.Web.Services.PersianDateHelper.ToJalaliDateTime(DateTime.SpecifyKind(dateValue, DateTimeKind.Local)))
                                 }
                                 else
                                 {

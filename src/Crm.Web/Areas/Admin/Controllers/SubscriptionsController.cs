@@ -21,16 +21,17 @@ public class SubscriptionsController : Controller
         _db = db;
     }
 
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var subs = await _db.Subscriptions.AsNoTracking()
+        var listQuery = new ContentListQuery { Page = page, PageSize = 20 };
+        var model = await _db.Subscriptions.AsNoTracking()
             .Include(s => s.Tenant)
             .Include(s => s.Plan)
             .Include(s => s.Payments)
             .OrderByDescending(s => s.CreatedAtUtc)
-            .Take(300)
-            .ToListAsync();
-        return View(subs);
+            .ToPagedListAsync(listQuery);
+        ViewBag.ListQuery = listQuery;
+        return View(model);
     }
 
     [HttpGet]

@@ -1,43 +1,34 @@
 @model AdminLoginViewModel
 @{
-    ViewData["Title"] = "ورود";
-    Layout = null;
+    Layout = "/Views/Shared/_AuthLayout.cshtml";
+    ViewData["Title"] = "ورود به پنل مدیریت";
 }
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - پنل مدیریت BaMaCRM</title>
-    <link rel="stylesheet" href="~/lib/vazirmatn/vazirmatn.css" />
-    <link rel="stylesheet" href="~/lib/bootstrap/5.3.3/css/bootstrap.rtl.min.css" />
-    <link rel="stylesheet" href="~/lib/fontawesome/6.4.0/css/all.min.css" />
-    <link rel="stylesheet" href="~/css/taben-admin.css" asp-append-version="true" />
-</head>
-<body class="admin-body">
-    <div class="admin-login-page">
-        <div class="admin-login-card">
-            <div class="admin-login-card-header">
-                <div class="admin-login-logo"><i class="fas fa-chart-line"></i></div>
-                <h1>ورود به پنل مدیریت</h1>
-                <p>BaMaCRM — مدیریت محتوای سایت</p>
-            </div>
-            <div class="admin-login-card-body">
-                <form asp-action="Login" method="post">
-                    <input type="hidden" asp-for="ReturnUrl" />
-                    <div asp-validation-summary="ModelOnly" class="admin-alert admin-alert-danger"></div>
-                    <div class="mb-3">
-                        <label asp-for="Username" class="admin-form-label">نام کاربری</label>
-                        <input asp-for="Username" class="form-control admin-form-control" autocomplete="username" />
-                    </div>
-                    <div class="mb-4">
-                        <label asp-for="Password" class="admin-form-label">رمز عبور</label>
-                        <input asp-for="Password" type="password" class="form-control admin-form-control" autocomplete="current-password" />
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">ورود</button>
-                </form>
-            </div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="app-brand justify-content-center mb-4">
+            <a asp-area="" asp-controller="Home" asp-action="Index" class="app-brand-link gap-2">
+                <span class="app-brand-logo demo"><i class="bx bxs-shield-alt-2 fs-2 text-primary"></i></span>
+                <span class="app-brand-text demo text-body fw-bold fs-4">BaMaCRM</span>
+            </a>
         </div>
+
+        <h4 class="mb-1 text-center">پنل مدیریت اصلی</h4>
+        <p class="mb-4 text-center text-muted">مدیریت مشتریان، اشتراک‌ها و محتوای سایت</p>
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+        <form asp-action="Login" method="post">
+            <input type="hidden" asp-for="ReturnUrl" />
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label">نام کاربری</label>
+                <input asp-for="Username" class="form-control" dir="ltr" autofocus autocomplete="username" />
+            </div>
+            <div class="mb-4">
+                <label asp-for="Password" class="form-label">رمز عبور</label>
+                <input asp-for="Password" type="password" class="form-control" dir="ltr" autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn btn-primary d-grid w-100">ورود</button>
+        </form>
     </div>
-</body>
-</html>
+</div>

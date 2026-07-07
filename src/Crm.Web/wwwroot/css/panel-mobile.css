@@ -1,0 +1,100 @@
+/*
+ * بهینه‌سازی موبایل پنل‌ها (App / Admin / Owner / Portal).
+ * قواعد فقط روی صفحه‌های کوچک اعمال می‌شوند تا دسکتاپ دست‌نخورده بماند.
+ */
+
+/* ===== کاریز (کانبان) ===== */
+.kanban-board {
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+}
+
+.kanban-col {
+    width: 280px;
+    scroll-snap-align: start;
+}
+
+/* ===== گانت پروژه ===== */
+.gantt-label {
+    width: 160px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 767.98px) {
+    .gantt-label {
+        width: 96px;
+        font-size: .75rem;
+    }
+
+    .kanban-col {
+        width: 240px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* جدول‌های عریض: اجازه شکستن متن سلول‌ها به‌جای اسکرول بی‌پایان */
+    .table-responsive.text-nowrap {
+        white-space: normal !important;
+    }
+
+    .table-responsive.text-nowrap .btn,
+    .table-responsive.text-nowrap .badge {
+        white-space: nowrap;
+    }
+
+    /* سربرگ صفحه‌ها: دکمه‌ها زیر عنوان قرار بگیرند و فضای کمتری بگیرند */
+    .content-wrapper h4 .badge {
+        font-size: .7rem;
+    }
+
+    /* کارت‌ها با max-width ثابت تمام‌عرض شوند */
+    .card[style*="max-width"] {
+        max-width: 100% !important;
+    }
+
+    /* فرم‌های داخل کارت: فاصله کمتر */
+    .container-p-y {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* FullCalendar: نوار ابزار جمع‌وجور */
+    .fc .fc-toolbar {
+        flex-wrap: wrap;
+        gap: .5rem;
+        justify-content: center;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1.05rem;
+    }
+
+    .fc .fc-button {
+        padding: .3rem .55rem;
+        font-size: .78rem;
+    }
+
+    /* مودال‌ها تمام‌عرض با کمی حاشیه */
+    .modal-dialog {
+        margin: .75rem;
+    }
+
+    /* دکمه‌های سربرگ لیست‌ها در موبایل کنار هم جمع شوند */
+    .content-wrapper > .d-flex.flex-wrap.justify-content-between .d-flex.gap-2 {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 575.98px) {
+    /* جدول آیتم‌های فاکتور: ورودی‌ها کوچک‌تر */
+    #linesTable .form-control,
+    #linesTable .form-select {
+        font-size: .78rem;
+        padding: .25rem .4rem;
+    }
+
+    /* آواتار و آیکون‌های بزرگ کمی کوچک شوند */
+    .content-wrapper h4 {
+        font-size: 1.15rem;
+    }
+}

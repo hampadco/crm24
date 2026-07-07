@@ -26,12 +26,23 @@ public class TenantsController : Controller
         _signInManager = signInManager;
     }
 
-    public async Task<IActionResult> Index(string? q, TenantStatus? status)
+    public async Task<IActionResult> Index(string? q, TenantStatus? status, int page = 1)
     {
-        var model = await _platform.GetTenantsAsync(q, status);
-        ViewData["Search"] = q;
-        ViewData["Status"] = status;
+        var listQuery = new TenantListQuery { Q = q, Status = status, Page = page };
+        var model = await _platform.GetTenantsAsync(listQuery);
+        ViewBag.TenantListQuery = listQuery;
+        ViewBag.PaginationRoutes = BuildTenantPaginationRoutes(listQuery);
         return View(model);
+    }
+
+    private static Dictionary<string, object?> BuildTenantPaginationRoutes(TenantListQuery query)
+    {
+        var routes = new Dictionary<string, object?>();
+        if (!string.IsNullOrWhiteSpace(query.Q))
+            routes["q"] = query.Q;
+        if (query.Status is not null)
+            routes["status"] = query.Status.ToString();
+        return routes;
     }
 
     public async Task<IActionResult> Details(int id)
