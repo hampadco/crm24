@@ -91,6 +91,10 @@
                                 {
                                     @(value == "true" ? "✓" : "—")
                                 }
+                                else if (field.Type is Crm.Core.Entities.FieldType.Date or Crm.Core.Entities.FieldType.DateTime)
+                                {
+                                    @Crm.Web.Services.PersianDateHelper.ToJalaliFromIso(value)
+                                }
                                 else
                                 {
                                     @(value ?? "—")

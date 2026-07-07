@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>راهنمای کامل پیاده‌سازی CRM24 | PRD + Roadmap</title>
+  <title>راهنمای کامل پیاده‌سازی BaMaCRM | PRD + Roadmap</title>
   <link href="assets/css/vazirmatn.css" rel="stylesheet">
   <style>
     :root {
@@ -251,7 +251,7 @@
 <body>
 
 <header class="hero">
-  <h1>راهنمای کامل پیاده‌سازی CRM24</h1>
+  <h1>راهنمای کامل پیاده‌سازی BaMaCRM</h1>
   <p>سند PRD + معماری + نقشه‌راه + چرخه‌های کاری + زمان‌بندی + فازبندی + استک فنی — آماده برای شروع توسعه</p>
   <div class="hero-meta">
     <span>📅 نسخه ۱.۰ — ۱۴۰۵/۰۳/۲۸</span>
@@ -259,7 +259,7 @@
     <span>📦 ۱۲ فاز — ~۶ ماه (تیم ۳ نفر)</span>
     <span>🔌 REST API + Webhook + API Key</span>
     <span>☁️ Cloud + 🖥️ Local</span>
-    <span>🎯 کلون کامل CRM24</span>
+    <span>🎯 کلون کامل BaMaCRM</span>
   </div>
 </header>
 
@@ -294,7 +294,7 @@
 <section id="overview">
   <h2><span class="num">۱</span> نمای کلی محصول</h2>
   <div class="alert alert-info">
-    <strong>هدف:</strong> ساخت یک CRM سازمانی فارسی، چندکاربره، ماژول‌محور و قابل سفارشی‌سازی — معادل عملکردی CRM24 (بر پایه Vtiger).
+    <strong>هدف:</strong> ساخت یک CRM سازمانی فارسی، چندکاربره، ماژول‌محور و قابل سفارشی‌سازی — معادل عملکردی BaMaCRM (بر پایه Vtiger).
   </div>
   <p>این محصول یک «CRM ساده» نیست. یک <strong>پلتفرم Enterprise</strong> با موتور متادیتا، RBAC سه‌لایه، موتور اتوماسیون، و ۳۰+ ماژول است.</p>
 
@@ -310,7 +310,7 @@
   <h3>مدل‌های استقرار (Cloud / Local)</h3>
   <table>
     <tr><th>مدل</th><th>توضیح</th><th>مخاطب</th></tr>
-    <tr><td><span class="badge badge-blue">Cloud (SaaS)</span></td><td>هاست روی سرور CRM24، multi-tenant، بروزرسانی خودکار</td><td>استارتاپ، SMB</td></tr>
+    <tr><td><span class="badge badge-blue">Cloud (SaaS)</span></td><td>هاست روی سرور BaMaCRM، multi-tenant، بروزرسانی خودکار</td><td>استارتاپ، SMB</td></tr>
     <tr><td><span class="badge badge-green">Local (On-Premise)</span></td><td>نصب روی سرور مشتری (Docker)، single-tenant، داده داخل سازمان</td><td>بانک، دولت، enterprise</td></tr>
     <tr><td><span class="badge badge-purple">Hybrid</span></td><td>Core لوکال + یکپارچگی‌های ابری (SMS، بله)</td><td>سازمان‌های حساس</td></tr>
   </table>
@@ -980,11 +980,11 @@ Events: notification.new | call.incoming | ticket.updated
   <h3>مقایسه Cloud و Local</h3>
   <table>
     <tr><th>معیار</th><th>☁️ Cloud (SaaS)</th><th>🖥️ Local (On-Premise)</th></tr>
-    <tr><td>محل داده</td><td>سرور CRM24 (ایران)</td><td>سرور مشتری</td></tr>
+    <tr><td>محل داده</td><td>سرور BaMaCRM (ایران)</td><td>سرور مشتری</td></tr>
     <tr><td>Tenant model</td><td>Multi-tenant (tenant_id)</td><td>Single-tenant</td></tr>
     <tr><td>نصب</td><td>ثبت‌نام آنلاین — ۵ دقیقه</td><td>Docker Compose / K8s — ۱-۲ روز</td></tr>
     <tr><td>بروزرسانی</td><td>خودکار (zero-downtime)</td><td>Patch دستی یا قرارداد پشتیبانی</td></tr>
-    <tr><td>Backup</td><td>CRM24 مسئول</td><td>مشتری مسئول (راهنما + ابزار)</td></tr>
+    <tr><td>Backup</td><td>BaMaCRM مسئول</td><td>مشتری مسئول (راهنما + ابزار)</td></tr>
     <tr><td>Custom domain</td><td>Pro+ (crm.company.ir)</td><td>کامل (داخلی)</td></tr>
     <tr><td>API Base URL</td><td>api.yourcrm.ir</td><td>crm.company.local/api</td></tr>
     <tr><td>محدودیت API</td><td>بر اساس پلن</td><td>بدون محدودیت داخلی</td></tr>
@@ -1615,7 +1615,7 @@ volumes:
   </div>
 
   <h3>فاز اضافه در Roadmap: فاز ۱۳ (اختیاری — SaaS)</h3>
-  <p>اگر محصول را به‌صورت SaaS می‌فروشید (مثل CRM24):</p>
+  <p>اگر محصول را به‌صورت SaaS می‌فروشید (مثل BaMaCRM):</p>
   <ul>
     <li>تعرفه و پنل‌ها (Free / Pro / Enterprise)</li>
     <li>محدودیت کاربر/ماژول per-plan</li>
@@ -1717,11 +1717,11 @@ PAYMENT_GATEWAY_KEY=</pre>
 
 <!-- ========== 18. COVERAGE MATRIX ========== -->
 <section id="matrix">
-  <h2><span class="num">۱۸</span> ماتریس پوشش — مقایسه با CRM24 اصلی</h2>
+  <h2><span class="num">۱۸</span> ماتریس پوشش — مقایسه با BaMaCRM اصلی</h2>
   <p>✅ = پوشش کامل در سند | ⚠️ = ذکر شده ولی نیاز به جزئیات بیشتر در کد | ❌ = قبلاً جا افتاده (الان اضافه شد)</p>
 
   <table>
-    <tr><th>قابلیت CRM24</th><th>سند</th><th>فاز</th></tr>
+    <tr><th>قابلیت BaMaCRM</th><th>سند</th><th>فاز</th></tr>
     <tr><td>سرنخ‌های فروش</td><td>✅</td><td>۲</td></tr>
     <tr><td>فرصت‌های فروش + کاریز</td><td>✅</td><td>۲</td></tr>
     <tr><td>مخاطبین / سازمان‌ها</td><td>✅</td><td>۲</td></tr>
@@ -1770,7 +1770,7 @@ PAYMENT_GATEWAY_KEY=</pre>
 
   <h3>ابزارها (۵/۵) ✅</h3>
   <table>
-    <tr><th>مقاله CRM24</th><th>پوشش سند</th><th>جزئیات پیاده‌سازی</th></tr>
+    <tr><th>مقاله BaMaCRM</th><th>پوشش سند</th><th>جزئیات پیاده‌سازی</th></tr>
     <tr><td>معرفی وب فرم‌ها</td><td>✅</td><td>بخش ۱۵ — captcha, hidden, iframe, group</td></tr>
     <tr><td>قالب‌های پیام آماده</td><td>✅</td><td>بخش ۱۵ + Sharing عمومی/خصوصی per-module</td></tr>
     <tr><td>نظرسنجی‌ها</td><td>✅</td><td>بخش ۱۹ پایین — ۴ نوع سوال، publish، Lead/Contact</td></tr>
@@ -1967,7 +1967,7 @@ PAYMENT_GATEWAY_KEY=</pre>
 </div>
 
 <footer style="text-align:center; padding:2rem; color:var(--muted); border-top:1px solid var(--border); font-size:.85rem;">
-  CRM24 Implementation Guide v1.2 — API + Cloud/Local — Node.js + NestJS + React + PostgreSQL
+  BaMaCRM Implementation Guide v1.2 — API + Cloud/Local — Node.js + NestJS + React + PostgreSQL
 </footer>
 
 <script>

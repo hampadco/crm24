@@ -63,6 +63,27 @@ public static class PersianDateHelper
         return pc.ToDateTime(year, month, day, hour, minute, 0, 0);
     }
 
+    /// <summary>
+    /// نمایش شمسی یک مقدار متنی ISO (مثل «2026-07-07» یا «2026-07-07T14:30») که در رکوردهای داینامیک ذخیره شده است.
+    /// اگر مقدار تاریخ معتبر نباشد، همان متن برگردانده می‌شود.
+    /// </summary>
+    public static string ToJalaliFromIso(string? isoValue)
+    {
+        if (string.IsNullOrWhiteSpace(isoValue))
+            return "—";
+
+        var s = isoValue.Trim().Replace("T", " ");
+        if (!DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+            return isoValue;
+
+        var hasTime = dt.TimeOfDay != TimeSpan.Zero || s.Contains(':');
+        var pc = new PersianCalendar();
+        var formatted = $"{pc.GetYear(dt):0000}/{pc.GetMonth(dt):00}/{pc.GetDayOfMonth(dt):00}";
+        if (hasTime)
+            formatted += $" {dt.Hour:00}:{dt.Minute:00}";
+        return PersianFormattingHelper.ToPersianDigits(formatted);
+    }
+
     private static DateTime Normalize(DateTime dateTime)
     {
         return dateTime.Kind switch

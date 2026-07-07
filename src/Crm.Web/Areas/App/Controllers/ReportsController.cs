@@ -157,7 +157,14 @@ public class ReportsController : AppControllerBase
 
         for (var r = 0; r < model.Rows.Count; r++)
             for (var c = 0; c < model.Columns.Count; c++)
-                sheet.Cell(r + 2, c + 1).Value = model.Rows[r].Values.GetValueOrDefault(model.Columns[c].Name) ?? "";
+            {
+                var column = model.Columns[c];
+                var raw = model.Rows[r].Values.GetValueOrDefault(column.Name) ?? "";
+                sheet.Cell(r + 2, c + 1).Value =
+                    column.Type is FieldType.Date or FieldType.DateTime && raw.Length > 0
+                        ? Services.PersianDateHelper.ToJalaliFromIso(raw)
+                        : raw;
+            }
 
         sheet.Columns().AdjustToContents();
 

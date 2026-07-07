@@ -87,7 +87,17 @@
                     <tr>
                         @foreach (var column in Model.Columns)
                         {
-                            <td>@(row.Values.GetValueOrDefault(column.Name) ?? "—")</td>
+                            var cellValue = row.Values.GetValueOrDefault(column.Name);
+                            <td>
+                                @if (column.Type is Crm.Core.Entities.FieldType.Date or Crm.Core.Entities.FieldType.DateTime)
+                                {
+                                    @Crm.Web.Services.PersianDateHelper.ToJalaliFromIso(cellValue)
+                                }
+                                else
+                                {
+                                    @(cellValue ?? "—")
+                                }
+                            </td>
                         }
                     </tr>
                 }

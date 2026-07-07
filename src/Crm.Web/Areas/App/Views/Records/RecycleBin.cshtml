@@ -32,7 +32,7 @@
                         <td class="text-muted">@record.Id</td>
                         <td>@record.Title</td>
                         <td>@record.Module.PluralLabel</td>
-                        <td dir="ltr">@record.DeletedAtUtc?.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                        <td dir="ltr">@(record.DeletedAtUtc is { } del ? Crm.Web.Services.PersianDateHelper.ToJalaliDateTime(del) : "—")</td>
                         <td class="text-end">
                             <form asp-action="Restore" asp-route-id="@record.Id" method="post" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-outline-success">

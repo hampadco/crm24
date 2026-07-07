@@ -23,7 +23,7 @@
                 @foreach (var log in Model)
                 {
                     <tr>
-                        <td>@PersianDateHelper.ToJalaliDate(log.CreatedAtUtc) @log.CreatedAtUtc.ToString("HH:mm")</td>
+                        <td>@PersianDateHelper.ToJalaliDateTime(log.CreatedAtUtc)</td>
                         <td>@(log.RecordId?.ToString() ?? "—")</td>
                         <td>
                             <span class="badge @(log.Success ? "bg-label-success" : "bg-label-danger")">

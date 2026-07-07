@@ -34,7 +34,7 @@
                         <div class="p-3 rounded @(message.IsFromCustomer ? "bg-lighter" : "bg-label-primary")" style="max-width:80%">
                             <div class="small text-muted mb-1">
                                 <strong>@message.AuthorName</strong>
-                                — @PersianDateHelper.ToJalaliDate(message.CreatedAtUtc) @message.CreatedAtUtc.ToString("HH:mm")
+                                — @PersianDateHelper.ToJalaliDateTime(message.CreatedAtUtc)
                                 @(message.IsFromCustomer ? "(مشتری)" : "(کارشناس)")
                             </div>
                             <div style="white-space:pre-wrap">@message.Body</div>
@@ -96,7 +96,7 @@
             <div class="card-header"><h5 class="mb-0">اطلاعات</h5></div>
             <div class="card-body">
                 <ul class="list-unstyled mb-0 d-grid gap-2">
-                    <li><span class="text-muted">ثبت:</span> @PersianDateHelper.ToJalaliDate(Model.CreatedAtUtc) @Model.CreatedAtUtc.ToString("HH:mm")</li>
+                    <li><span class="text-muted">ثبت:</span> @PersianDateHelper.ToJalaliDateTime(Model.CreatedAtUtc)</li>
                     @if (Model.DueAtUtc is DateTime due)
                     {
                         <li><span class="text-muted">مهلت SLA:</span> @PersianDateHelper.ToJalaliDate(due) @due.ToString("HH:mm")</li>
