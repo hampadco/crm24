@@ -17,7 +17,7 @@
             <div class="admin-sidebar-brand">
                 <div class="brand">
                     CRM24 — مدیریت
-                    <span>پنل محتوای سایت</span>
+                    <span>پنل اصلی سیستم</span>
                 </div>
             </div>
             <div class="admin-sidebar-scroll">
@@ -25,11 +25,34 @@
                     @{
                         var controller = ViewContext.RouteData.Values["controller"]?.ToString();
                         var contentControllers = new[] { "Articles", "Faqs", "Categories", "SitePages" };
+                        var platformControllers = new[] { "Tenants", "Subscriptions", "Transactions", "Plans" };
                         var contentOpen = contentControllers.Contains(controller);
+                        var platformOpen = platformControllers.Contains(controller);
                     }
                     <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="@(controller == "Dashboard" ? "active" : "")">
                         <i class="fas fa-chart-line"></i> داشبورد
                     </a>
+
+                    <div class="admin-nav-group @(platformOpen ? "is-open" : "")" data-nav-group="platform">
+                        <button type="button" class="admin-nav-group-toggle" aria-expanded="@(platformOpen ? "true" : "false")">
+                            <span class="admin-nav-group-toggle-label"><i class="fas fa-building"></i> پلتفرم SaaS</span>
+                            <i class="fas fa-chevron-down admin-nav-group-chevron"></i>
+                        </button>
+                        <div class="admin-nav-group-body">
+                            <a asp-area="Admin" asp-controller="Tenants" asp-action="Index" class="@(controller == "Tenants" ? "active" : "")">
+                                <i class="fas fa-users"></i> مشتریان
+                            </a>
+                            <a asp-area="Admin" asp-controller="Subscriptions" asp-action="Index" class="@(controller == "Subscriptions" ? "active" : "")">
+                                <i class="fas fa-id-card"></i> اشتراک‌ها
+                            </a>
+                            <a asp-area="Admin" asp-controller="Transactions" asp-action="Index" class="@(controller == "Transactions" ? "active" : "")">
+                                <i class="fas fa-money-bill-wave"></i> تراکنش‌ها
+                            </a>
+                            <a asp-area="Admin" asp-controller="Plans" asp-action="Index" class="@(controller == "Plans" ? "active" : "")">
+                                <i class="fas fa-tags"></i> پلن‌ها و تعرفه
+                            </a>
+                        </div>
+                    </div>
 
                     <div class="admin-nav-group @(contentOpen ? "is-open" : "")" data-nav-group="content">
                         <button type="button" class="admin-nav-group-toggle" aria-expanded="@(contentOpen ? "true" : "false")">

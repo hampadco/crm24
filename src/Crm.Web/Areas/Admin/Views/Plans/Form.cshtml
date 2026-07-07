@@ -1,16 +1,17 @@
-@model Crm.Web.Areas.Owner.Controllers.PlanFormModel
+@model Crm.Web.Models.Admin.PlanFormModel
 @{
     ViewData["Title"] = Model.Id is null ? "پلن جدید" : "ویرایش پلن";
-    ViewData["PanelTitle"] = "پنل مالک CRM24";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-purchase-tag text-primary me-1"></i> @ViewData["Title"]</h4>
-    <a asp-action="Index" class="btn btn-outline-secondary"><i class="bx bx-right-arrow-alt me-1"></i> بازگشت</a>
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-body">
+<div class="admin-card">
+    <div class="admin-card-body">
         <form asp-action="Save" method="post">
             <input type="hidden" asp-for="Id" />
             <div class="row g-3">
@@ -26,12 +27,10 @@
                 <div class="col-md-6">
                     <label asp-for="PriceMonthly" class="form-label"></label>
                     <input asp-for="PriceMonthly" class="form-control" dir="ltr" />
-                    <span asp-validation-for="PriceMonthly" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="PriceYearly" class="form-label"></label>
                     <input asp-for="PriceYearly" class="form-control" dir="ltr" />
-                    <span asp-validation-for="PriceYearly" class="text-danger small"></span>
                 </div>
                 <div class="col-md-4">
                     <label asp-for="MaxUsers" class="form-label"></label>
@@ -67,8 +66,7 @@
                 </div>
             </div>
             <div class="mt-4">
-                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره</button>
-                <a asp-action="Index" class="btn btn-label-secondary">انصراف</a>
+                <button type="submit" class="btn btn-primary">ذخیره پلن</button>
             </div>
         </form>
     </div>

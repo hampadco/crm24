@@ -1,0 +1,16 @@
+@model Crm.Core.Entities.TenantStatus
+@switch (Model)
+{
+    case Crm.Core.Entities.TenantStatus.Trial:
+        <span class="badge bg-warning text-dark">آزمایشی</span>
+        break;
+    case Crm.Core.Entities.TenantStatus.Active:
+        <span class="badge bg-success">فعال</span>
+        break;
+    case Crm.Core.Entities.TenantStatus.Suspended:
+        <span class="badge bg-danger">معلق</span>
+        break;
+    case Crm.Core.Entities.TenantStatus.Expired:
+        <span class="badge bg-secondary">منقضی</span>
+        break;
+}

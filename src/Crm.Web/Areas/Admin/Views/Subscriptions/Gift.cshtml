@@ -1,0 +1,61 @@
+@model Crm.Web.Models.Admin.GiftSubscriptionModel
+@{
+    var tenant = (Crm.Core.Entities.Tenant)ViewData["Tenant"]!;
+    var plans = (List<Crm.Core.Entities.Plan>)ViewData["Plans"]!;
+    ViewData["Title"] = $"اشتراک هدیه — {tenant.Name}";
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-controller="Tenants" asp-action="Details" asp-route-id="@tenant.Id" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+    </div>
+</div>
+
+<partial name="_AdminAlerts" />
+
+<div class="admin-card">
+    <div class="admin-card-body">
+        <div class="alert alert-info small">
+            اشتراک هدیه بدون ثبت پرداخت فعال می‌شود و در گزارش‌ها با برچسب «هدیه» نمایش داده می‌شود.
+        </div>
+        @if (plans.Count == 0)
+        {
+            <div class="alert alert-warning mb-0">ابتدا یک پلن فعال تعریف کنید.</div>
+        }
+        else
+        {
+            <form asp-action="Gift" method="post">
+                <input type="hidden" asp-for="TenantId" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="PlanId" class="form-label"></label>
+                        <select asp-for="PlanId" class="form-select">
+                            @foreach (var plan in plans)
+                            {
+                                <option value="@plan.Id">@plan.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Months" class="form-label"></label>
+                        <select asp-for="Months" class="form-select">
+                            <option value="1">۱ ماه</option>
+                            <option value="3">۳ ماه</option>
+                            <option value="6">۶ ماه</option>
+                            <option value="12">۱۲ ماه</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Reason" class="form-label"></label>
+                        <textarea asp-for="Reason" rows="3" class="form-control" placeholder="مثلاً: هدیه راه‌اندازی / جبران قطعی سرویس"></textarea>
+                        <span asp-validation-for="Reason" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-gift ms-1"></i> فعال‌سازی اشتراک هدیه</button>
+                </div>
+            </form>
+        }
+    </div>
+</div>

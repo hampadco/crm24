@@ -21,6 +21,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 // ---------- سایت عمومی و ادمین محتوا ----------
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection(AdminSettings.SectionName));
 builder.Services.AddScoped<AdminAuthService>();
+builder.Services.AddScoped<PlatformAdminService>();
 builder.Services.AddScoped<MediaUploadService>();
 builder.Services.AddScoped<ContentMediaService>();
 builder.Services.AddScoped<IElementorMediaUsageChecker, SiteElementorMediaUsageChecker>();

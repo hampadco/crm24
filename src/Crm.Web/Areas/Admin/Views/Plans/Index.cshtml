@@ -1,19 +1,20 @@
 @model List<Crm.Core.Entities.Plan>
 @{
     ViewData["Title"] = "پلن‌ها و تعرفه";
-    ViewData["PanelTitle"] = "پنل مالک CRM24";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-purchase-tag text-primary me-1"></i> پلن‌ها و تعرفه</h4>
-    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> پلن جدید</a>
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-action="Create" class="btn btn-primary btn-sm"><i class="fas fa-plus ms-1"></i> پلن جدید</a>
+    </div>
 </div>
 
-<partial name="_Alerts" />
+<partial name="_AdminAlerts" />
 
-<div class="card">
-    <div class="table-responsive text-nowrap">
-        <table class="table table-hover">
+<div class="admin-card">
+    <div class="table-responsive">
+        <table class="table admin-table mb-0">
             <thead>
                 <tr>
                     <th>نام</th>
@@ -23,13 +24,13 @@
                     <th>رکورد</th>
                     <th>فضا</th>
                     <th>وضعیت</th>
-                    <th class="text-end">عملیات</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody class="table-border-bottom-0">
+            <tbody>
                 @if (Model.Count == 0)
                 {
-                    <tr><td colspan="8" class="text-center text-muted py-5">پلنی تعریف نشده است.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">پلنی تعریف نشده است.</td></tr>
                 }
                 @foreach (var plan in Model)
                 {
@@ -38,26 +39,26 @@
                             <span class="fw-semibold">@plan.Name</span>
                             @if (plan.IsFeatured)
                             {
-                                <span class="badge bg-label-primary ms-1">پیشنهادی</span>
+                                <span class="badge bg-primary ms-1">پیشنهادی</span>
                             }
                         </td>
-                        <td>@plan.PriceMonthly.ToString("N0") تومان</td>
-                        <td>@plan.PriceYearly.ToString("N0") تومان</td>
+                        <td>@plan.PriceMonthly.ToString("N0")</td>
+                        <td>@plan.PriceYearly.ToString("N0")</td>
                         <td>@plan.MaxUsers</td>
                         <td>@plan.MaxRecords.ToString("N0")</td>
                         <td>@(plan.MaxStorageMb >= 1024 ? $"{plan.MaxStorageMb / 1024} GB" : $"{plan.MaxStorageMb} MB")</td>
                         <td>
                             @if (plan.IsActive)
                             {
-                                <span class="badge bg-label-success">فعال</span>
+                                <span class="badge bg-success">فعال</span>
                             }
                             else
                             {
-                                <span class="badge bg-label-secondary">غیرفعال</span>
+                                <span class="badge bg-secondary">غیرفعال</span>
                             }
                         </td>
                         <td class="text-end">
-                            <a asp-action="Edit" asp-route-id="@plan.Id" class="btn btn-sm btn-icon btn-text-secondary"><i class="bx bx-edit"></i></a>
+                            <a asp-action="Edit" asp-route-id="@plan.Id" class="btn btn-sm btn-outline-primary">ویرایش</a>
                         </td>
                     </tr>
                 }

@@ -12,10 +12,12 @@ namespace Crm.Web.Areas.Admin.Controllers;
 public class DashboardController : Controller
 {
     private readonly SiteDbContext _db;
+    private readonly PlatformAdminService _platform;
 
-    public DashboardController(SiteDbContext db)
+    public DashboardController(SiteDbContext db, PlatformAdminService platform)
     {
         _db = db;
+        _platform = platform;
     }
 
     public async Task<IActionResult> Index()
@@ -40,7 +42,8 @@ public class DashboardController : Controller
             FaqCount = await _db.FaqItems.CountAsync(),
             SitePageCount = await _db.SitePages.CountAsync(),
             SubscriberCount = await _db.NewsletterSubscribers.CountAsync(),
-            RecentItems = recentItems
+            RecentItems = recentItems,
+            Platform = await _platform.GetDashboardStatsAsync()
         };
 
         return View(model);

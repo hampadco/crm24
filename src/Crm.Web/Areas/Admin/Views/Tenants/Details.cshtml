@@ -1,0 +1,185 @@
+@using Crm.Core.Entities
+@using Crm.Web.Models.Admin
+@using Crm.Web.Services
+@model TenantDetailsViewModel
+@{
+    ViewData["Title"] = Model.Tenant.Name;
+    var storageMb = Model.StorageBytes / 1024.0 / 1024.0;
+}
+
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@Model.Tenant.Name</h1>
+    <div class="admin-topbar-actions d-flex flex-wrap gap-2">
+        <form asp-action="Impersonate" asp-route-id="@Model.Tenant.Id" method="post"
+              onsubmit="return confirm('با کاربر ادمین این مشتری وارد پنل CRM می‌شوید. ادامه می‌دهید؟');">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-sign-in-alt ms-1"></i> ورود به پنل مشتری</button>
+        </form>
+        <a asp-controller="Subscriptions" asp-action="Create" asp-route-tenantId="@Model.Tenant.Id" class="btn btn-primary btn-sm">
+            <i class="fas fa-tag ms-1"></i> ثبت اشتراک
+        </a>
+        <a asp-controller="Subscriptions" asp-action="Gift" asp-route-tenantId="@Model.Tenant.Id" class="btn btn-success btn-sm">
+            <i class="fas fa-gift ms-1"></i> اشتراک هدیه
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+    </div>
+</div>
+
+<partial name="_AdminAlerts" />
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">وضعیت</div>
+            <div class="mt-2"><partial name="_TenantStatusBadge" model="Model.Tenant.Status" /></div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">کاربران</div>
+            <div class="admin-stat-value">@Model.UserCount.ToFa()</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">رکوردها</div>
+            <div class="admin-stat-value">@Model.RecordCount.ToFa()</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">فضای مصرفی</div>
+            <div class="admin-stat-value">@storageMb.ToString("0.#") MB</div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-card mb-3">
+    <div class="admin-card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h2 class="h6 mb-0">تغییر وضعیت</h2>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var (target, label, cls) in new[] {
+                (TenantStatus.Active, "فعال‌سازی", "btn-success"),
+                (TenantStatus.Suspended, "تعلیق", "btn-danger"),
+                (TenantStatus.Trial, "بازگشت به تریال", "btn-warning") })
+            {
+                if (Model.Tenant.Status != target)
+                {
+                    <form asp-action="SetStatus" asp-route-id="@Model.Tenant.Id" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="status" value="@target" />
+                        <button type="submit" class="btn btn-sm @cls">@label</button>
+                    </form>
+                }
+            }
+        </div>
+    </div>
+    <div class="admin-card-body small text-muted">
+        شناسه: <code dir="ltr">@Model.Tenant.Slug</code> —
+        ثبت: @PersianDateHelper.ToJalaliDate(Model.Tenant.CreatedAtUtc) —
+        پایان تریال: @(Model.Tenant.TrialEndsAtUtc is DateTime te ? PersianDateHelper.ToJalaliDate(te) : "—")
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2 class="h6 mb-0">کاربران</h2></div>
+            <div class="table-responsive">
+                <table class="table admin-table mb-0">
+                    <thead><tr><th>نام</th><th>ایمیل</th><th>ادمین</th></tr></thead>
+                    <tbody>
+                        @foreach (var user in Model.Users)
+                        {
+                            <tr>
+                                <td>@user.FullName</td>
+                                <td dir="ltr">@user.Email</td>
+                                <td>@(user.IsTenantAdmin ? "✓" : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="admin-card h-100">
+            <div class="admin-card-header"><h2 class="h6 mb-0">اشتراک‌ها</h2></div>
+            <div class="table-responsive">
+                <table class="table admin-table mb-0">
+                    <thead><tr><th>پلن</th><th>بازه</th><th>مبلغ</th><th>نوع</th><th>وضعیت</th><th></th></tr></thead>
+                    <tbody>
+                        @if (Model.Subscriptions.Count == 0)
+                        {
+                            <tr><td colspan="6" class="text-muted text-center py-3">اشتراکی ثبت نشده است.</td></tr>
+                        }
+                        @foreach (var sub in Model.Subscriptions)
+                        {
+                            <tr>
+                                <td>@sub.Plan.Name</td>
+                                <td class="small">@PersianDateHelper.ToJalaliDate(sub.StartsAtUtc) — @PersianDateHelper.ToJalaliDate(sub.EndsAtUtc)</td>
+                                <td>@sub.Amount.ToString("N0")</td>
+                                <td>
+                                    @if (PlatformAdminService.IsGiftSubscription(sub))
+                                    {
+                                        <span class="badge bg-info">هدیه</span>
+                                    }
+                                    else if (sub.Amount == 0)
+                                    {
+                                        <span class="badge bg-secondary">رایگان</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary">پرداختی</span>
+                                    }
+                                </td>
+                                <td>
+                                    @switch (sub.Status)
+                                    {
+                                        case SubscriptionStatus.Active: <span class="badge bg-success">فعال</span>; break;
+                                        case SubscriptionStatus.Expired: <span class="badge bg-secondary">منقضی</span>; break;
+                                        case SubscriptionStatus.Canceled: <span class="badge bg-danger">لغو</span>; break;
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (sub.Status == SubscriptionStatus.Active)
+                                    {
+                                        <form asp-controller="Subscriptions" asp-action="Cancel" asp-route-id="@sub.Id" method="post" class="d-inline"
+                                              onsubmit="return confirm('این اشتراک لغو شود؟');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">لغو</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-card border-danger">
+    <div class="admin-card-header bg-danger bg-opacity-10">
+        <h2 class="h6 mb-0 text-danger"><i class="fas fa-exclamation-triangle ms-1"></i> حذف مشتری</h2>
+    </div>
+    <div class="admin-card-body">
+        <p class="small text-muted mb-3">
+            با حذف مشتری، تمام کاربران، رکوردها، اشتراک‌ها و داده‌های CRM این سازمان برای همیشه پاک می‌شوند. این عمل غیرقابل بازگشت است.
+        </p>
+        <form asp-action="Delete" asp-route-id="@Model.Tenant.Id" method="post"
+              onsubmit="return confirm('آیا از حذف کامل این مشتری مطمئن هستید؟');">
+            @Html.AntiForgeryToken()
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label small">برای تأیید، شناسه <code dir="ltr">@Model.Tenant.Slug</code> را وارد کنید:</label>
+                    <input type="text" name="confirmSlug" class="form-control form-control-sm" dir="ltr" required autocomplete="off" />
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-danger btn-sm w-100">حذف دائمی مشتری</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

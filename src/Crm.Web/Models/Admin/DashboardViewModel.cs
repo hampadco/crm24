@@ -17,4 +17,5 @@ public class DashboardViewModel
     public int SitePageCount { get; set; }
     public int SubscriberCount { get; set; }
     public IReadOnlyList<DashboardRecentItem> RecentItems { get; set; } = Array.Empty<DashboardRecentItem>();
+    public PlatformDashboardStats? Platform { get; set; }
 }

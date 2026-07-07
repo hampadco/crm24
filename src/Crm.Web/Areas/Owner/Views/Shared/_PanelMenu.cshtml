@@ -3,7 +3,7 @@
 }
 <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
     <div class="app-brand demo">
-        <a asp-area="Owner" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
+        <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
             <span class="app-brand-logo demo">
                 <i class="bx bxs-crown fs-3 text-primary"></i>
             </span>
@@ -22,7 +22,7 @@
 
     <ul class="menu-inner py-1">
         <li class="menu-item @(controller == "Dashboard" ? "active" : "")">
-            <a asp-area="Owner" asp-controller="Dashboard" asp-action="Index" class="menu-link">
+            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-home-circle"></i>
                 <div>داشبورد</div>
             </a>
@@ -30,19 +30,19 @@
 
         <li class="menu-header small text-uppercase"><span class="menu-header-text">مشتریان</span></li>
         <li class="menu-item @(controller == "Tenants" ? "active" : "")">
-            <a asp-area="Owner" asp-controller="Tenants" asp-action="Index" class="menu-link">
+            <a asp-area="Admin" asp-controller="Tenants" asp-action="Index" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-buildings"></i>
                 <div>Tenant ها</div>
             </a>
         </li>
         <li class="menu-item @(controller == "Plans" ? "active" : "")">
-            <a asp-area="Owner" asp-controller="Plans" asp-action="Index" class="menu-link">
+            <a asp-area="Admin" asp-controller="Plans" asp-action="Index" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-purchase-tag"></i>
                 <div>پلن‌ها و تعرفه</div>
             </a>
         </li>
         <li class="menu-item @(controller == "Subscriptions" ? "active" : "")">
-            <a asp-area="Owner" asp-controller="Subscriptions" asp-action="Index" class="menu-link">
+            <a asp-area="Admin" asp-controller="Subscriptions" asp-action="Index" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-receipt"></i>
                 <div>اشتراک‌ها</div>
             </a>

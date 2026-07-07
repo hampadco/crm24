@@ -1,25 +1,24 @@
-@model Crm.Web.Areas.Owner.Controllers.SubscriptionCreateModel
+@model Crm.Web.Models.Admin.SubscriptionCreateModel
 @{
     var tenant = (Crm.Core.Entities.Tenant)ViewData["Tenant"]!;
     var plans = (List<Crm.Core.Entities.Plan>)ViewData["Plans"]!;
     ViewData["Title"] = $"ثبت اشتراک — {tenant.Name}";
-    ViewData["PanelTitle"] = "پنل مالک CRM24";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-purchase-tag text-primary me-1"></i> ثبت اشتراک برای «@tenant.Name»</h4>
-    <a asp-controller="Tenants" asp-action="Details" asp-route-id="@tenant.Id" class="btn btn-outline-secondary">
-        <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
-    </a>
+<div class="admin-topbar">
+    <h1 class="admin-page-title">@ViewData["Title"]</h1>
+    <div class="admin-topbar-actions">
+        <a asp-controller="Tenants" asp-action="Details" asp-route-id="@tenant.Id" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+    </div>
 </div>
 
-<partial name="_Alerts" />
+<partial name="_AdminAlerts" />
 
-<div class="card">
-    <div class="card-body">
+<div class="admin-card">
+    <div class="admin-card-body">
         @if (plans.Count == 0)
         {
-            <div class="alert alert-warning">ابتدا از بخش «پلن‌ها و تعرفه» حداقل یک پلن فعال تعریف کنید.</div>
+            <div class="alert alert-warning mb-0">ابتدا از بخش «پلن‌ها و تعرفه» حداقل یک پلن فعال تعریف کنید.</div>
         }
         else
         {
@@ -68,7 +67,7 @@
                     </div>
                 </div>
                 <div class="mt-4">
-                    <button type="submit" class="btn btn-primary"><i class="bx bx-check me-1"></i> ثبت اشتراک</button>
+                    <button type="submit" class="btn btn-primary">ثبت اشتراک</button>
                 </div>
             </form>
         }
@@ -78,13 +77,15 @@
 @section Scripts {
     <script>
         function updateAmount() {
-            const plan = document.querySelector('#planSelect').selectedOptions[0];
-            const months = parseInt(document.querySelector('#monthsSelect').value);
-            if (!plan) return;
+            const plan = document.querySelector('#planSelect')?.selectedOptions[0];
+            const monthsEl = document.querySelector('#monthsSelect');
+            const amountEl = document.querySelector('#amountInput');
+            if (!plan || !monthsEl || !amountEl) return;
+            const months = parseInt(monthsEl.value, 10);
             const monthly = parseFloat(plan.dataset.monthly);
             const yearly = parseFloat(plan.dataset.yearly);
             const amount = months >= 12 ? (yearly * months / 12) : (monthly * months);
-            document.querySelector('#amountInput').value = Math.round(amount);
+            amountEl.value = Math.round(amount);
         }
         document.querySelector('#planSelect')?.addEventListener('change', updateAmount);
         document.querySelector('#monthsSelect')?.addEventListener('change', updateAmount);
