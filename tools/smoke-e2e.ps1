@@ -68,7 +68,7 @@ $csvPath = Join-Path $env:TEMP 'leads-import.csv'
 $listPage = Invoke-WebRequest -Uri "$base/App/m/leads" -WebSession $s -UseBasicParsing
 $importToken = Get-Token $listPage.Content
 $cookieHeader = ($s.Cookies.GetCookies($base) | ForEach-Object { "$($_.Name)=$($_.Value)" }) -join '; '
-$cookieJar = Join-Path $env:TEMP 'crm24-curl-cookies.txt'
+$cookieJar = Join-Path $env:TEMP 'bamacrm-curl-cookies.txt'
 $importHtmlRaw = & curl.exe -s -L -b $cookieHeader -c $cookieJar -F "__RequestVerificationToken=$importToken" -F "file=@$csvPath;type=text/csv" "$base/App/m/leads/import"
 $importHtml = [System.Net.WebUtility]::HtmlDecode(($importHtmlRaw -join "`n"))
 if ($importHtml -match 'رکورد وارد شد' -and $importHtml -match 'رضا کریمی') { Write-Output "12. CSV IMPORT OK" } else { Write-Output "12. CSV IMPORT FAILED" }

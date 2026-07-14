@@ -11,7 +11,7 @@ public class HelpController : AppControllerBase
         ViewData["PanelTitle"] = "مرکز آموزش";
         return View(new HelpIndexViewModel
         {
-            Title = "مرکز آموزش BaMaCRM",
+            Title = "مرکز آموزش BamaCRM",
             Description = "آموزش تک‌تک صفحات، فیلدها و روابط بین بخش‌ها — از سرنخ تا فاکتور، پروژه، تیکت و پورتال. برای شروع، «نقشه روابط CRM» را ببینید.",
             BaseUrl = "/App/help",
             Topics = Services.Help.AppHelpContent.Topics

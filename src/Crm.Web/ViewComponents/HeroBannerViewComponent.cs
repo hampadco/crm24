@@ -8,7 +8,7 @@ public class HeroBannerViewComponent : ViewComponent
     {
         var model = new HeroBannerViewModel
         {
-            BackgroundUrl = "/images/home/hero.jpg",
+            BackgroundUrl = "/images/home/hero.jpg?v=2",
             Headline = "نرم‌افزار مدیریت ارتباط با مشتری",
             Subtitle = "در هر مرحله از چرخه فروش، از سرنخ تا ایجاد مشتری وفادار، کنار شما خواهد بود."
         };

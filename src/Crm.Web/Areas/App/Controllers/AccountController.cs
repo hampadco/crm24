@@ -46,7 +46,7 @@ public class AccountController : Controller
         }
 
         await _signInManager.SignInAsync(result.AdminUser, isPersistent: true);
-        TempData["Success"] = $"به BaMaCRM خوش آمدید! دوره آزمایشی ۱۰ روزه «{result.Tenant!.Name}» فعال شد.";
+        TempData["Success"] = $"به BamaCRM خوش آمدید! دوره آزمایشی ۱۰ روزه «{result.Tenant!.Name}» فعال شد.";
         return RedirectToAction("Index", "Dashboard", new { area = "App" });
     }
 

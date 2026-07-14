@@ -14,7 +14,7 @@ public class HelpController : Controller
         ViewData["PanelTitle"] = "مرکز آموزش";
         return View(new HelpIndexViewModel
         {
-            Title = "آموزش پنل مدیریت BaMaCRM",
+            Title = "آموزش پنل مدیریت BamaCRM",
             Description = "راهنمای مدیریت مشتریان SaaS، اشتراک‌ها، تراکنش‌ها و محتوای سایت — با توضیح روابط Tenant، Plan، Subscription و فیلدهای هر صفحه.",
             BaseUrl = "/Admin/help",
             Topics = Services.Help.AdminHelpContent.Topics

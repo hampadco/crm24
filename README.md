@@ -1,6 +1,6 @@
-# BaMaCRM — پلتفرم مدیریت ارتباط با مشتری
+# BamaCRM — پلتفرم مدیریت ارتباط با مشتری
 
-پلتفرم SaaS چند-مستاجری (Multi-Tenant) مشابه [crm24.io](https://crm24.io) با ‎.NET 10 MVC.
+پلتفرم SaaS چند-مستاجری (Multi-Tenant) برای مدیریت فروش، پشتیبانی و ارتباط با مشتری — با ‎.NET 10 MVC.
 
 ## ساختار سالوشن
 
@@ -37,7 +37,7 @@ dotnet run --project src/Crm.Web
 - ادمین محتوای سایت: `/Admin` (کاربر پیش‌فرض در `appsettings.json` بخش `Admin`)
 - پنل مالک: `/Owner` — پنل CRM: `/App` — پورتال مشتری: `/Portal`
 
-دیتابیس: PostgreSQL 16 (`crm24` / `crm24` / `crm24_dev` روی پورت 5432) — اسکیما و داده اولیه به‌صورت خودکار هنگام اجرا ساخته می‌شود.
+دیتابیس: PostgreSQL 16 (`bamacrm` / `bamacrm` / `bamacrm_dev` روی پورت 5432) — اسکیما و داده اولیه به‌صورت خودکار هنگام اجرا ساخته می‌شود.
 
 ## استقرار (Production — Cloud یا On-Premise)
 
@@ -49,7 +49,7 @@ docker compose -f docker-compose.deploy.yml up -d --build
 ```
 
 - وب‌اپ روی پورت `8080` — دیتابیس و آپلودها در ولوم Docker
-- **Backup خودکار:** سرویس `backup` هر ۲۴ ساعت `pg_dump` می‌گیرد (۱۴ نسخه آخر در ولوم `crm24_backups`)
+- **Backup خودکار:** سرویس `backup` هر ۲۴ ساعت `pg_dump` می‌گیرد (۱۴ نسخه آخر در ولوم `bamacrm_backups`)
 - Migration ها هنگام بالا آمدن وب‌اپ خودکار اجرا می‌شوند
 
 ## REST API عمومی

@@ -15,6 +15,7 @@ public static class DbInitializer
         await context.Database.EnsureCreatedAsync();
         await SeedTaxonomyIfEmptyAsync(context);
         await SeedArticlesIfEmptyAsync(context);
+        await SeedArticleThumbnailsAsync(context);
         await SeedFaqsIfEmptyAsync(context);
         await SeedSitePagesIfEmptyAsync(context);
         await SeedAdminAccountIfEmptyAsync(context, scope.ServiceProvider);
@@ -53,7 +54,7 @@ public static class DbInitializer
                 Title = "CRM چیست و چرا کسب‌وکار شما به آن نیاز دارد؟",
                 Slug = "what-is-crm",
                 Summary = "آشنایی با مفهوم مدیریت ارتباط با مشتری و نقش آن در رشد فروش و وفادارسازی مشتریان.",
-                ThumbnailUrl = "",
+                ThumbnailUrl = "/images/articles/what-is-crm.jpg",
                 CategoryId = CatId("crm-training"),
                 PublishedAt = seedDate,
                 Content = """
@@ -90,7 +91,7 @@ public static class DbInitializer
                 Title = "قیف فروش چیست و چگونه نرخ تبدیل سرنخ را افزایش دهیم؟",
                 Slug = "sales-funnel-guide",
                 Summary = "مراحل قیف فروش و تکنیک‌های عملی برای تبدیل سرنخ به مشتری وفادار.",
-                ThumbnailUrl = "",
+                ThumbnailUrl = "/images/articles/sales-funnel-guide.jpg",
                 CategoryId = CatId("sales-management"),
                 PublishedAt = seedDate.AddDays(5),
                 Content = "<p>قیف فروش مسیر حرکت مشتری از آشنایی اولیه تا خرید نهایی را نشان می‌دهد. با مدیریت مرحله‌به‌مرحله فرصت‌ها در CRM، نقاط ریزش مشتری را شناسایی و نرخ تبدیل را افزایش دهید.</p>"
@@ -100,13 +101,40 @@ public static class DbInitializer
                 Title = "اتوماسیون بازاریابی؛ چگونه کارهای تکراری را به نرم‌افزار بسپاریم؟",
                 Slug = "marketing-automation",
                 Summary = "با گردش‌کارهای خودکار، پیگیری مشتریان را بدون دخالت دستی انجام دهید.",
-                ThumbnailUrl = "",
+                ThumbnailUrl = "/images/articles/marketing-automation.jpg",
                 CategoryId = CatId("marketing"),
                 PublishedAt = seedDate.AddDays(10),
                 Content = "<p>ارسال پیامک خوش‌آمد، ارجاع خودکار سرنخ به کارشناس و یادآوری پیگیری، نمونه‌هایی از اتوماسیون‌هایی هستند که ساعت‌ها کار روزانه تیم فروش را حذف می‌کنند.</p>"
             });
 
         await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedArticleThumbnailsAsync(SiteDbContext context)
+    {
+        var thumbnails = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["what-is-crm"] = "/images/articles/what-is-crm.jpg",
+            ["sales-funnel-guide"] = "/images/articles/sales-funnel-guide.jpg",
+            ["marketing-automation"] = "/images/articles/marketing-automation.jpg"
+        };
+
+        var articles = await context.Articles
+            .Where(a => thumbnails.Keys.Contains(a.Slug))
+            .ToListAsync();
+
+        var changed = false;
+        foreach (var article in articles)
+        {
+            if (!string.IsNullOrWhiteSpace(article.ThumbnailUrl))
+                continue;
+
+            article.ThumbnailUrl = thumbnails[article.Slug];
+            changed = true;
+        }
+
+        if (changed)
+            await context.SaveChangesAsync();
     }
 
     private static async Task SeedFaqsIfEmptyAsync(SiteDbContext context)

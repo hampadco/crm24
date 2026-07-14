@@ -16,6 +16,10 @@ using Crm.Web.Services;
 using Crm.Web.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile(
+    $"appsettings.{builder.Environment.EnvironmentName}.local.json",
+    optional: true,
+    reloadOnChange: true);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 // ---------- سایت عمومی و ادمین محتوا ----------
@@ -173,6 +177,33 @@ app.UseAuthorization();
 
 app.MapHub<Crm.Web.Hubs.NotificationHub>("/hubs/notifications");
 app.MapOpenApi();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapPost("/dev/reset-admin", async (AdminAuthService auth) =>
+    {
+        var (username, password) = await auth.ResetCredentialsFromSettingsAsync();
+        return Results.Ok(new
+        {
+            message = "حساب ادمین از appsettings ریست شد.",
+            username,
+            password,
+            loginUrl = "/Admin/Account/Login"
+        });
+    }).AllowAnonymous();
+
+    app.MapGet("/dev/reset-admin", async (AdminAuthService auth) =>
+    {
+        var (username, password) = await auth.ResetCredentialsFromSettingsAsync();
+        return Results.Ok(new
+        {
+            message = "حساب ادمین از appsettings ریست شد.",
+            username,
+            password,
+            loginUrl = "/Admin/Account/Login"
+        });
+    }).AllowAnonymous();
+}
 
 app.MapControllerRoute(
     name: "articles-detail",

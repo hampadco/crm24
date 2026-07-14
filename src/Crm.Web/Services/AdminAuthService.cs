@@ -97,4 +97,26 @@ public class AdminAuthService
         var account = await _db.AdminAccounts.AsNoTracking().FirstOrDefaultAsync();
         return account?.Username ?? _settings.Username;
     }
+
+    /// <summary>
+    /// ریست کامل حساب ادمین به مقادیر Admin در appsettings (فقط برای Development).
+    /// </summary>
+    public async Task<(string Username, string Password)> ResetCredentialsFromSettingsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_settings.Username) || string.IsNullOrWhiteSpace(_settings.Password))
+            throw new InvalidOperationException("بخش Admin در appsettings خالی است.");
+
+        var account = await _db.AdminAccounts.FirstOrDefaultAsync();
+        if (account is null)
+        {
+            account = new AdminAccount { Id = 1 };
+            _db.AdminAccounts.Add(account);
+        }
+
+        account.Username = _settings.Username;
+        account.PasswordHash = _hasher.HashPassword(account, _settings.Password);
+        await _db.SaveChangesAsync();
+
+        return (_settings.Username, _settings.Password);
+    }
 }

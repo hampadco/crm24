@@ -21,7 +21,7 @@ public static class AdminHelpContent
             Icon = "bx-sitemap",
             Summary = "روابط مشتری (Tenant)، اشتراک، تراکنش و محتوای سایت",
             Intro = """
-                پنل /Admin برای مالک پلتفرم BaMaCRM است — نه برای مشتریان CRM.
+                پنل /Admin برای مالک پلتفرم BamaCRM است — نه برای مشتریان CRM.
                 Tenant (مشتری SaaS) ← Subscription (اشتراک) ← Plan (پلن)
                 SubscriptionPayment / PaymentTransaction ← درآمد پلتفرم
                 Articles / SitePages / FAQ ← محتوای سایت عمومی marketing

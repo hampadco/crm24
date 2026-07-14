@@ -1,9 +1,13 @@
+@{
+    var panelArea = ViewContext.RouteData.Values["area"]?.ToString();
+    var useModernPanelSkin = panelArea is "Admin" or "App";
+}
 <!DOCTYPE html>
 <html lang="fa" class="light-style layout-navbar-fixed layout-menu-fixed" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="vertical-menu-template">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] | @(ViewData["PanelTitle"] ?? "BaMaCRM")</title>
+    <title>@ViewData["Title"] | @(ViewData["PanelTitle"] ?? "BamaCRM")</title>
     <link rel="icon" type="image/x-icon" href="~/panel-assets/img/favicon/favicon.ico" />
 
     <link rel="stylesheet" href="~/panel-assets/vendor/fonts/boxicons.css" />
@@ -15,6 +19,10 @@
     <link rel="stylesheet" href="~/panel-assets/css/demo.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/rtl.css" />
     <link rel="stylesheet" href="~/css/panel-layout-fix.css" asp-append-version="true" />
+    @if (useModernPanelSkin)
+    {
+        <link rel="stylesheet" href="~/css/panel-theme.css" asp-append-version="true" />
+    }
 
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/apex-charts/apex-charts.css" />
@@ -31,10 +39,7 @@
 
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body dir="rtl">
-    @{
-        var panelArea = ViewContext.RouteData.Values["area"]?.ToString();
-    }
+<body dir="rtl" class="@(useModernPanelSkin ? "panel-skin" : "")">
     <div class="layout-wrapper layout-content-navbar">
         <div class="layout-container">
             @if (!string.IsNullOrEmpty(panelArea))
@@ -164,7 +169,7 @@
                     <footer class="content-footer footer bg-footer-theme">
                         <div class="container-fluid d-flex flex-wrap justify-content-between py-3 flex-md-row flex-column">
                             <div class="mb-2 mb-md-0">
-                                © ۱۴۰۵ BaMaCRM — تمامی حقوق محفوظ است.
+                                © ۱۴۰۵ BamaCRM — تمامی حقوق محفوظ است.
                             </div>
                         </div>
                     </footer>

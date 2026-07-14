@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $base = 'http://localhost:5100'
 
 function Get-Token($content) {
@@ -23,7 +23,7 @@ if ($ownerAnon.BaseResponse.ResponseUri.AbsolutePath -like '*/Login*') { Write-O
 
 # 3) Login as site admin
 $loginPage = Invoke-WebRequest -Uri "$base/Admin/Account/Login" -SessionVariable o -UseBasicParsing
-$login = Post-Form "$base/Admin/Account/Login" $o @{ Username = 'admin'; Password = 'Crm24@1405'; '__RequestVerificationToken' = (Get-Token $loginPage.Content) }
+$login = Post-Form "$base/Admin/Account/Login" $o @{ Username = 'admin'; Password = 'BamaCRM@1405'; '__RequestVerificationToken' = (Get-Token $loginPage.Content) }
 Write-Output "3. ADMIN LOGIN OK"
 
 # 4) Owner dashboard

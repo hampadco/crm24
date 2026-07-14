@@ -1,0 +1,205 @@
+/*
+ * پوسته مینیمال پنل ادمین و مشتری
+ * هدر و سایدبار سفید مجزا + آیتم‌های منو کارت‌مانند با سایه
+ */
+
+.panel-skin {
+    --panel-surface: #ffffff;
+    --panel-canvas: #eef1f6;
+    --panel-border: rgba(15, 23, 42, 0.07);
+    --panel-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --panel-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.07), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --panel-shadow-md: 0 6px 18px rgba(15, 23, 42, 0.09), 0 2px 6px rgba(15, 23, 42, 0.05);
+    --panel-radius: 0.7rem;
+    --panel-primary: #5a8dee;
+    --panel-primary-soft: rgba(90, 141, 238, 0.14);
+    --panel-primary-glow: 0 4px 14px rgba(90, 141, 238, 0.22);
+}
+
+/* پس‌زمینه کلی محتوا */
+.panel-skin .layout-wrapper.layout-content-navbar {
+    background-color: var(--panel-canvas);
+}
+
+.panel-skin .content-wrapper {
+    background-color: var(--panel-canvas);
+}
+
+/* ===== هدر (Navbar) ===== */
+.panel-skin .layout-navbar.bg-navbar-theme {
+    background-color: var(--panel-surface) !important;
+    border-bottom: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow-sm);
+}
+
+.panel-skin .layout-navbar .nav-link {
+    border-radius: 0.55rem;
+    transition: background-color 0.15s ease;
+}
+
+.panel-skin .layout-navbar .nav-link:hover {
+    background-color: rgba(90, 141, 238, 0.08);
+}
+
+.panel-skin .layout-navbar .avatar-initial {
+    box-shadow: var(--panel-shadow-xs);
+}
+
+/* ===== سایدبار ===== */
+.panel-skin .layout-menu.bg-menu-theme {
+    background-color: var(--panel-surface) !important;
+    border-inline-start: 1px solid var(--panel-border);
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.06);
+}
+
+html[dir="rtl"].panel-skin .layout-menu.bg-menu-theme {
+    box-shadow: -4px 0 24px rgba(15, 23, 42, 0.06);
+}
+
+.panel-skin .layout-menu .menu-inner-shadow {
+    display: none;
+}
+
+.panel-skin .layout-menu .app-brand {
+    background-color: var(--panel-surface);
+    border-bottom: 1px solid var(--panel-border);
+    margin-bottom: 0.35rem;
+}
+
+.panel-skin .layout-menu .menu-divider {
+    opacity: 0;
+    height: 0;
+    margin: 0;
+}
+
+/* فضای داخلی منو */
+.panel-skin .layout-menu .menu-inner {
+    padding: 0.65rem 0.55rem 1.25rem;
+}
+
+/* ===== سرتیتر گروه‌های منو ===== */
+.panel-skin .layout-menu .menu-header {
+    margin: 0.85rem 0.65rem 0.4rem;
+    padding: 0;
+}
+
+.panel-skin .layout-menu .menu-header .menu-header-text {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #94a3b8 !important;
+    padding: 0.15rem 0.35rem;
+}
+
+.panel-skin .layout-menu .menu-inner > .menu-header::before {
+    display: none;
+}
+
+/* ===== آیتم‌های منو — کارت جدا با سایه ===== */
+.panel-skin .layout-menu .menu-inner > .menu-item:not(.menu-header) {
+    margin: 0 0.35rem 0.42rem;
+}
+
+.panel-skin .layout-menu .menu-inner > .menu-item > .menu-link {
+    margin: 0;
+    border-radius: var(--panel-radius);
+    background-color: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    box-shadow: var(--panel-shadow-sm);
+    color: #4b5563;
+    font-weight: 500;
+    min-height: 2.65rem;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.panel-skin .layout-menu .menu-inner > .menu-item > .menu-link:hover {
+    background-color: #ffffff;
+    border-color: rgba(90, 141, 238, 0.18);
+    box-shadow: var(--panel-shadow-md);
+    color: #334155;
+    transform: translateY(-1px);
+}
+
+.panel-skin .layout-menu .menu-inner > .menu-item.active > .menu-link,
+.panel-skin .layout-menu .menu-inner > .menu-item.active > .menu-link:hover {
+    background: linear-gradient(135deg, rgba(90, 141, 238, 0.16) 0%, rgba(90, 141, 238, 0.08) 100%);
+    border-color: rgba(90, 141, 238, 0.28);
+    box-shadow: var(--panel-primary-glow);
+    color: var(--panel-primary);
+    font-weight: 600;
+    transform: none;
+}
+
+.panel-skin .layout-menu .menu-icon {
+    color: #64748b;
+    font-size: 1.2rem;
+    transition: color 0.16s ease;
+}
+
+.panel-skin .layout-menu .menu-inner > .menu-item.active > .menu-link .menu-icon,
+.panel-skin .layout-menu .menu-inner > .menu-item > .menu-link:hover .menu-icon {
+    color: var(--panel-primary);
+}
+
+/* زیرمنوها */
+.panel-skin .layout-menu .menu-sub {
+    padding: 0.25rem 0 0.15rem;
+}
+
+.panel-skin .layout-menu .menu-sub > .menu-item {
+    margin: 0 0.35rem 0.35rem;
+}
+
+.panel-skin .layout-menu .menu-sub > .menu-item > .menu-link {
+    border-radius: calc(var(--panel-radius) - 0.1rem);
+    background-color: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.04);
+    box-shadow: var(--panel-shadow-xs);
+    font-size: 0.92rem;
+}
+
+.panel-skin .layout-menu .menu-sub > .menu-item > .menu-link:before {
+    display: none;
+}
+
+.panel-skin .layout-menu .menu-sub > .menu-item.active > .menu-link {
+    background-color: var(--panel-primary-soft);
+    border-color: rgba(90, 141, 238, 0.22);
+    color: var(--panel-primary);
+}
+
+/* ===== فوتر پنل ===== */
+.panel-skin .content-footer.footer.bg-footer-theme {
+    background-color: transparent !important;
+    border-top: none;
+    color: #94a3b8;
+}
+
+/* ===== حالت منوی جمع‌شده ===== */
+html.layout-menu-collapsed.panel-skin .layout-menu .menu-inner > .menu-item:not(.menu-header) {
+    margin-inline: 0.25rem;
+}
+
+html.layout-menu-collapsed.panel-skin .layout-menu .menu-inner > .menu-item > .menu-link {
+    box-shadow: var(--panel-shadow-xs);
+    padding-inline: 0.85rem;
+}
+
+/* ===== موبایل ===== */
+@media (max-width: 1199.98px) {
+    .panel-skin .layout-menu.bg-menu-theme {
+        box-shadow: -8px 0 32px rgba(15, 23, 42, 0.12);
+    }
+}
+
+/* کارت‌های داخل محتوا کمی برجسته‌تر */
+.panel-skin .content-wrapper .card {
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow-sm);
+}
+
+.panel-skin .content-wrapper .alert-primary {
+    border: none;
+    box-shadow: var(--panel-shadow-sm);
+}

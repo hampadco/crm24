@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $base = 'http://localhost:5100'
 
 function Get-Token($content) {
@@ -22,7 +22,7 @@ Write-Output "1. TENANT REGISTERED"
 
 # Owner suspends it
 $loginPage = Invoke-WebRequest -Uri "$base/Admin/Account/Login" -SessionVariable o -UseBasicParsing
-Post-Form "$base/Admin/Account/Login" $o @{ Username = 'admin'; Password = 'Crm24@1405'; '__RequestVerificationToken' = (Get-Token $loginPage.Content) } | Out-Null
+Post-Form "$base/Admin/Account/Login" $o @{ Username = 'admin'; Password = 'BamaCRM@1405'; '__RequestVerificationToken' = (Get-Token $loginPage.Content) } | Out-Null
 $tenants = Invoke-WebRequest -Uri "$base/Owner/Tenants?q=$([System.Uri]::EscapeDataString('قطع دسترسی'))" -WebSession $o -UseBasicParsing
 $tenantId = ([regex]::Match($tenants.Content, '/Owner/Tenants/Details/(\d+)')).Groups[1].Value
 if (-not $tenantId) { throw 'tenant not found in owner list' }
