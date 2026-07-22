@@ -41,13 +41,13 @@ dotnet run --project src/Crm.Web
 
 ### Tenant نمونه (دمو)
 
-از پنل ادمین ← **مشتریان** ← دکمه «ساخت مشتری دمو» بسازید (بعد از حذف هم دوباره قابل ساخت است):
+فقط در **Development** از پنل ادمین ← **مشتریان** ← دکمه «ساخت مشتری دمو» (در Production نمایش داده نمی‌شود):
 
 - ورود پنل CRM: `/App/Account/Login`
 - ایمیل: `demo@bamacrm.local`
 - رمز: `Demo@1405`
 
-جزئیات کامل (حجم داده، نمودارها، تقویم شمسی، پورسانت): [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
+جزئیات کامل (دادهٔ دمو، نمودارها، تقویم شمسی، پورسانت، بهینه‌سازی لود): [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
 
 ## استقرار (Production — Cloud یا On-Premise)
 

@@ -20,17 +20,20 @@ public class TenantsController : Controller
     private readonly CrmDbContext _db;
     private readonly SignInManager<CrmUser> _signInManager;
     private readonly DemoTenantSeeder _demoSeeder;
+    private readonly IWebHostEnvironment _env;
 
     public TenantsController(
         PlatformAdminService platform,
         CrmDbContext db,
         SignInManager<CrmUser> signInManager,
-        DemoTenantSeeder demoSeeder)
+        DemoTenantSeeder demoSeeder,
+        IWebHostEnvironment env)
     {
         _platform = platform;
         _db = db;
         _signInManager = signInManager;
         _demoSeeder = demoSeeder;
+        _env = env;
     }
 
     public async Task<IActionResult> Index(string? q, TenantStatus? status, int page = 1)
@@ -39,9 +42,13 @@ public class TenantsController : Controller
         var model = await _platform.GetTenantsAsync(listQuery);
         ViewBag.TenantListQuery = listQuery;
         ViewBag.PaginationRoutes = BuildTenantPaginationRoutes(listQuery);
-        ViewBag.DemoExists = await _demoSeeder.DemoExistsAsync();
-        ViewBag.DemoEmail = DemoTenantSeeder.DemoEmail;
-        ViewBag.DemoPassword = DemoTenantSeeder.DemoPassword;
+        ViewBag.AllowDemoTenant = _env.IsDevelopment();
+        if (_env.IsDevelopment())
+        {
+            ViewBag.DemoExists = await _demoSeeder.DemoExistsAsync();
+            ViewBag.DemoEmail = DemoTenantSeeder.DemoEmail;
+            ViewBag.DemoPassword = DemoTenantSeeder.DemoPassword;
+        }
         return View(model);
     }
 
@@ -67,6 +74,9 @@ public class TenantsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateDemo()
     {
+        if (!_env.IsDevelopment())
+            return NotFound();
+
         var (ok, message, tenantId) = await _demoSeeder.CreateOrRefreshAsync();
         if (!ok)
         {
