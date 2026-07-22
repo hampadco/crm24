@@ -75,7 +75,7 @@ public class DashboardWidget : TenantEntity
 {
     public int UserId { get; set; }
 
-    /// <summary>counter | pie | monthly</summary>
+    /// <summary>counter | pie | bar | monthly</summary>
     public string Type { get; set; } = "counter";
 
     public string Title { get; set; } = string.Empty;

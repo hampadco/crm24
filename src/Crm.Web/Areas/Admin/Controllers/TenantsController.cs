@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Identity;
+using Crm.Infrastructure.Services;
 using Crm.Web.Models.Admin;
 using Crm.Web.Services;
 
@@ -18,12 +19,18 @@ public class TenantsController : Controller
     private readonly PlatformAdminService _platform;
     private readonly CrmDbContext _db;
     private readonly SignInManager<CrmUser> _signInManager;
+    private readonly DemoTenantSeeder _demoSeeder;
 
-    public TenantsController(PlatformAdminService platform, CrmDbContext db, SignInManager<CrmUser> signInManager)
+    public TenantsController(
+        PlatformAdminService platform,
+        CrmDbContext db,
+        SignInManager<CrmUser> signInManager,
+        DemoTenantSeeder demoSeeder)
     {
         _platform = platform;
         _db = db;
         _signInManager = signInManager;
+        _demoSeeder = demoSeeder;
     }
 
     public async Task<IActionResult> Index(string? q, TenantStatus? status, int page = 1)
@@ -32,6 +39,9 @@ public class TenantsController : Controller
         var model = await _platform.GetTenantsAsync(listQuery);
         ViewBag.TenantListQuery = listQuery;
         ViewBag.PaginationRoutes = BuildTenantPaginationRoutes(listQuery);
+        ViewBag.DemoExists = await _demoSeeder.DemoExistsAsync();
+        ViewBag.DemoEmail = DemoTenantSeeder.DemoEmail;
+        ViewBag.DemoPassword = DemoTenantSeeder.DemoPassword;
         return View(model);
     }
 
@@ -51,6 +61,24 @@ public class TenantsController : Controller
         if (model is null)
             return NotFound();
         return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateDemo()
+    {
+        var (ok, message, tenantId) = await _demoSeeder.CreateOrRefreshAsync();
+        if (!ok)
+        {
+            TempData["Error"] = message;
+            return RedirectToAction(nameof(Index));
+        }
+
+        TempData["Success"] = message;
+        if (tenantId is int id)
+            return RedirectToAction(nameof(Details), new { id });
+
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]

@@ -1,6 +1,7 @@
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Crm.Infrastructure.Services;
 
@@ -12,10 +13,12 @@ namespace Crm.Infrastructure.Services;
 public class SalesModuleSeeder
 {
     private readonly CrmDbContext _db;
+    private readonly IMemoryCache _cache;
 
-    public SalesModuleSeeder(CrmDbContext db)
+    public SalesModuleSeeder(CrmDbContext db, IMemoryCache cache)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task SeedAsync(int tenantId, int adminProfileId, int userProfileId)
@@ -122,15 +125,24 @@ public class SalesModuleSeeder
     /// <summary>برای Tenant های موجود که همه ماژول‌های فروش را ندارند (ارتقا).</summary>
     public async Task EnsureSeededAsync(int tenantId)
     {
+        var cacheKey = $"sales-modules-ok:{tenantId}";
+        if (_cache.TryGetValue(cacheKey, out bool ok) && ok)
+            return;
+
         var hasAll = await _db.Modules.CountAsync(m =>
             m.TenantId == tenantId &&
             new[] { "leads", "organizations", "contacts", "opportunities", "tasks", "events", "calls" }.Contains(m.Name)) == 7;
         if (hasAll)
+        {
+            _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
             return;
+        }
 
         var adminProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
         var userProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && !p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
         await SeedAsync(tenantId, adminProfile, userProfile);
+        _cache.Remove($"modules:{tenantId}");
+        _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
     }
 
     private async Task EnsureModuleAsync(

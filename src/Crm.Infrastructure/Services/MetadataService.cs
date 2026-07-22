@@ -20,18 +20,28 @@ public class MetadataService
         _cache = cache;
     }
 
-    public async Task<IReadOnlyList<ModuleDef>> GetActiveModulesAsync() =>
-        await _db.Modules
+    public async Task<IReadOnlyList<ModuleDef>> GetActiveModulesAsync()
+    {
+        var cacheKey = ModulesCacheKey();
+        if (_cache.TryGetValue(cacheKey, out IReadOnlyList<ModuleDef>? cached) && cached is not null)
+            return cached;
+
+        var modules = await _db.Modules
             .AsNoTracking()
             .Where(m => m.IsActive)
             .OrderBy(m => m.SortOrder)
             .ThenBy(m => m.Id)
             .ToListAsync();
 
-    public async Task<ModuleDef?> GetModuleByNameAsync(string name) =>
-        await _db.Modules
-            .AsNoTracking()
-            .FirstOrDefaultAsync(m => m.Name == name && m.IsActive);
+        _cache.Set(cacheKey, (IReadOnlyList<ModuleDef>)modules, TimeSpan.FromMinutes(5));
+        return modules;
+    }
+
+    public async Task<ModuleDef?> GetModuleByNameAsync(string name)
+    {
+        var modules = await GetActiveModulesAsync();
+        return modules.FirstOrDefault(m => m.Name == name);
+    }
 
     public async Task<IReadOnlyList<FieldDef>> GetFieldsAsync(int moduleId)
     {
@@ -53,4 +63,9 @@ public class MetadataService
 
     public void InvalidateFieldCache(int moduleId) =>
         _cache.Remove($"fields:{_tenant.TenantId}:{moduleId}");
+
+    public void InvalidateModulesCache() =>
+        _cache.Remove(ModulesCacheKey());
+
+    private string ModulesCacheKey() => $"modules:{_tenant.TenantId}";
 }

@@ -4,6 +4,10 @@
     ViewData["PanelTitle"] = Model.Tenant.Name;
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/panel-assets/vendor/libs/apex-charts/apex-charts.css" />
+}
+
 <partial name="_Alerts" />
 
 <div class="row g-4">
@@ -31,7 +35,7 @@
 
     @foreach (var widget in Model.Widgets)
     {
-        <div class="@(widget.Widget.Type == "counter" ? "col-md-3 col-6" : "col-md-6")">
+        <div class="@(widget.Widget.Type == "counter" ? "col-md-3 col-6" : "col-lg-6")">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center pb-2">
                     <h6 class="mb-0">@widget.Widget.Title</h6>
@@ -49,7 +53,10 @@
                             <div class="avatar">
                                 <span class="avatar-initial rounded bg-label-primary"><i class="bx @(widget.Module?.Icon ?? "bx-cube")"></i></span>
                             </div>
-                            <h3 class="mb-0">@widget.CounterValue.ToString("N0")</h3>
+                            <div>
+                                <h3 class="mb-0">@widget.CounterValue.ToString("N0")</h3>
+                                <small class="text-muted">@widget.Module?.PluralLabel</small>
+                            </div>
                         </div>
                     }
                     else
@@ -106,6 +113,7 @@
                     <select name="type" class="form-select" id="widgetType">
                         <option value="counter">شمارنده رکوردها</option>
                         <option value="pie">نمودار دایره‌ای (گروه‌بندی)</option>
+                        <option value="bar">نمودار میله‌ای (گروه‌بندی)</option>
                         <option value="monthly">روند ماهانه رکوردها</option>
                     </select>
                 </div>
@@ -136,16 +144,18 @@
 </div>
 
 @section Scripts {
+<script src="~/panel-assets/vendor/libs/apex-charts/apexcharts.js"></script>
 <script>
     const picklistFields = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         Model.PicklistFields.ToDictionary(kv => kv.Key, kv => kv.Value.Select(f => new { name = f.Name, label = f.Label }))));
+    const chartColors = ['#696cff', '#03c3ec', '#71dd37', '#ffab00', '#ff3e1d', '#8592a3', '#28c76f', '#00cfe8', '#a8aaae', '#ff9f43'];
 
     function refreshWidgetFields() {
         const type = document.getElementById('widgetType').value;
         const moduleId = document.getElementById('widgetModule').value;
         const box = document.getElementById('widgetFieldBox');
-        box.style.display = type === 'pie' ? '' : 'none';
-        if (type === 'pie') {
+        box.style.display = (type === 'pie' || type === 'bar') ? '' : 'none';
+        if (type === 'pie' || type === 'bar') {
             const fields = picklistFields[moduleId] || [];
             document.getElementById('widgetField').innerHTML =
                 fields.map(f => `<option value="${f.name}">${f.label}</option>`).join('');
@@ -157,21 +167,72 @@
 
     document.querySelectorAll('.widget-chart').forEach(el => {
         const series = JSON.parse(el.dataset.series);
-        if (el.dataset.type === 'pie') {
+        const type = el.dataset.type;
+        if (type === 'pie') {
             new ApexCharts(el, {
-                chart: { type: 'donut', height: 260, fontFamily: 'inherit' },
+                chart: { type: 'donut', height: 280, fontFamily: 'inherit' },
                 series: series.map(s => s.value),
                 labels: series.map(s => s.label),
-                legend: { position: 'bottom' }
+                colors: chartColors,
+                legend: { position: 'bottom', fontSize: '12px' },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) { return Math.round(val) + '%'; }
+                },
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '62%',
+                            labels: {
+                                show: true,
+                                total: {
+                                    show: true,
+                                    label: 'جمع',
+                                    formatter: function (w) {
+                                        return w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString('fa-IR');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }).render();
+        } else if (type === 'bar') {
+            new ApexCharts(el, {
+                chart: { type: 'bar', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
+                series: [{ name: 'تعداد', data: series.map(s => s.value) }],
+                xaxis: { categories: series.map(s => s.label) },
+                colors: ['#696cff'],
+                plotOptions: {
+                    bar: {
+                        borderRadius: 6,
+                        columnWidth: '48%',
+                        distributed: true,
+                        dataLabels: { position: 'top' }
+                    }
+                },
+                legend: { show: false },
+                dataLabels: {
+                    enabled: true,
+                    offsetY: -16,
+                    style: { fontSize: '11px', colors: ['#566a7f'] }
+                },
+                grid: { strokeDashArray: 4 }
             }).render();
         } else {
             new ApexCharts(el, {
-                chart: { type: 'area', height: 260, toolbar: { show: false }, fontFamily: 'inherit' },
+                chart: { type: 'area', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
                 series: [{ name: 'رکورد', data: series.map(s => s.value) }],
                 xaxis: { categories: series.map(s => s.label) },
                 colors: ['#696cff'],
-                stroke: { width: 2, curve: 'smooth' },
-                dataLabels: { enabled: false }
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.45, opacityTo: 0.05, stops: [0, 90, 100] }
+                },
+                stroke: { width: 3, curve: 'smooth' },
+                dataLabels: { enabled: false },
+                markers: { size: 4, hover: { size: 6 } },
+                grid: { strokeDashArray: 4 }
             }).render();
         }
     });

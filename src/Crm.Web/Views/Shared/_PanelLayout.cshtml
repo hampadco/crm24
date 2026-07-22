@@ -25,7 +25,6 @@
     }
 
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/libs/apex-charts/apex-charts.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/flatpickr/flatpickr.css" />
 
     <script src="~/panel-assets/vendor/js/helpers.js"></script>
@@ -190,7 +189,6 @@
     <script src="~/panel-assets/vendor/libs/hammer/hammer.js"></script>
     <script src="~/panel-assets/vendor/libs/i18n/i18n.js"></script>
     <script src="~/panel-assets/vendor/js/menu.js"></script>
-    <script src="~/panel-assets/vendor/libs/apex-charts/apexcharts.js"></script>
     <script src="~/panel-assets/js/main.js"></script>
     <script src="~/panel-assets/vendor/libs/jdate/jdate.js"></script>
     <script src="~/panel-assets/vendor/libs/flatpickr/flatpickr-jdate.js"></script>
@@ -204,36 +202,47 @@
 
     @if (ViewContext.RouteData.Values["area"]?.ToString() == "App" && User.Identity?.IsAuthenticated == true)
     {
-        <script src="~/lib/signalr/signalr.min.js"></script>
         <script>
             (function () {
-                var connection = new signalR.HubConnectionBuilder()
-                    .withUrl("/hubs/notifications")
-                    .withAutomaticReconnect()
-                    .build();
+                function bootSignalR() {
+                    var s = document.createElement('script');
+                    s.src = '/lib/signalr/signalr.min.js';
+                    s.onload = function () {
+                        var connection = new signalR.HubConnectionBuilder()
+                            .withUrl("/hubs/notifications")
+                            .withAutomaticReconnect()
+                            .build();
 
-                connection.on("incomingCall", function (data) {
-                    var name = data.contactTitle || data.caller;
-                    var wrapper = document.createElement("div");
-                    wrapper.className = "position-fixed bottom-0 start-0 p-3";
-                    wrapper.style.zIndex = "9999";
-                    wrapper.innerHTML =
-                        '<div class="toast show" role="alert">' +
-                        '  <div class="toast-header bg-success text-white">' +
-                        '    <i class="bx bx-phone-incoming me-2"></i>' +
-                        '    <strong class="me-auto">تماس ورودی</strong>' +
-                        '    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
-                        '  </div>' +
-                        '  <div class="toast-body">' +
-                        '    <div class="mb-2">' + name + ' <span dir="ltr">(' + data.caller + ')</span></div>' +
-                        '    <a href="/App/m/calls/' + data.callRecordId + '/edit" class="btn btn-sm btn-primary">ثبت نتیجه تماس</a>' +
-                        '  </div>' +
-                        '</div>';
-                    document.body.appendChild(wrapper);
-                    setTimeout(function () { wrapper.remove(); }, 30000);
-                });
+                        connection.on("incomingCall", function (data) {
+                            var name = data.contactTitle || data.caller;
+                            var wrapper = document.createElement("div");
+                            wrapper.className = "position-fixed bottom-0 start-0 p-3";
+                            wrapper.style.zIndex = "9999";
+                            wrapper.innerHTML =
+                                '<div class="toast show" role="alert">' +
+                                '  <div class="toast-header bg-success text-white">' +
+                                '    <i class="bx bx-phone-incoming me-2"></i>' +
+                                '    <strong class="me-auto">تماس ورودی</strong>' +
+                                '    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
+                                '  </div>' +
+                                '  <div class="toast-body">' +
+                                '    <div class="mb-2">' + name + ' <span dir="ltr">(' + data.caller + ')</span></div>' +
+                                '    <a href="/App/m/calls/' + data.callRecordId + '/edit" class="btn btn-sm btn-primary">ثبت نتیجه تماس</a>' +
+                                '  </div>' +
+                                '</div>';
+                            document.body.appendChild(wrapper);
+                            setTimeout(function () { wrapper.remove(); }, 30000);
+                        });
 
-                connection.start().catch(function () { /* اتصال لحظه‌ای در دسترس نیست */ });
+                        connection.start().catch(function () { /* اتصال لحظه‌ای در دسترس نیست */ });
+                    };
+                    document.body.appendChild(s);
+                }
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(bootSignalR, { timeout: 4000 });
+                } else {
+                    setTimeout(bootSignalR, 1500);
+                }
             })();
         </script>
     }

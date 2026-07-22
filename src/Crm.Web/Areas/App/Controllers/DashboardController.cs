@@ -35,13 +35,20 @@ public class DashboardController : AppControllerBase
     private readonly ITenantContext _tenant;
     private readonly MetadataService _metadata;
     private readonly SalesModuleSeeder _salesSeeder;
+    private readonly DynamicRecordService _records;
 
-    public DashboardController(CrmDbContext db, ITenantContext tenant, MetadataService metadata, SalesModuleSeeder salesSeeder)
+    public DashboardController(
+        CrmDbContext db,
+        ITenantContext tenant,
+        MetadataService metadata,
+        SalesModuleSeeder salesSeeder,
+        DynamicRecordService records)
     {
         _db = db;
         _tenant = tenant;
         _metadata = metadata;
         _salesSeeder = salesSeeder;
+        _records = records;
     }
 
     public async Task<IActionResult> Index()
@@ -50,16 +57,20 @@ public class DashboardController : AppControllerBase
         if (tenant is null)
             return RedirectToAction("Login", "Account", new { area = "App" });
 
-        // ارتقای Tenant های قدیمی: ماژول‌های فروش اگر نبودند ساخته می‌شوند
+        // فقط یک‌بار در هر چند ساعت چک می‌شود (کش داخل seeder)
         await _salesSeeder.EnsureSeededAsync(tenant.Id);
 
         var modules = await _metadata.GetActiveModulesAsync();
-        var moduleStats = new List<(ModuleDef, int)>();
-        foreach (var module in modules)
-        {
-            var count = await _db.Records.CountAsync(r => r.ModuleId == module.Id);
-            moduleStats.Add((module, count));
-        }
+
+        // یک کوئری برای شمارش همه ماژول‌ها به‌جای N×CountAsync
+        var countByModule = await _db.Records.AsNoTracking()
+            .GroupBy(r => r.ModuleId)
+            .Select(g => new { ModuleId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ModuleId, x => x.Count);
+
+        var moduleStats = modules
+            .Select(m => (m, countByModule.GetValueOrDefault(m.Id)))
+            .ToList();
 
         var model = new DashboardViewModel
         {
@@ -72,17 +83,21 @@ public class DashboardController : AppControllerBase
                 : null
         };
 
+        // فیلدها کش می‌شوند؛ برای مودال افزودن ویجت
         foreach (var module in modules)
         {
             var fields = await _metadata.GetFieldsAsync(module.Id);
             model.PicklistFields[module.Id] = fields.Where(f => f.Type == FieldType.Picklist).ToList();
         }
 
-        // ویجت‌های شخصی کاربر
         var widgets = await _db.DashboardWidgets.AsNoTracking()
             .Where(w => w.UserId == _tenant.UserId)
             .OrderBy(w => w.SortOrder)
             .ToListAsync();
+
+        // کش تجمیع ماهانه و pie/bar برای ماژول‌های تکراری
+        var monthlyCache = new Dictionary<int, List<(int Year, int Month, int Count)>>();
+        var fieldAggCache = new Dictionary<(int ModuleId, string Field), IReadOnlyList<(string Value, int Count)>>();
 
         foreach (var widget in widgets)
         {
@@ -95,40 +110,52 @@ public class DashboardController : AppControllerBase
             switch (widget.Type)
             {
                 case "counter":
-                    view.CounterValue = await _db.Records.CountAsync(r => r.ModuleId == module.Id);
+                    view.CounterValue = countByModule.GetValueOrDefault(module.Id);
                     break;
 
-                case "pie" when widget.FieldName is not null:
+                case "pie" or "bar" when widget.FieldName is not null:
                 {
-                    var fields = await _metadata.GetFieldsAsync(module.Id);
-                    var field = fields.FirstOrDefault(f => f.Name == widget.FieldName);
-                    var records = await _db.Records.AsNoTracking()
-                        .Where(r => r.ModuleId == module.Id).Take(5000).ToListAsync();
-                    var groups = records
-                        .Select(r => DynamicRecordService.ParseData(r).GetValueOrDefault(widget.FieldName))
-                        .GroupBy(v => v ?? "(خالی)")
-                        .Select(g => (Label: ResolvePicklistLabel(field, g.Key), Value: g.Count()))
-                        .OrderByDescending(g => g.Value)
+                    var cacheKey = (module.Id, widget.FieldName);
+                    if (!fieldAggCache.TryGetValue(cacheKey, out var groups))
+                    {
+                        groups = await _records.AggregateFieldAsync(module.Id, widget.FieldName);
+                        fieldAggCache[cacheKey] = groups;
+                    }
+
+                    var field = model.PicklistFields.GetValueOrDefault(module.Id)
+                        ?.FirstOrDefault(f => f.Name == widget.FieldName);
+                    if (field is null)
+                    {
+                        var fields = await _metadata.GetFieldsAsync(module.Id);
+                        field = fields.FirstOrDefault(f => f.Name == widget.FieldName);
+                    }
+
+                    view.Series = groups
+                        .Select(g => (Label: ResolvePicklistLabel(field, g.Value), Value: g.Count))
                         .ToList();
-                    view.Series = groups;
                     break;
                 }
 
                 case "monthly":
                 {
-                    var since = DateTime.UtcNow.AddMonths(-5);
-                    var firstOfWindow = new DateTime(since.Year, since.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-                    var counts = await _db.Records.AsNoTracking()
-                        .Where(r => r.ModuleId == module.Id && r.CreatedAtUtc >= firstOfWindow)
-                        .GroupBy(r => new { r.CreatedAtUtc.Year, r.CreatedAtUtc.Month })
-                        .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
-                        .ToListAsync();
+                    if (!monthlyCache.TryGetValue(module.Id, out var counts))
+                    {
+                        var since = DateTime.UtcNow.AddMonths(-5);
+                        var firstOfWindow = new DateTime(since.Year, since.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                        var raw = await _db.Records.AsNoTracking()
+                            .Where(r => r.ModuleId == module.Id && r.CreatedAtUtc >= firstOfWindow)
+                            .GroupBy(r => new { r.CreatedAtUtc.Year, r.CreatedAtUtc.Month })
+                            .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
+                            .ToListAsync();
+                        counts = raw.Select(c => (c.Year, c.Month, c.Count)).ToList();
+                        monthlyCache[module.Id] = counts;
+                    }
 
                     var pc = new PersianCalendar();
                     for (var i = 5; i >= 0; i--)
                     {
                         var month = DateTime.UtcNow.AddMonths(-i);
-                        var count = counts.FirstOrDefault(c => c.Year == month.Year && c.Month == month.Month)?.Count ?? 0;
+                        var count = counts.FirstOrDefault(c => c.Year == month.Year && c.Month == month.Month).Count;
                         view.Series.Add(($"{pc.GetYear(month)}/{pc.GetMonth(month):00}", count));
                     }
                     break;
@@ -156,7 +183,7 @@ public class DashboardController : AppControllerBase
         _db.DashboardWidgets.Add(new DashboardWidget
         {
             UserId = userId,
-            Type = type is "pie" or "monthly" ? type : "counter",
+            Type = type is "pie" or "monthly" or "bar" ? type : "counter",
             Title = string.IsNullOrWhiteSpace(title) ? module.PluralLabel : title.Trim(),
             ModuleId = moduleId,
             FieldName = fieldName,

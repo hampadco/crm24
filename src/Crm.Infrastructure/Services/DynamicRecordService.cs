@@ -57,7 +57,7 @@ public class DynamicRecordService
     }
 
     public async Task<(IReadOnlyList<DynamicRecord> Items, int TotalCount)> ListAsync(
-        int moduleId, string? search, int page, int pageSize)
+        int moduleId, string? search, int page, int pageSize, bool includeTotal = true)
     {
         var query = _db.Records.AsNoTracking().Where(r => r.ModuleId == moduleId);
         query = await _access.ApplyVisibilityAsync(query, moduleId);
@@ -68,7 +68,7 @@ public class DynamicRecordService
             query = query.Where(r => EF.Functions.ILike(r.Title, $"%{term}%"));
         }
 
-        var total = await query.CountAsync();
+        var total = includeTotal ? await query.CountAsync() : 0;
         var items = await query
             .OrderByDescending(r => r.Id)
             .Skip((page - 1) * pageSize)
@@ -76,6 +76,51 @@ public class DynamicRecordService
             .ToListAsync();
 
         return (items, total);
+    }
+
+    /// <summary>
+    /// رکوردهایی که مقدار تاریخِ فیلد jsonb در بازهٔ [from, to] است (برای تقویم).
+    /// </summary>
+    public async Task<IReadOnlyList<DynamicRecord>> ListByJsonDateRangeAsync(
+        int moduleId, string dateField, DateTime fromUtc, DateTime toUtc, int max = 400)
+    {
+        if (string.IsNullOrWhiteSpace(dateField) ||
+            dateField.Length > 64 ||
+            !dateField.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
+            return [];
+
+        var tenantId = _tenant.TenantId;
+        var fromIso = fromUtc.ToString("yyyy-MM-dd");
+        var toIso = toUtc.ToString("yyyy-MM-dd");
+
+        // مقایسه متنی ISO روی jsonb؛ برای فیلتر تقویم کافی و سریع است
+        var ids = await _db.Database
+            .SqlQuery<IdRow>($"""
+                SELECT r."Id" AS "Id"
+                FROM "Records" r
+                WHERE r."ModuleId" = {moduleId}
+                  AND r."TenantId" = {tenantId}
+                  AND r."IsDeleted" = FALSE
+                  AND COALESCE(r."CustomData" ->> {dateField}, '') >= {fromIso}
+                  AND COALESCE(r."CustomData" ->> {dateField}, '') < {toIso}
+                ORDER BY r."Id" DESC
+                LIMIT {max}
+                """)
+            .ToListAsync();
+
+        if (ids.Count == 0)
+            return [];
+
+        var idList = ids.Select(i => i.Id).ToList();
+        var query = _db.Records.AsNoTracking().Where(r => r.ModuleId == moduleId && idList.Contains(r.Id));
+        query = await _access.ApplyVisibilityAsync(query, moduleId);
+        var map = await query.ToDictionaryAsync(r => r.Id);
+        return idList.Where(map.ContainsKey).Select(id => map[id]).ToList();
+    }
+
+    private sealed class IdRow
+    {
+        public int Id { get; set; }
     }
 
     public async Task<DynamicRecord?> GetAsync(int moduleId, int id)
@@ -215,6 +260,38 @@ public class DynamicRecordService
 
     public static Dictionary<string, string?> ParseData(DynamicRecord record) =>
         JsonSerializer.Deserialize<Dictionary<string, string?>>(record.CustomData) ?? new();
+
+    /// <summary>
+    /// تجمیع مقادیر یک فیلد jsonb در SQL (به‌جای لود هزاران رکورد به حافظه).
+    /// </summary>
+    public async Task<IReadOnlyList<(string Value, int Count)>> AggregateFieldAsync(int moduleId, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(fieldName) ||
+            fieldName.Length > 64 ||
+            !fieldName.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
+            return [];
+
+        var tenantId = _tenant.TenantId;
+        var rows = await _db.Database
+            .SqlQuery<FieldAggregateRow>($"""
+                SELECT COALESCE("CustomData" ->> {fieldName}, '(خالی)') AS "Value", COUNT(*)::int AS "Count"
+                FROM "Records"
+                WHERE "ModuleId" = {moduleId}
+                  AND "TenantId" = {tenantId}
+                  AND "IsDeleted" = FALSE
+                GROUP BY 1
+                ORDER BY 2 DESC
+                """)
+            .ToListAsync();
+
+        return rows.Select(r => (r.Value ?? "(خالی)", r.Count)).ToList();
+    }
+
+    private sealed class FieldAggregateRow
+    {
+        public string? Value { get; set; }
+        public int Count { get; set; }
+    }
 
     private static Dictionary<string, string?> ValidateAndBuildData(
         IReadOnlyList<FieldDef> fields, Dictionary<string, string?> values)

@@ -1,46 +1,78 @@
 @using Crm.Web.Areas.App.Controllers
-@model List<Crm.Core.Entities.CommissionRule>
+@using Crm.Web.Services
+@model CommissionsIndexViewModel
 @{
     ViewData["PanelTitle"] = "مشارکت در فروش";
-    List<CommissionReportRow> report = ViewBag.Report;
+    var rowNumber = (Model.Page - 1) * Model.PageSize;
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <h4 class="mb-0"><i class="bx bx-gift text-primary me-1"></i> مشارکت در فروش (پورسانت)</h4>
+    <h4 class="mb-0">
+        <i class="bx bx-gift text-primary me-1"></i>
+        مشارکت در فروش (پورسانت)
+        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount.ToFa()</span>
+    </h4>
     <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> قانون جدید</a>
 </div>
 
 <partial name="_Alerts" />
 
 <div class="row g-4">
-    <div class="col-lg-7">
+    <div class="col-lg-8">
         <div class="card">
-            <div class="card-header"><h5 class="mb-0">قوانین پورسانت</h5></div>
+            <div class="card-header pb-0">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h5 class="mb-0">قوانین پورسانت</h5>
+                    <form method="get" class="d-flex gap-2">
+                        <div class="input-group input-group-merge" style="min-width:220px">
+                            <span class="input-group-text"><i class="bx bx-search"></i></span>
+                            <input type="text" name="q" value="@Model.Search" class="form-control" placeholder="جستجوی قانون یا محصول..." />
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary">جستجو</button>
+                    </form>
+                </div>
+            </div>
             <div class="table-responsive text-nowrap">
-                <table class="table table-hover">
+                <table class="table table-hover mb-0">
                     <thead>
-                        <tr><th>نام</th><th>دامنه</th><th>درصد</th><th>مبلغ ثابت</th><th>حداقل فاکتور</th><th>وضعیت</th><th></th></tr>
+                        <tr>
+                            <th style="width:3rem">#</th>
+                            <th>نام قانون</th>
+                            <th>دامنه</th>
+                            <th>درصد</th>
+                            <th>مبلغ ثابت</th>
+                            <th>حداقل فاکتور</th>
+                            <th>وضعیت</th>
+                            <th class="text-end">عملیات</th>
+                        </tr>
                     </thead>
                     <tbody class="table-border-bottom-0">
-                        @if (Model.Count == 0)
-                        {
-                            <tr><td colspan="7" class="text-center text-muted py-4">قانونی تعریف نشده است.</td></tr>
-                        }
-                        @foreach (var rule in Model)
+                        @if (Model.Rules.Count == 0)
                         {
                             <tr>
+                                <td colspan="8" class="text-center text-muted py-5">
+                                    @(string.IsNullOrWhiteSpace(Model.Search) ? "قانونی تعریف نشده است." : "نتیجه‌ای برای این جستجو یافت نشد.")
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var rule in Model.Rules)
+                        {
+                            rowNumber++;
+                            <tr>
+                                <td class="text-muted">@rowNumber.ToFa()</td>
                                 <td><strong>@rule.Name</strong></td>
                                 <td>@(rule.Product?.Name ?? "کل فاکتور")</td>
-                                <td>@(rule.Percent > 0 ? rule.Percent.ToString("0.#") + "%" : "—")</td>
-                                <td>@(rule.FixedAmount > 0 ? rule.FixedAmount.ToString("N0") : "—")</td>
-                                <td>@(rule.MinInvoiceAmount > 0 ? rule.MinInvoiceAmount.ToString("N0") : "—")</td>
+                                <td dir="ltr">@(rule.Percent > 0 ? rule.Percent.ToString("0.#") + "%" : "—")</td>
+                                <td>@(rule.FixedAmount > 0 ? rule.FixedAmount.ToString("N0") + " تومان" : "—")</td>
+                                <td>@(rule.MinInvoiceAmount > 0 ? rule.MinInvoiceAmount.ToString("N0") + " تومان" : "—")</td>
                                 <td>
                                     <span class="badge @(rule.IsActive ? "bg-label-success" : "bg-label-secondary")">
                                         @(rule.IsActive ? "فعال" : "غیرفعال")
                                     </span>
                                 </td>
                                 <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@rule.Id" class="btn btn-sm btn-icon btn-text-secondary">
+                                    <a asp-action="Edit" asp-route-id="@rule.Id"
+                                       class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
                                         <i class="bx bx-edit"></i>
                                     </a>
                                 </td>
@@ -49,28 +81,61 @@
                     </tbody>
                 </table>
             </div>
+            @if (Model.TotalPages > 1)
+            {
+                <div class="card-footer">
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0 justify-content-center flex-wrap">
+                            @for (var p = 1; p <= Model.TotalPages; p++)
+                            {
+                                <li class="page-item @(p == Model.Page ? "active" : "")">
+                                    <a class="page-link"
+                                       asp-action="Index"
+                                       asp-route-q="@Model.Search"
+                                       asp-route-page="@p">@p.ToFa()</a>
+                                </li>
+                            }
+                        </ul>
+                    </nav>
+                    <p class="text-muted small text-center mb-0 mt-2">
+                        نمایش @(((Model.Page - 1) * Model.PageSize + 1).ToFa())
+                        تا @Math.Min(Model.Page * Model.PageSize, Model.TotalCount).ToFa()
+                        از @Model.TotalCount.ToFa() قانون
+                    </p>
+                </div>
+            }
         </div>
     </div>
 
-    <div class="col-lg-5">
+    <div class="col-lg-4">
         <div class="card">
-            <div class="card-header"><h5 class="mb-0">گزارش پورسانت کارشناسان</h5></div>
+            <div class="card-header"><h5 class="mb-0">گزارش کارشناسان</h5></div>
             <div class="table-responsive text-nowrap">
-                <table class="table">
+                <table class="table mb-0">
                     <thead>
-                        <tr><th>کارشناس</th><th>تعداد معامله</th><th>جمع پورسانت</th></tr>
+                        <tr>
+                            <th>#</th>
+                            <th>کارشناس</th>
+                            <th>معامله</th>
+                            <th>جمع پورسانت</th>
+                        </tr>
                     </thead>
                     <tbody class="table-border-bottom-0">
-                        @if (report.Count == 0)
+                        @if (Model.Report.Count == 0)
                         {
-                            <tr><td colspan="3" class="text-center text-muted py-4">هنوز پورسانتی محاسبه نشده است.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted py-4">هنوز پورسانتی محاسبه نشده است.</td></tr>
                         }
-                        @foreach (var row in report)
+                        @{
+                            var reportRow = 0;
+                        }
+                        @foreach (var row in Model.Report)
                         {
+                            reportRow++;
                             <tr>
+                                <td class="text-muted">@reportRow.ToFa()</td>
                                 <td>@row.UserName</td>
-                                <td>@row.DealCount</td>
-                                <td><strong>@row.Total.ToString("N0") تومان</strong></td>
+                                <td>@row.DealCount.ToFa()</td>
+                                <td><strong>@row.Total.ToString("N0")</strong> <small class="text-muted">تومان</small></td>
                             </tr>
                         }
                     </tbody>

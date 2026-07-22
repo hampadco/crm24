@@ -4,6 +4,9 @@
 @{
     ViewData["Title"] = "مشتریان";
     var listQuery = ViewBag.TenantListQuery as TenantListQuery ?? new TenantListQuery();
+    var demoExists = ViewBag.DemoExists as bool? ?? false;
+    var demoEmail = ViewBag.DemoEmail as string ?? "demo@bamacrm.local";
+    var demoPassword = ViewBag.DemoPassword as string ?? "Demo@1405";
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
@@ -12,6 +15,92 @@
         @ViewData["Title"]
         <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount.ToFa()</span>
     </h4>
+    <form asp-action="CreateDemo" method="post" class="m-0" id="createDemoForm">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn @(demoExists ? "btn-outline-primary" : "btn-primary")" id="createDemoBtn">
+            <i class="bx bx-magic-wand me-1"></i>
+            <span class="btn-label">@(demoExists ? "تکمیل / بازسازی دمو" : "ساخت مشتری دمو")</span>
+        </button>
+    </form>
+</div>
+
+<div id="demoSeedOverlay" class="demo-seed-overlay d-none" aria-live="polite" aria-busy="true">
+    <div class="demo-seed-overlay__card">
+        <div class="spinner-border text-primary mb-3" role="status" style="width:2.5rem;height:2.5rem">
+            <span class="visually-hidden">در حال ساخت…</span>
+        </div>
+        <h5 class="mb-1">در حال ساخت مشتری دمو</h5>
+        <p class="text-muted mb-0 small">رکوردهای نمونه در حال آماده‌سازی‌اند. لطفاً صبر کنید…</p>
+    </div>
+</div>
+
+<style>
+    .demo-seed-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1090;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(38, 43, 67, 0.45);
+        backdrop-filter: blur(2px);
+    }
+    .demo-seed-overlay.d-none { display: none !important; }
+    .demo-seed-overlay__card {
+        background: #fff;
+        border-radius: 0.75rem;
+        padding: 1.75rem 2rem;
+        text-align: center;
+        max-width: 22rem;
+        box-shadow: 0 0.5rem 1.5rem rgba(38, 43, 67, 0.2);
+    }
+</style>
+
+<script>
+    (function () {
+        var form = document.getElementById('createDemoForm');
+        var btn = document.getElementById('createDemoBtn');
+        var overlay = document.getElementById('demoSeedOverlay');
+        if (!form || !btn || !overlay) return;
+
+        form.addEventListener('submit', function (e) {
+            var msg = @(demoExists
+                ? Html.Raw("\"مشتری دمو از قبل هست. دادهٔ نمونه تکمیل/بازسازی شود؟\"")
+                : Html.Raw("\"مشتری دمو با حداقل ۲۰۰ رکورد در هر صفحه ساخته شود؟\""));
+            if (!window.confirm(msg)) {
+                e.preventDefault();
+                return;
+            }
+
+            overlay.classList.remove('d-none');
+            btn.disabled = true;
+            var label = btn.querySelector('.btn-label');
+            if (label) label.textContent = 'در حال ساخت…';
+            var icon = btn.querySelector('i');
+            if (icon) {
+                icon.className = 'bx bx-loader-alt bx-spin me-1';
+            }
+        });
+    })();
+</script>
+
+<div class="alert alert-info d-flex flex-wrap align-items-center gap-2 mb-4" role="status">
+    <i class="bx bx-info-circle fs-4"></i>
+    <div class="flex-grow-1">
+        مشتری دمو برای تست شوکیس و UI است.
+        ورود پنل CRM:
+        <code dir="ltr">@demoEmail</code>
+        /
+        <code dir="ltr">@demoPassword</code>
+        @if (demoExists)
+        {
+            <span class="badge bg-label-success ms-1">دمو موجود است</span>
+        }
+        else
+        {
+            <span class="badge bg-label-warning ms-1">دمو ساخته نشده</span>
+        }
+    </div>
 </div>
 
 <partial name="_AdminAlerts" />
@@ -62,10 +151,14 @@
                 {
                     <tr><td colspan="9" class="text-center text-muted py-5">موردی یافت نشد.</td></tr>
                 }
+                @{
+                    var rowNumber = Model.FromIndex - 1;
+                }
                 @foreach (var item in Model.Items)
                 {
+                    rowNumber++;
                     <tr>
-                        <td class="text-muted">@item.Tenant.Id</td>
+                        <td class="text-muted">@rowNumber.ToFa()</td>
                         <td><a asp-action="Details" asp-route-id="@item.Tenant.Id" class="fw-semibold">@item.Tenant.Name</a></td>
                         <td dir="ltr"><code>@item.Tenant.Slug</code></td>
                         <td><partial name="_TenantStatusBadge" model="item.Tenant.Status" /></td>

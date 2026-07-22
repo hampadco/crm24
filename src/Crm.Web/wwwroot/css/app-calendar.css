@@ -1,0 +1,253 @@
+/* تقویم CRM — گرید هفتگی، کنتراست رویدادها */
+
+.app-calendar-card {
+  overflow: hidden;
+}
+
+.crm-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  font-size: 0.8125rem;
+  color: #697a8d;
+}
+
+.crm-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.crm-cal-legend-item i {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 0.2rem;
+}
+
+.crm-calendar {
+  --crm-cal-border: #e7e7ff;
+  --crm-cal-muted: #a1acb8;
+  --crm-cal-text: #566a7f;
+  --crm-cal-today: rgba(105, 108, 255, 0.08);
+}
+
+.crm-calendar .fc {
+  font-family: inherit;
+}
+
+.crm-calendar .fc .fc-toolbar {
+  gap: 0.75rem;
+  margin-bottom: 1.25rem !important;
+  flex-wrap: wrap;
+}
+
+.crm-calendar .fc .fc-toolbar-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #384551;
+}
+
+.crm-calendar .fc .fc-button {
+  border-radius: 0.375rem !important;
+  box-shadow: none !important;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  text-transform: none;
+}
+
+.crm-calendar .fc .fc-button-primary {
+  background: #696cff;
+  border-color: #696cff;
+}
+
+.crm-calendar .fc .fc-button-primary:not(:disabled).fc-button-active,
+.crm-calendar .fc .fc-button-primary:not(:disabled):active,
+.crm-calendar .fc .fc-button-primary:hover {
+  background: #5f61e6;
+  border-color: #5f61e6;
+}
+
+.crm-calendar .fc .fc-view-harness {
+  margin: 0 !important;
+  min-height: 0 !important;
+}
+
+.crm-calendar .fc .fc-scrollgrid {
+  border-color: var(--crm-cal-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.crm-calendar .fc .fc-scrollgrid td,
+.crm-calendar .fc .fc-scrollgrid th {
+  border-color: var(--crm-cal-border);
+}
+
+.crm-calendar .fc .fc-col-header-cell {
+  background: #f8f8ff;
+  padding: 0.65rem 0;
+}
+
+.crm-calendar .fc .fc-col-header-cell-cushion {
+  color: var(--crm-cal-text);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  padding: 0.35rem;
+}
+
+.crm-calendar .fc .fc-daygrid-day {
+  min-height: 6.5rem;
+}
+
+.crm-calendar .fc .fc-daygrid-day-frame {
+  min-height: 6.5rem;
+  padding: 0.2rem;
+}
+
+.crm-calendar .fc .fc-daygrid-day-top {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  padding: 0.15rem 0.25rem;
+}
+
+.crm-calendar .crm-cal-daynum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--crm-cal-text);
+  padding: 0 0.35rem;
+}
+
+.crm-calendar .fc .fc-day-today {
+  background: var(--crm-cal-today) !important;
+}
+
+.crm-calendar .fc .fc-day-today .crm-cal-daynum {
+  background: #696cff;
+  color: #fff;
+}
+
+.crm-calendar .crm-cal-other-month {
+  background: #fafafa;
+}
+
+.crm-calendar .crm-cal-other-month .crm-cal-daynum {
+  color: var(--crm-cal-muted);
+  opacity: 0.75;
+}
+
+.crm-calendar .fc .fc-daygrid-day-number {
+  padding: 0;
+  float: none;
+}
+
+/* بلوک رویداد — همیشه پس‌زمینه رنگی + متن سفید */
+.crm-calendar .fc .fc-daygrid-event,
+.crm-calendar .fc .fc-timegrid-event,
+.crm-calendar .fc .fc-more-popover .fc-event {
+  margin: 0.1rem 0.15rem;
+  border: 0 !important;
+  border-radius: 0.3rem !important;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  padding: 0.15rem 0.35rem !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: none;
+  color: #ffffff !important;
+}
+
+.crm-calendar .fc .fc-daygrid-event .fc-event-main,
+.crm-calendar .fc .fc-daygrid-event .fc-event-title,
+.crm-calendar .fc .fc-daygrid-event .fc-event-time,
+.crm-calendar .fc .fc-timegrid-event .fc-event-main,
+.crm-calendar .fc .fc-timegrid-event .fc-event-title,
+.crm-calendar .fc .fc-timegrid-event .fc-event-time,
+.crm-calendar .fc .fc-more-popover .fc-event .fc-event-title,
+.crm-calendar .fc .fc-more-popover .fc-event .fc-event-time {
+  color: #ffffff !important;
+  background: transparent !important;
+  font-weight: 600;
+  padding: 0;
+}
+
+/* fallback اگر backgroundColor از FC نیاید */
+.crm-calendar .fc .crm-cal-prio-urgent { background-color: #e4282b !important; border-color: #e4282b !important; }
+.crm-calendar .fc .crm-cal-prio-high { background-color: #e08a00 !important; border-color: #e08a00 !important; }
+.crm-calendar .fc .crm-cal-prio-normal { background-color: #0097a7 !important; border-color: #0097a7 !important; }
+.crm-calendar .fc .crm-cal-prio-low { background-color: #4b5675 !important; border-color: #4b5675 !important; }
+.crm-calendar .fc .crm-cal-type-meeting { background-color: #5a5fea !important; border-color: #5a5fea !important; }
+.crm-calendar .fc .crm-cal-type-visit { background-color: #1f9d57 !important; border-color: #1f9d57 !important; }
+.crm-calendar .fc .crm-cal-type-demo { background-color: #e07b00 !important; border-color: #e07b00 !important; }
+.crm-calendar .fc .crm-cal-type-other { background-color: #4b5675 !important; border-color: #4b5675 !important; }
+.crm-calendar .fc .crm-cal-task:not([class*="crm-cal-prio-"]) { background-color: #0097a7 !important; }
+.crm-calendar .fc .crm-cal-event:not([class*="crm-cal-type-"]) { background-color: #5a5fea !important; }
+
+.crm-calendar .fc .fc-daygrid-more-link {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #696cff;
+  margin: 0.15rem 0.25rem;
+  writing-mode: horizontal-tb;
+}
+
+.crm-calendar .fc .fc-more-popover {
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1.25rem rgba(38, 43, 67, 0.14);
+  border: 1px solid var(--crm-cal-border);
+  max-width: 18rem;
+  z-index: 10;
+}
+
+.crm-calendar .fc .fc-more-popover .fc-popover-header {
+  background: #f5f5ff;
+  color: #384551;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+}
+
+.crm-calendar .fc .fc-timegrid-event {
+  border-radius: 0.35rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.crm-calendar .fc .fc-timegrid-slot-label-cushion,
+.crm-calendar .fc .fc-timegrid-axis-cushion {
+  font-size: 0.75rem;
+  color: var(--crm-cal-text);
+}
+
+.crm-calendar .fc .fc-list-event:hover td {
+  background: #f8f8ff;
+}
+
+.crm-calendar .fc .fc-list-event-title a {
+  color: #384551 !important;
+  font-weight: 600;
+}
+
+.crm-calendar .fc .fc-list-day-cushion {
+  background: #f8f8ff;
+  color: #384551;
+  font-weight: 700;
+}
+
+@media (max-width: 767.98px) {
+  .crm-calendar .fc .fc-toolbar-title {
+    font-size: 1rem;
+  }
+
+  .crm-calendar .fc .fc-daygrid-day,
+  .crm-calendar .fc .fc-daygrid-day-frame {
+    min-height: 5rem;
+  }
+}

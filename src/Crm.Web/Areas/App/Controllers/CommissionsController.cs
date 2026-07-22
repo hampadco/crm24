@@ -38,41 +38,84 @@ public class CommissionReportRow
     public decimal Total { get; set; }
 }
 
+public class CommissionsIndexViewModel
+{
+    public IReadOnlyList<CommissionRule> Rules { get; set; } = [];
+    public IReadOnlyList<CommissionReportRow> Report { get; set; } = [];
+    public string? Search { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public int TotalCount { get; set; }
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(TotalCount / (double)PageSize));
+}
+
 /// <summary>مشارکت در فروش: قوانین پورسانت + گزارش هر کارشناس.</summary>
 public class CommissionsController : AppControllerBase
 {
+    private const int PageSize = 20;
     private readonly CrmDbContext _db;
 
     public CommissionsController(CrmDbContext db) => _db = db;
 
     [HttpGet("/App/commissions")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q, int page = 1)
     {
-        var rules = await _db.CommissionRules.AsNoTracking()
-            .Include(r => r.Product)
-            .OrderBy(r => r.Name).ToListAsync();
+        page = Math.Max(1, page);
+        var query = _db.CommissionRules.AsNoTracking().Include(r => r.Product).AsQueryable();
 
-        var entries = await _db.CommissionEntries.AsNoTracking().ToListAsync();
-        var userIds = entries.Select(e => e.UserId).Distinct().ToList();
-        var users = await _db.Users.AsNoTracking()
-            .Where(u => userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => u.FullName);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var term = q.Trim();
+            query = query.Where(r => EF.Functions.ILike(r.Name, $"%{term}%")
+                || (r.Product != null && EF.Functions.ILike(r.Product.Name, $"%{term}%")));
+        }
 
-        var report = entries
+        var total = await query.CountAsync();
+        var rules = await query
+            .OrderByDescending(r => r.IsActive)
+            .ThenBy(r => r.Name)
+            .Skip((page - 1) * PageSize)
+            .Take(PageSize)
+            .ToListAsync();
+
+        var reportAgg = await _db.CommissionEntries.AsNoTracking()
             .GroupBy(e => e.UserId)
-            .Select(g => new CommissionReportRow
+            .Select(g => new
             {
                 UserId = g.Key,
-                UserName = users.GetValueOrDefault(g.Key, $"کاربر {g.Key}"),
                 DealCount = g.Select(e => e.DocumentId).Distinct().Count(),
                 Total = g.Sum(e => e.Amount)
             })
-            .OrderByDescending(r => r.Total)
+            .OrderByDescending(x => x.Total)
+            .ToListAsync();
+
+        var userIds = reportAgg.Select(x => x.UserId).ToList();
+        var users = userIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await _db.Users.AsNoTracking()
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+        var report = reportAgg
+            .Select(x => new CommissionReportRow
+            {
+                UserId = x.UserId,
+                UserName = users.GetValueOrDefault(x.UserId, $"کاربر {x.UserId}"),
+                DealCount = x.DealCount,
+                Total = x.Total
+            })
             .ToList();
 
         ViewData["Title"] = "مشارکت در فروش (پورسانت)";
-        ViewBag.Report = report;
-        return View(rules);
+        return View(new CommissionsIndexViewModel
+        {
+            Rules = rules,
+            Report = report,
+            Search = q,
+            Page = page,
+            PageSize = PageSize,
+            TotalCount = total
+        });
     }
 
     [HttpGet("/App/commissions/create")]

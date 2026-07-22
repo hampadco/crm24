@@ -69,11 +69,15 @@
                         </td>
                     </tr>
                 }
+                @{
+                    var rowNumber = (Model.Page - 1) * Model.PageSize;
+                }
                 @foreach (var record in Model.Records)
                 {
+                    rowNumber++;
                     var data = Model.RecordData[record.Id];
                     <tr>
-                        <td class="text-muted">@record.Id</td>
+                        <td class="text-muted">@rowNumber</td>
                         @foreach (var field in Model.Fields)
                         {
                             var value = data.GetValueOrDefault(field.Name);

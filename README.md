@@ -39,6 +39,16 @@ dotnet run --project src/Crm.Web
 
 دیتابیس: PostgreSQL 16 (`bamacrm` / `bamacrm` / `bamacrm_dev` روی پورت 5432) — اسکیما و داده اولیه به‌صورت خودکار هنگام اجرا ساخته می‌شود.
 
+### Tenant نمونه (دمو)
+
+از پنل ادمین ← **مشتریان** ← دکمه «ساخت مشتری دمو» بسازید (بعد از حذف هم دوباره قابل ساخت است):
+
+- ورود پنل CRM: `/App/Account/Login`
+- ایمیل: `demo@bamacrm.local`
+- رمز: `Demo@1405`
+
+جزئیات کامل (حجم داده، نمودارها، تقویم شمسی، پورسانت): [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
+
 ## استقرار (Production — Cloud یا On-Premise)
 
 ```bash

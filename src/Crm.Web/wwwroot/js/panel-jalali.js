@@ -96,14 +96,73 @@
         });
     }
 
-    /** عنوان شمسی برای FullCalendar */
+    /** عنوان شمسی برای FullCalendar (ماه) */
     function jalaliTitle(date) {
         var jd = new JDate(date);
         return jalaliMonths[jd.getMonth()] + ' ' + jd.getFullYear();
     }
 
+    /** عنوان بازه هفته/لیست شمسی */
+    function jalaliRangeTitle(start, endExclusive) {
+        var a = new JDate(start);
+        var endMs = endExclusive.getTime() - 1;
+        var b = new JDate(new Date(endMs));
+        var sameMonth = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+        if (sameMonth) {
+            return a.getDate() + '–' + b.getDate() + ' ' + jalaliMonths[a.getMonth()] + ' ' + a.getFullYear();
+        }
+        return a.getDate() + ' ' + jalaliMonths[a.getMonth()] + ' – ' +
+            b.getDate() + ' ' + jalaliMonths[b.getMonth()] + ' ' + b.getFullYear();
+    }
+
+    /** بازه ماه شمسی (شروع شامل، پایان غیرشامل) */
+    function jalaliMonthRange(date) {
+        var jd = new JDate(date);
+        var y = jd.getFullYear();
+        var m = jd.getMonth();
+        var start = new JDate(y, m, 1);
+        var endY = y;
+        var endM = m + 1;
+        if (endM > 11) {
+            endM = 0;
+            endY++;
+        }
+        var end = new JDate(endY, endM, 1);
+        return {
+            start: new Date(start.getTime()),
+            end: new Date(end.getTime())
+        };
+    }
+
+    /** آیا تاریخ در همان ماه شمسیِ anchor است؟ */
+    function isSameJalaliMonth(date, anchor) {
+        var a = new JDate(anchor);
+        var d = new JDate(date);
+        return a.getFullYear() === d.getFullYear() && a.getMonth() === d.getMonth();
+    }
+
+    /** جابه‌جایی به اول ماه شمسی با delta ماه */
+    function shiftJalaliMonth(date, delta) {
+        var jd = new JDate(date);
+        var y = jd.getFullYear();
+        var m = jd.getMonth() + delta;
+        while (m < 0) {
+            m += 12;
+            y--;
+        }
+        while (m > 11) {
+            m -= 12;
+            y++;
+        }
+        return new Date(new JDate(y, m, 1).getTime());
+    }
+
     window.initJalaliPickers = initJalaliPickers;
     window.jalaliCalendarTitle = jalaliTitle;
+    window.jalaliRangeTitle = jalaliRangeTitle;
+    window.jalaliMonthRange = jalaliMonthRange;
+    window.isSameJalaliMonth = isSameJalaliMonth;
+    window.shiftJalaliMonth = shiftJalaliMonth;
     window.jalaliDayNumber = function (date) {
         return new JDate(date).getDate();
     };

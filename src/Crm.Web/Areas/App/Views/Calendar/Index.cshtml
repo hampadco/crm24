@@ -4,6 +4,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/fullcalendar/fullcalendar.css" />
+    <link rel="stylesheet" href="~/css/app-calendar.css" asp-append-version="true" />
 }
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
@@ -16,9 +17,16 @@
 
 <partial name="_Alerts" />
 
-<div class="card">
-    <div class="card-body">
-        <div id="calendar"></div>
+<div class="card app-calendar-card">
+    <div class="card-body p-3 p-md-4">
+        <div class="crm-cal-legend mb-3">
+            <span class="crm-cal-legend-item"><i style="background:#5a5fea"></i> رویداد</span>
+            <span class="crm-cal-legend-item"><i style="background:#1f9d57"></i> بازدید</span>
+            <span class="crm-cal-legend-item"><i style="background:#0097a7"></i> وظیفه</span>
+            <span class="crm-cal-legend-item"><i style="background:#e08a00"></i> اولویت بالا</span>
+            <span class="crm-cal-legend-item"><i style="background:#e4282b"></i> فوری</span>
+        </div>
+        <div id="calendar" class="crm-calendar"></div>
     </div>
 </div>
 
@@ -27,30 +35,175 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var el = document.getElementById('calendar');
-            if (!el || typeof Calendar === 'undefined') {
-                console.error('FullCalendar bundle not loaded.');
+            if (!el || typeof Calendar === 'undefined' || typeof JDate === 'undefined') {
+                console.error('FullCalendar / JDate not loaded.');
                 return;
+            }
+
+            var weekDays = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه', 'شنبه'];
+            var jalaliAnchor = window.shiftJalaliMonth(new Date(), 0);
+            var correctingRange = false;
+
+            function applyEventContrast(info) {
+                if (info.el.classList.contains('fc-list-event')) return;
+                var bg = (info.event.extendedProps && info.event.extendedProps.bg)
+                    || info.event.backgroundColor
+                    || '#4b5675';
+                var text = (info.event.extendedProps && info.event.extendedProps.text) || '#ffffff';
+                info.el.style.setProperty('background-color', bg, 'important');
+                info.el.style.setProperty('border-color', bg, 'important');
+                info.el.style.setProperty('color', text, 'important');
+                info.el.querySelectorAll('.fc-event-main, .fc-event-title, .fc-event-time').forEach(function (child) {
+                    child.style.setProperty('color', text, 'important');
+                    child.style.setProperty('background-color', 'transparent', 'important');
+                });
+            }
+
+            function rewriteListDayHeaders() {
+                el.querySelectorAll('.fc-list-day').forEach(function (row) {
+                    var iso = row.getAttribute('data-date');
+                    if (!iso) return;
+                    var d = new Date(iso + 'T12:00:00');
+                    var jd = new JDate(d);
+                    var main = row.querySelector('.fc-list-day-text');
+                    var side = row.querySelector('.fc-list-day-side-text');
+                    var label = weekDays[d.getDay()] + ' ' + jd.getDate() + ' ' + window.jalaliCalendarTitle(d);
+                    if (main) main.textContent = label;
+                    if (side) side.textContent = '';
+                });
+            }
+
+            function updateTitle(info) {
+                var titleEl = el.querySelector('.fc-toolbar-title');
+                if (!titleEl) return;
+                var type = info.view.type;
+                if (type === 'dayGridJalali' || type === 'listJalali') {
+                    titleEl.textContent = window.jalaliCalendarTitle(jalaliAnchor);
+                } else {
+                    titleEl.textContent = window.jalaliRangeTitle(info.start, info.end);
+                }
             }
 
             var calendar = new Calendar(el, {
                 plugins: [dayGridPlugin, timegridPlugin, listPlugin],
-                initialView: 'dayGridMonth',
+                initialView: 'dayGridJalali',
+                initialDate: jalaliAnchor,
                 direction: 'rtl',
                 locale: 'fa',
                 firstDay: 6,
-                height: 'auto',
-                headerToolbar: { start: 'prev,next today', center: 'title', end: 'dayGridMonth,timeGridWeek,listMonth' },
-                buttonText: { today: 'امروز', month: 'ماه', week: 'هفته', list: 'لیست' },
+                height: 720,
+                expandRows: true,
+                stickyHeaderDates: true,
+                dayMaxEvents: 3,
+                displayEventTime: false,
+                eventDisplay: 'block',
+                moreLinkClick: 'popover',
+                moreLinkContent: function (arg) {
+                    return '+' + arg.num + ' مورد دیگر';
+                },
+                navLinks: false,
+                nowIndicator: true,
+                headerToolbar: {
+                    start: 'prevNav,nextNav todayNav',
+                    center: 'title',
+                    end: 'dayGridJalali,timeGridWeek,listJalali'
+                },
+                customButtons: {
+                    prevNav: {
+                        text: '‹',
+                        click: function () {
+                            var type = calendar.view.type;
+                            if (type === 'dayGridJalali' || type === 'listJalali') {
+                                jalaliAnchor = window.shiftJalaliMonth(jalaliAnchor, -1);
+                                calendar.gotoDate(jalaliAnchor);
+                            } else {
+                                calendar.prev();
+                            }
+                        }
+                    },
+                    nextNav: {
+                        text: '›',
+                        click: function () {
+                            var type = calendar.view.type;
+                            if (type === 'dayGridJalali' || type === 'listJalali') {
+                                jalaliAnchor = window.shiftJalaliMonth(jalaliAnchor, 1);
+                                calendar.gotoDate(jalaliAnchor);
+                            } else {
+                                calendar.next();
+                            }
+                        }
+                    },
+                    todayNav: {
+                        text: 'امروز',
+                        click: function () {
+                            jalaliAnchor = window.shiftJalaliMonth(new Date(), 0);
+                            if (calendar.view.type === 'dayGridJalali' || calendar.view.type === 'listJalali') {
+                                calendar.gotoDate(jalaliAnchor);
+                            } else {
+                                calendar.today();
+                            }
+                        }
+                    }
+                },
+                views: {
+                    dayGridJalali: {
+                        type: 'dayGrid',
+                        duration: { weeks: 6 },
+                        dateAlignment: 'week',
+                        buttonText: 'ماه',
+                        displayEventTime: false
+                    },
+                    timeGridWeek: {
+                        type: 'timeGridWeek',
+                        buttonText: 'هفته',
+                        displayEventTime: true,
+                        slotMinTime: '06:00:00',
+                        slotMaxTime: '22:00:00',
+                        allDaySlot: true,
+                        allDayText: 'تمام‌روز'
+                    },
+                    listJalali: {
+                        type: 'list',
+                        buttonText: 'لیست',
+                        visibleRange: function () {
+                            return window.jalaliMonthRange(jalaliAnchor);
+                        }
+                    }
+                },
+                dayCellClassNames: function (arg) {
+                    if (calendar.view.type !== 'dayGridJalali') return [];
+                    return window.isSameJalaliMonth(arg.date, jalaliAnchor)
+                        ? []
+                        : ['fc-day-other', 'crm-cal-other-month'];
+                },
                 dayCellContent: function (arg) {
-                    return { html: '<div class="fc-daygrid-day-number">' + window.jalaliDayNumber(arg.date) + '</div>' };
+                    return { html: '<span class="crm-cal-daynum">' + window.jalaliDayNumber(arg.date) + '</span>' };
                 },
                 datesSet: function (info) {
-                    var titleEl = document.querySelector('#calendar .fc-toolbar-title');
-                    if (titleEl) titleEl.textContent = window.jalaliCalendarTitle(info.view.currentStart);
+                    // جلوگیری از سر خوردن پنجره ۶هفته‌ای روی «امروز» وسط ماه
+                    if (info.view.type === 'dayGridJalali' && !correctingRange) {
+                        var month = window.jalaliMonthRange(jalaliAnchor);
+                        if (info.start.getTime() > month.start.getTime()) {
+                            correctingRange = true;
+                            calendar.gotoDate(jalaliAnchor);
+                            correctingRange = false;
+                            return;
+                        }
+                    }
+                    updateTitle(info);
+                    if (info.view.type === 'listJalali') {
+                        requestAnimationFrame(rewriteListDayHeaders);
+                    }
+                },
+                eventDidMount: function (info) {
+                    var full = info.event.extendedProps && info.event.extendedProps.fullTitle;
+                    if (full) info.el.setAttribute('title', full);
+                    applyEventContrast(info);
                 },
                 events: '/App/calendar/feed'
             });
             calendar.render();
+            calendar.gotoDate(jalaliAnchor);
         });
     </script>
 }
