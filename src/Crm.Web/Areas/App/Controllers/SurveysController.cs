@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -29,13 +30,15 @@ public class SurveysController : AppControllerBase
     public SurveysController(CrmDbContext db) => _db = db;
 
     [HttpGet("/App/surveys")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var surveys = await _db.Surveys.AsNoTracking()
-            .Include(s => s.Questions)
-            .Include(s => s.Responses)
-            .OrderByDescending(s => s.Id).Take(300).ToListAsync();
+        var (surveys, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.Surveys.AsNoTracking()
+                .Include(s => s.Questions)
+                .Include(s => s.Responses)
+                .OrderByDescending(s => s.Id), page);
         ViewData["Title"] = "نظرسنجی‌ها";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(surveys);
     }
 

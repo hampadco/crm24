@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -13,15 +14,16 @@ public class KbController : AppControllerBase
     public KbController(CrmDbContext db) => _db = db;
 
     [HttpGet("/App/kb")]
-    public async Task<IActionResult> Index(string? q)
+    public async Task<IActionResult> Index(string? q, int page = 1)
     {
         var query = _db.KbArticles.AsNoTracking().AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(a => a.Title.Contains(q) || a.Body.Contains(q));
 
-        var articles = await query.OrderByDescending(a => a.Id).Take(300).ToListAsync();
+        var (articles, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderByDescending(a => a.Id), page);
         ViewData["Title"] = "پایگاه دانش";
         ViewBag.Query = q;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize, new Dictionary<string, string?> { ["q"] = q });
         return View(articles);
     }
 

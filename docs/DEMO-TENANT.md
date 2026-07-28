@@ -92,6 +92,13 @@
 | ApexCharts | از `_PanelLayout` برداشته شد؛ فقط در داشبورد لود می‌شود |
 | SignalR | لود تأخیری با `requestIdleCallback` / `setTimeout` تا TTFB صفحه را بند نکند |
 | `ListAsync` | پارامتر اختیاری `includeTotal` برای وقتی شمارش لازم نیست |
+| لیست‌های App | صفحه‌بندی مشترک `AppPaging` (۲۰ رکورد در هر صفحه) برای Indexهای لیست |
+| Alert / Confirm | SweetAlert2 از طریق `wwwroot/js/panel-ui.js` (جایگزین alert/confirm بومی) |
+| دمو پورسانت | `CommissionEntry` نمونه برای گزارش کارشناسان |
+| دمو کمپین | `CampaignMember` برای ROI معنی‌دار |
+| دمو گردش‌کار / گزارش | چند `WorkflowRule` و `ReportDef` نمونه |
+| Kanban | تاریخ فرصت‌ها شمسی |
+| جزئیات کمپین | Select2 قابل جستجو روی دراپ‌داون اعضا |
 
 ## کارهای بعدی پیشنهادی (هنوز انجام نشده)
 

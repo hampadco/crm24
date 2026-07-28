@@ -36,8 +36,7 @@
                         </td>
                         <td class="text-end">
                             <a asp-action="Edit" asp-route-id="@form.Id" class="btn btn-sm btn-outline-primary"><i class="bx bx-edit"></i></a>
-                            <form asp-action="Delete" asp-route-id="@form.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('حذف شود؟')">
+                            <form asp-action="Delete" asp-route-id="@form.Id" method="post" class="d-inline" data-confirm="حذف شود؟">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash"></i></button>
                             </form>
@@ -47,4 +46,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_AppPagination" />
 </div>

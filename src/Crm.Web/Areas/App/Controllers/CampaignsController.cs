@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -29,12 +30,12 @@ public class CampaignsController : AppControllerBase
     }
 
     [HttpGet("/App/campaigns")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var campaigns = await _db.Campaigns.AsNoTracking()
-            .Include(c => c.Members)
-            .OrderByDescending(c => c.Id).Take(300).ToListAsync();
+        var (campaigns, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.Campaigns.AsNoTracking().Include(c => c.Members).OrderByDescending(c => c.Id), page);
         ViewData["Title"] = "کمپین‌ها";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(campaigns);
     }
 

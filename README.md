@@ -47,7 +47,7 @@ dotnet run --project src/Crm.Web
 - ایمیل: `demo@bamacrm.local`
 - رمز: `Demo@1405`
 
-جزئیات کامل (دادهٔ دمو، نمودارها، تقویم شمسی، پورسانت، بهینه‌سازی لود): [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
+جزئیات کامل (دادهٔ دمو، نمودارها، تقویم، پورسانت، صفحه‌بندی و بهینه‌سازی لود): [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
 
 ## استقرار (Production — Cloud یا On-Premise)
 

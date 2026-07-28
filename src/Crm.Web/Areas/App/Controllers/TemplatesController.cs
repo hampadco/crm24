@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -19,12 +20,14 @@ public class TemplatesController : AppControllerBase
     }
 
     [HttpGet("/App/templates")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var templates = await _db.MessageTemplates.AsNoTracking()
-            .Where(t => t.IsPublic || t.CreatedByUserId == _tenant.UserId)
-            .OrderByDescending(t => t.Id).Take(300).ToListAsync();
+        var (templates, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.MessageTemplates.AsNoTracking()
+                .Where(t => t.IsPublic || t.CreatedByUserId == _tenant.UserId)
+                .OrderByDescending(t => t.Id), page);
         ViewData["Title"] = "قالب‌های پیام";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(templates);
     }
 

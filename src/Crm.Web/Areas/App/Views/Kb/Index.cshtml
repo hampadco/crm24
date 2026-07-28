@@ -44,8 +44,7 @@
                             <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-sm btn-icon btn-text-secondary">
                                 <i class="bx bx-edit"></i>
                             </a>
-                            <form asp-action="Delete" asp-route-id="@article.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('این مقاله حذف شود؟');">
+                            <form asp-action="Delete" asp-route-id="@article.Id" method="post" class="d-inline" data-confirm="این مقاله حذف شود؟">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm btn-icon btn-text-danger">
                                     <i class="bx bx-trash"></i>
@@ -57,4 +56,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_AppPagination" />
 </div>

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -13,15 +14,16 @@ public class WarrantiesController : AppControllerBase
     public WarrantiesController(CrmDbContext db) => _db = db;
 
     [HttpGet("/App/warranties")]
-    public async Task<IActionResult> Index(string? q)
+    public async Task<IActionResult> Index(string? q, int page = 1)
     {
         var query = _db.Warranties.AsNoTracking().Include(w => w.Product).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(w => w.SerialNumber.Contains(q) || w.CustomerName.Contains(q));
 
-        var warranties = await query.OrderByDescending(w => w.Id).Take(300).ToListAsync();
+        var (warranties, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderByDescending(w => w.Id), page);
         ViewData["Title"] = "گارانتی‌ها";
         ViewBag.Query = q;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize, new Dictionary<string, string?> { ["q"] = q });
         return View(warranties);
     }
 

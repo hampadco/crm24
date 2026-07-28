@@ -50,7 +50,7 @@ public class KanbanController : AppControllerBase
         if (stageField is null)
             return RedirectToAction("Index", "Records", new { moduleName });
 
-        var (items, _) = await _records.ListAsync(module.Id, search: null, page: 1, pageSize: 500);
+        var (items, _) = await _records.ListAsync(module.Id, search: null, page: 1, pageSize: 150, includeTotal: false);
 
         var columns = new List<(PicklistValue, List<KanbanCard>)>();
         foreach (var stage in stageField.PicklistValues.OrderBy(p => p.SortOrder))
@@ -68,7 +68,7 @@ public class KanbanController : AppControllerBase
                     Title = record.Title,
                     Amount = data.TryGetValue("amount", out var amount) && decimal.TryParse(amount, out var a)
                         ? a.ToString("N0") + " تومان" : null,
-                    Subtitle = data.GetValueOrDefault("expectedCloseDate")
+                    Subtitle = FormatJalaliSubtitle(data.GetValueOrDefault("expectedCloseDate"))
                 });
             }
             columns.Add((stage, cards));
@@ -111,5 +111,14 @@ public class KanbanController : AppControllerBase
         {
             return StatusCode(403, new { ok = false, error = "دسترسی ندارید." });
         }
+    }
+
+    private static string? FormatJalaliSubtitle(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return null;
+        if (DateTime.TryParse(raw, out var dt))
+            return Crm.Web.Services.PersianDateHelper.ToJalaliDate(dt);
+        return raw;
     }
 }

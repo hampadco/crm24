@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -59,15 +60,16 @@ public class ProductsController : AppControllerBase
     }
 
     [HttpGet("/App/products")]
-    public async Task<IActionResult> Index(string? q)
+    public async Task<IActionResult> Index(string? q, int page = 1)
     {
         var query = _db.Products.AsNoTracking();
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(p => p.Name.Contains(q) || (p.Sku != null && p.Sku.Contains(q)));
 
-        var products = await query.OrderBy(p => p.Name).Take(500).ToListAsync();
+        var (products, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderBy(p => p.Name), page);
         ViewData["Title"] = "محصولات و سرویس‌ها";
         ViewBag.Query = q;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize, new Dictionary<string, string?> { ["q"] = q });
         return View(products);
     }
 

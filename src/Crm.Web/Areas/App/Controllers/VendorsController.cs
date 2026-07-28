@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -13,11 +14,12 @@ public class VendorsController : AppControllerBase
     public VendorsController(CrmDbContext db) => _db = db;
 
     [HttpGet("/App/vendors")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var vendors = await _db.Vendors.AsNoTracking()
-            .OrderByDescending(v => v.Id).Take(300).ToListAsync();
+        var (vendors, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.Vendors.AsNoTracking().OrderByDescending(v => v.Id), page);
         ViewData["Title"] = "تأمین‌کنندگان";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(vendors);
     }
 

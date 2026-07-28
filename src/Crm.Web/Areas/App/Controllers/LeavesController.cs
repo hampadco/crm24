@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -28,20 +29,21 @@ public class LeavesController : AppControllerBase
     }
 
     [HttpGet("/App/leaves")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
         var isAdmin = _tenant.IsTenantAdmin;
         var query = _db.LeaveRequests.AsNoTracking().AsQueryable();
         if (!isAdmin)
             query = query.Where(l => l.UserId == _tenant.UserId);
 
-        var requests = await query.OrderByDescending(l => l.Id).Take(300).ToListAsync();
+        var (requests, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderByDescending(l => l.Id), page);
 
         var userIds = requests.Select(r => r.UserId).Distinct().ToList();
         ViewBag.Users = await _db.Users.AsNoTracking()
             .Where(u => userIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.FullName);
         ViewBag.IsAdmin = isAdmin;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
 
         ViewData["Title"] = "مرخصی و مأموریت";
         return View(requests);

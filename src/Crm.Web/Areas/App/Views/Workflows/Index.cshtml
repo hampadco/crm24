@@ -75,8 +75,7 @@
                             <a asp-action="Edit" asp-route-id="@rule.Id" class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
                                 <i class="bx bx-edit"></i>
                             </a>
-                            <form asp-action="Delete" asp-route-id="@rule.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('این قانون حذف شود؟');">
+                            <form asp-action="Delete" asp-route-id="@rule.Id" method="post" class="d-inline" data-confirm="این قانون حذف شود؟">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
                                     <i class="bx bx-trash"></i>
@@ -88,4 +87,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_AppPagination" />
 </div>

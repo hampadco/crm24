@@ -1,0 +1,123 @@
+@{
+    var page = ViewBag.Page as int? ?? 1;
+    var totalPages = ViewBag.TotalPages as int? ?? 1;
+    var totalCount = ViewBag.TotalCount as int? ?? 0;
+    var pageSize = ViewBag.PageSize as int? ?? 20;
+    var action = ViewBag.PagingAction as string ?? "Index";
+    var controller = ViewBag.PagingController as string;
+    var extra = ViewBag.PagingRoutes as IDictionary<string, string?> ?? new Dictionary<string, string?>();
+
+    Dictionary<string, string> PageRoute(int p)
+    {
+        var routes = new Dictionary<string, string> { ["page"] = p.ToString() };
+        foreach (var kv in extra)
+        {
+            if (!string.IsNullOrEmpty(kv.Value))
+                routes[kv.Key] = kv.Value!;
+        }
+        return routes;
+    }
+}
+
+@if (ViewBag.Page is int || totalCount > 0)
+{
+    <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+        <p class="text-muted small mb-0">
+            @if (totalCount == 0)
+            {
+                <span>موردی برای نمایش نیست</span>
+            }
+            else
+            {
+                <span>
+                    نمایش <strong>@(((page - 1) * pageSize + 1).ToFa())</strong>
+                    تا <strong>@Math.Min(page * pageSize, totalCount).ToFa()</strong>
+                    از <strong>@totalCount.ToFa()</strong> مورد
+                    <span class="text-muted">(صفحه @(page.ToFa()) از @(totalPages.ToFa()))</span>
+                </span>
+            }
+        </p>
+        @if (totalPages > 1)
+        {
+            <nav aria-label="صفحه‌بندی">
+                <ul class="pagination pagination-sm mb-0 flex-wrap">
+                    <li class="page-item @(page <= 1 ? "disabled" : "")">
+                        @if (controller is null)
+                        {
+                            <a class="page-link" asp-action="@action" asp-all-route-data="PageRoute(page - 1)">قبلی</a>
+                        }
+                        else
+                        {
+                            <a class="page-link" asp-controller="@controller" asp-action="@action" asp-all-route-data="PageRoute(page - 1)">قبلی</a>
+                        }
+                    </li>
+                    @{
+                        var start = Math.Max(1, page - 2);
+                        var end = Math.Min(totalPages, page + 2);
+                    }
+                    @if (start > 1)
+                    {
+                        <li class="page-item">
+                            @if (controller is null)
+                            {
+                                <a class="page-link" asp-action="@action" asp-all-route-data="PageRoute(1)">@(1.ToFa())</a>
+                            }
+                            else
+                            {
+                                <a class="page-link" asp-controller="@controller" asp-action="@action" asp-all-route-data="PageRoute(1)">@(1.ToFa())</a>
+                            }
+                        </li>
+                        @if (start > 2)
+                        {
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        }
+                    }
+                    @for (var i = start; i <= end; i++)
+                    {
+                        <li class="page-item @(i == page ? "active" : "")">
+                            @if (controller is null)
+                            {
+                                <a class="page-link" asp-action="@action" asp-all-route-data="PageRoute(i)">@i.ToFa()</a>
+                            }
+                            else
+                            {
+                                <a class="page-link" asp-controller="@controller" asp-action="@action" asp-all-route-data="PageRoute(i)">@i.ToFa()</a>
+                            }
+                        </li>
+                    }
+                    @if (end < totalPages)
+                    {
+                        @if (end < totalPages - 1)
+                        {
+                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                        }
+                        <li class="page-item">
+                            @if (controller is null)
+                            {
+                                <a class="page-link" asp-action="@action" asp-all-route-data="PageRoute(totalPages)">@totalPages.ToFa()</a>
+                            }
+                            else
+                            {
+                                <a class="page-link" asp-controller="@controller" asp-action="@action" asp-all-route-data="PageRoute(totalPages)">@totalPages.ToFa()</a>
+                            }
+                        </li>
+                    }
+                    <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                        @if (controller is null)
+                        {
+                            <a class="page-link" asp-action="@action" asp-all-route-data="PageRoute(page + 1)">بعدی</a>
+                        }
+                        else
+                        {
+                            <a class="page-link" asp-controller="@controller" asp-action="@action" asp-all-route-data="PageRoute(page + 1)">بعدی</a>
+                        }
+                    </li>
+                </ul>
+            </nav>
+        }
+        else if (totalCount > 0)
+        {
+            <span class="badge bg-label-primary">همه در یک صفحه</span>
+        }
+    </div>
+}

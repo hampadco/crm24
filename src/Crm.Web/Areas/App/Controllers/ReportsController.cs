@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -52,14 +53,13 @@ public class ReportsController : AppControllerBase
     }
 
     [HttpGet("/App/reports")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var reports = await _db.Reports.AsNoTracking()
-            .Include(r => r.Module)
-            .OrderByDescending(r => r.Id)
-            .ToListAsync();
+        var (reports, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.Reports.AsNoTracking().Include(r => r.Module).OrderByDescending(r => r.Id), page);
 
         ViewData["Title"] = "گزارش‌ها";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(reports);
     }
 

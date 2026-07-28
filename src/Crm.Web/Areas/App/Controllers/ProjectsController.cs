@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -28,11 +29,10 @@ public class ProjectsController : AppControllerBase
     }
 
     [HttpGet("/App/projects")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var projects = await _db.Projects.AsNoTracking()
-            .Include(p => p.Tasks)
-            .OrderByDescending(p => p.Id).Take(300).ToListAsync();
+        var (projects, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.Projects.AsNoTracking().Include(p => p.Tasks).OrderByDescending(x => x.Id), page);
 
         // فرصت‌های برنده که هنوز به پروژه تبدیل نشده‌اند
         var opportunitiesModule = await _metadata.GetModuleByNameAsync("opportunities");
@@ -40,12 +40,12 @@ public class ProjectsController : AppControllerBase
         if (opportunitiesModule is not null)
         {
             var convertedIds = await _db.Projects.IgnoreQueryFilters().AsNoTracking()
-                .Where(p => p.OpportunityRecordId != null)
-                .Select(p => p.OpportunityRecordId!.Value).ToListAsync();
+                .Where(x => x.OpportunityRecordId != null)
+                .Select(x => x.OpportunityRecordId!.Value).ToListAsync();
 
             var candidates = await _db.Records.AsNoTracking()
                 .Where(r => r.ModuleId == opportunitiesModule.Id && !convertedIds.Contains(r.Id))
-                .OrderByDescending(r => r.Id).Take(200).ToListAsync();
+                .OrderByDescending(r => r.Id).Take(50).ToListAsync();
 
             foreach (var record in candidates)
             {
@@ -55,6 +55,7 @@ public class ProjectsController : AppControllerBase
             }
         }
         ViewBag.WonOpportunities = wonOpportunities;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
 
         ViewData["Title"] = "پروژه‌ها";
         return View(projects);

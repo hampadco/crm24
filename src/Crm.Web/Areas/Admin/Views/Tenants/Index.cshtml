@@ -73,18 +73,23 @@
                 var msg = @(demoExists
                     ? Html.Raw("\"مشتری دمو از قبل هست. دادهٔ نمونه تکمیل/بازسازی شود؟\"")
                     : Html.Raw("\"مشتری دمو با حداقل ۲۰۰ رکورد در هر صفحه ساخته شود؟\""));
-                if (!window.confirm(msg)) {
-                    e.preventDefault();
-                    return;
-                }
-
-                overlay.classList.remove('d-none');
-                btn.disabled = true;
-                var label = btn.querySelector('.btn-label');
-                if (label) label.textContent = 'در حال ساخت…';
-                var icon = btn.querySelector('i');
-                if (icon) {
-                    icon.className = 'bx bx-loader-alt bx-spin me-1';
+                if (e.defaultPrevented) return;
+                e.preventDefault();
+                var proceed = function () {
+                    overlay.classList.remove('d-none');
+                    btn.disabled = true;
+                    var label = btn.querySelector('.btn-label');
+                    if (label) label.textContent = 'در حال ساخت…';
+                    var icon = btn.querySelector('i');
+                    if (icon) icon.className = 'bx bx-loader-alt bx-spin me-1';
+                    form.submit();
+                };
+                if (window.crmConfirm) {
+                    window.crmConfirm(msg, { confirmText: 'بله، شروع', icon: 'question' }).then(function (ok) {
+                        if (ok) proceed();
+                    });
+                } else if (window.confirm(msg)) {
+                    proceed();
                 }
             });
         })();

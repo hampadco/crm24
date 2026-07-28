@@ -4,6 +4,7 @@ using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -39,7 +40,7 @@ public class TicketsController : AppControllerBase
     }
 
     [HttpGet("/App/tickets")]
-    public async Task<IActionResult> Index(string? status, string? q)
+    public async Task<IActionResult> Index(string? status, string? q, int page = 1)
     {
         var query = _db.Tickets.AsNoTracking().AsQueryable();
         if (!string.IsNullOrEmpty(status) && Enum.TryParse<TicketStatus>(status, out var st))
@@ -47,11 +48,16 @@ public class TicketsController : AppControllerBase
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(t => t.Subject.Contains(q));
 
-        var tickets = await query.OrderByDescending(t => t.Id).Take(300).ToListAsync();
+        var (tickets, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderByDescending(t => t.Id), page);
 
         ViewData["Title"] = "تیکت‌ها";
         ViewBag.Status = status;
         ViewBag.Query = q;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize, new Dictionary<string, string?>
+        {
+            ["status"] = status,
+            ["q"] = q
+        });
         return View(tickets);
     }
 

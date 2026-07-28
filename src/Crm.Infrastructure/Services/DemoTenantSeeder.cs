@@ -228,6 +228,12 @@ public class DemoTenantSeeder
         await SeedVendorsAsync(tenantId, adminId, now);
         await SeedPurchaseOrdersAsync(tenantId, adminId, productIds, now);
         await SeedCampaignsAsync(tenantId, adminId, now);
+        var leadIds = await ModuleRecordIdsAsync(tenantId, "leads");
+        var opportunityIds = await ModuleRecordIdsAsync(tenantId, "opportunities");
+        await SeedCampaignMembersAsync(tenantId, adminId, leadIds, contactIds, opportunityIds, now);
+        await SeedCommissionEntriesAsync(tenantId, adminId, now);
+        await SeedWorkflowsAsync(tenantId, adminId, now);
+        await SeedReportsAsync(tenantId, adminId, now);
         await SeedWebFormsAsync(tenantId, adminId, now);
         await SeedSurveysAsync(tenantId, adminId, now);
         await SeedTemplatesAsync(tenantId, adminId, now);
@@ -801,6 +807,274 @@ public class DemoTenantSeeder
         }
 
         await _db.SaveChangesAsync();
+    }
+
+    private async Task SeedCampaignMembersAsync(
+        int tenantId, int userId,
+        IReadOnlyList<int> leadIds, IReadOnlyList<int> contactIds, IReadOnlyList<int> opportunityIds,
+        DateTime now)
+    {
+        var existing = await _db.CampaignMembers.IgnoreQueryFilters()
+            .CountAsync(m => m.TenantId == tenantId && !m.IsDeleted);
+        if (existing >= 80)
+            return;
+
+        var campaigns = await _db.Campaigns.IgnoreQueryFilters()
+            .Where(c => c.TenantId == tenantId && !c.IsDeleted)
+            .OrderBy(c => c.Id)
+            .Take(25)
+            .Select(c => c.Id)
+            .ToListAsync();
+        if (campaigns.Count == 0)
+            return;
+
+        var added = existing;
+        for (var i = 0; i < campaigns.Count && added < 80; i++)
+        {
+            var campaignId = campaigns[i];
+            void TryAdd(string module, IReadOnlyList<int> ids, int offset)
+            {
+                if (ids.Count == 0 || added >= 80) return;
+                var recordId = ids[(i + offset) % ids.Count];
+                _db.CampaignMembers.Add(new CampaignMember
+                {
+                    TenantId = tenantId,
+                    CampaignId = campaignId,
+                    ModuleName = module,
+                    RecordId = recordId,
+                    CreatedAtUtc = now.AddDays(-i),
+                    CreatedByUserId = userId
+                });
+                added++;
+            }
+
+            TryAdd("leads", leadIds, 0);
+            TryAdd("contacts", contactIds, 3);
+            TryAdd("opportunities", opportunityIds, 7);
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task SeedCommissionEntriesAsync(int tenantId, int userId, DateTime now)
+    {
+        var existing = await _db.CommissionEntries.IgnoreQueryFilters()
+            .CountAsync(e => e.TenantId == tenantId && !e.IsDeleted);
+        if (existing >= 40)
+            return;
+
+        var rules = await _db.CommissionRules.IgnoreQueryFilters()
+            .Where(r => r.TenantId == tenantId && !r.IsDeleted && r.IsActive)
+            .OrderBy(r => r.Id)
+            .Take(20)
+            .Select(r => r.Id)
+            .ToListAsync();
+        if (rules.Count == 0)
+            return;
+
+        var invoices = await _db.SalesDocuments.IgnoreQueryFilters()
+            .Where(d => d.TenantId == tenantId && !d.IsDeleted && d.Kind == SalesDocumentKind.Invoice)
+            .OrderBy(d => d.Id)
+            .Take(40)
+            .Select(d => new { d.Id, d.GrandTotal, d.CreatedByUserId })
+            .ToListAsync();
+        if (invoices.Count == 0)
+            return;
+
+        var teamUsers = await _db.Users.IgnoreQueryFilters()
+            .Where(u => u.TenantId == tenantId)
+            .Select(u => u.Id)
+            .ToListAsync();
+        if (teamUsers.Count == 0)
+            teamUsers = [userId];
+
+        var need = 40 - existing;
+        for (var i = 0; i < need && i < invoices.Count; i++)
+        {
+            var inv = invoices[i];
+            var ruleId = rules[i % rules.Count];
+            var amount = Math.Max(50_000m, Math.Round(inv.GrandTotal * (0.02m + (i % 5) * 0.01m), 0));
+            _db.CommissionEntries.Add(new CommissionEntry
+            {
+                TenantId = tenantId,
+                DocumentId = inv.Id,
+                UserId = teamUsers[i % teamUsers.Count],
+                RuleId = ruleId,
+                Amount = amount,
+                CreatedAtUtc = now.AddDays(-(i % 45)),
+                CreatedByUserId = userId
+            });
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task SeedWorkflowsAsync(int tenantId, int userId, DateTime now)
+    {
+        if (await _db.WorkflowRules.IgnoreQueryFilters().AnyAsync(r => r.TenantId == tenantId && !r.IsDeleted))
+            return;
+
+        async Task<int?> ModuleId(string name) =>
+            await _db.Modules.IgnoreQueryFilters()
+                .Where(m => m.TenantId == tenantId && m.Name == name && !m.IsDeleted)
+                .Select(m => (int?)m.Id)
+                .FirstOrDefaultAsync();
+
+        var leadsId = await ModuleId("leads");
+        var oppsId = await ModuleId("opportunities");
+        var tasksId = await ModuleId("tasks");
+        if (leadsId is null || oppsId is null)
+            return;
+
+        var specs = new List<(string Name, int ModuleId, WorkflowTrigger Trigger, WorkflowActionType Action, string Config)>
+        {
+            ("اعلان سرنخ داغ", leadsId.Value, WorkflowTrigger.RecordCreated, WorkflowActionType.Notify,
+                """{"message":"سرنخ جدید ثبت شد: {name}"}"""),
+            ("وظیفه پیگیری سرنخ", leadsId.Value, WorkflowTrigger.RecordUpdated, WorkflowActionType.CreateTask,
+                """{"title":"پیگیری سرنخ {name}","dueInDays":2}"""),
+            ("به‌روزرسانی مرحله فرصت", oppsId.Value, WorkflowTrigger.RecordUpdated, WorkflowActionType.UpdateField,
+                """{"field":"probability","value":"70"}"""),
+            ("اعلان فرصت برنده", oppsId.Value, WorkflowTrigger.RecordUpdated, WorkflowActionType.Notify,
+                """{"message":"فرصت {name} به مرحله برنده رسید"}""")
+        };
+
+        if (tasksId is not null)
+        {
+            specs.Add(("یادآوری وظیفه روزانه", tasksId.Value, WorkflowTrigger.Scheduled, WorkflowActionType.Notify,
+                """{"message":"مرور وظایف باز"}"""));
+        }
+
+        foreach (var spec in specs)
+        {
+            var rule = new WorkflowRule
+            {
+                TenantId = tenantId,
+                Name = spec.Name,
+                ModuleId = spec.ModuleId,
+                Trigger = spec.Trigger,
+                Schedule = spec.Trigger == WorkflowTrigger.Scheduled ? WorkflowSchedule.Daily : null,
+                ConditionsJson = """{"logic":"and","items":[]}""",
+                IsActive = true,
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            };
+            _db.WorkflowRules.Add(rule);
+            await _db.SaveChangesAsync();
+
+            _db.WorkflowActions.Add(new WorkflowAction
+            {
+                TenantId = tenantId,
+                RuleId = rule.Id,
+                Type = spec.Action,
+                ConfigJson = spec.Config,
+                SortOrder = 1,
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            });
+
+            _db.WorkflowLogs.Add(new WorkflowLog
+            {
+                TenantId = tenantId,
+                RuleId = rule.Id,
+                Success = true,
+                Message = "اجرای نمونه دمو",
+                CreatedAtUtc = now.AddHours(-spec.ModuleId % 24),
+                CreatedByUserId = userId
+            });
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task SeedReportsAsync(int tenantId, int userId, DateTime now)
+    {
+        if (await _db.Reports.IgnoreQueryFilters().AnyAsync(r => r.TenantId == tenantId && !r.IsDeleted))
+            return;
+
+        async Task<int?> ModuleId(string name) =>
+            await _db.Modules.IgnoreQueryFilters()
+                .Where(m => m.TenantId == tenantId && m.Name == name && !m.IsDeleted)
+                .Select(m => (int?)m.Id)
+                .FirstOrDefaultAsync();
+
+        var leadsId = await ModuleId("leads");
+        var oppsId = await ModuleId("opportunities");
+        var tasksId = await ModuleId("tasks");
+        var callsId = await ModuleId("calls");
+
+        var reports = new List<ReportDef>();
+        if (leadsId is not null)
+        {
+            reports.Add(new ReportDef
+            {
+                TenantId = tenantId,
+                Name = "سرنخ‌ها بر اساس وضعیت",
+                ModuleId = leadsId.Value,
+                ColumnsJson = """["name","status","source","city"]""",
+                GroupByField = "status",
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            });
+            reports.Add(new ReportDef
+            {
+                TenantId = tenantId,
+                Name = "کانال جذب سرنخ",
+                ModuleId = leadsId.Value,
+                ColumnsJson = """["name","source","status"]""",
+                GroupByField = "source",
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            });
+        }
+
+        if (oppsId is not null)
+        {
+            reports.Add(new ReportDef
+            {
+                TenantId = tenantId,
+                Name = "فرصت‌ها بر اساس مرحله",
+                ModuleId = oppsId.Value,
+                ColumnsJson = """["name","stage","amount","probability"]""",
+                GroupByField = "stage",
+                SumField = "amount",
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            });
+        }
+
+        if (tasksId is not null)
+        {
+            reports.Add(new ReportDef
+            {
+                TenantId = tenantId,
+                Name = "وضعیت وظایف",
+                ModuleId = tasksId.Value,
+                ColumnsJson = """["name","status","priority","dueDate"]""",
+                GroupByField = "status",
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            });
+        }
+
+        if (callsId is not null)
+        {
+            reports.Add(new ReportDef
+            {
+                TenantId = tenantId,
+                Name = "نتیجه تماس‌ها",
+                ModuleId = callsId.Value,
+                ColumnsJson = """["name","result","direction"]""",
+                GroupByField = "result",
+                CreatedAtUtc = now,
+                CreatedByUserId = userId
+            });
+        }
+
+        if (reports.Count > 0)
+        {
+            _db.Reports.AddRange(reports);
+            await _db.SaveChangesAsync();
+        }
     }
 
     private async Task SeedWebFormsAsync(int tenantId, int userId, DateTime now)

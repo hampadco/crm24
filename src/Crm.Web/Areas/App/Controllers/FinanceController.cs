@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -66,18 +67,23 @@ public class FinanceController : AppControllerBase
     }
 
     [HttpGet("/App/finance/{kindSlug:regex(^quotes|orders|invoices$)}")]
-    public async Task<IActionResult> Index(string kindSlug, string? q)
+    public async Task<IActionResult> Index(string kindSlug, string? q, int page = 1)
     {
         var kind = KindSlugs[kindSlug];
         var query = _db.SalesDocuments.AsNoTracking().Where(d => d.Kind == kind);
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(d => d.CustomerName.Contains(q));
 
-        var docs = await query.OrderByDescending(d => d.Id).Take(300).ToListAsync();
+        var (docs, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderByDescending(d => d.Id), page);
         ViewData["Title"] = $"{KindLabel(kind)}ها";
         ViewBag.Kind = kind;
         ViewBag.KindSlug = kindSlug;
         ViewBag.Query = q;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize, new Dictionary<string, string?>
+        {
+            ["kindSlug"] = kindSlug,
+            ["q"] = q
+        });
         return View(docs);
     }
 
@@ -259,14 +265,14 @@ public class FinanceController : AppControllerBase
     private async Task FillFormListsAsync(SalesDocFormModel model)
     {
         model.Products = await _db.Products.AsNoTracking()
-            .Where(p => p.IsActive).OrderBy(p => p.Name).Take(500).ToListAsync();
+            .Where(p => p.IsActive).OrderBy(p => p.Name).Take(100).ToListAsync();
 
         var contactsModule = await _db.Modules.AsNoTracking().FirstOrDefaultAsync(m => m.Name == "contacts");
         if (contactsModule is not null)
         {
             model.ContactOptions = await _db.Records.AsNoTracking()
                 .Where(r => r.ModuleId == contactsModule.Id)
-                .OrderByDescending(r => r.Id).Take(300)
+                .OrderByDescending(r => r.Id).Take(100)
                 .ToDictionaryAsync(r => r.Id, r => r.Title);
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -43,13 +44,15 @@ public class PurchaseOrdersController : AppControllerBase
     }
 
     [HttpGet("/App/purchase-orders")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var orders = await _db.PurchaseOrders.AsNoTracking()
-            .Include(p => p.Vendor)
-            .Include(p => p.Payments)
-            .OrderByDescending(p => p.Id).Take(300).ToListAsync();
+        var (orders, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.PurchaseOrders.AsNoTracking()
+                .Include(po => po.Vendor)
+                .Include(po => po.Payments)
+                .OrderByDescending(po => po.Id), page);
         ViewData["Title"] = "سفارش‌های خرید";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(orders);
     }
 

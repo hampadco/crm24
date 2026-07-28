@@ -30,7 +30,7 @@
                                 onclick="openTemplate(@template.Id, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(template.Title)), @Html.Raw(System.Text.Json.JsonSerializer.Serialize(template.Body)), @(template.IsPublic ? "true" : "false"))">
                             <i class="bx bx-edit"></i>
                         </button>
-                        <form asp-action="Delete" asp-route-id="@template.Id" method="post" onsubmit="return confirm('حذف شود؟')">
+                        <form asp-action="Delete" asp-route-id="@template.Id" method="post" data-confirm="حذف شود؟">
                             @Html.AntiForgeryToken()
                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash"></i></button>
                         </form>
@@ -43,6 +43,7 @@
         </div>
     }
 </div>
+<partial name="_AppPagination" />
 
 <div class="modal fade" id="templateModal" tabindex="-1">
     <div class="modal-dialog">

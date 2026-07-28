@@ -9,7 +9,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <h4 class="mb-0">
         <i class="bx bx-support text-primary me-1"></i> تیکت‌ها
-        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.Count</span>
+        <span class="badge bg-label-secondary rounded-pill align-middle">@(ViewBag.TotalCount ?? Model.Count)</span>
     </h4>
     <div class="d-flex gap-2">
         <a href="/App/tickets/sla" class="btn btn-outline-secondary"><i class="bx bx-timer me-1"></i> تنظیمات SLA</a>
@@ -79,4 +79,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_AppPagination" />
 </div>

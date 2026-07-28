@@ -6,6 +6,7 @@ using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Identity;
 using Crm.Infrastructure.Services;
 using Crm.Web.Areas.App.Models;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -30,21 +31,22 @@ public class TeamUsersController : AppControllerBase
     }
 
     [HttpGet("/App/team-users")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
         if (!await EnsureTenantAdminAsync())
             return Forbid("Identity.Application");
 
         var tenantId = _tenant.TenantId!.Value;
-        var users = await _db.Users.AsNoTracking()
+        var usersQuery = _db.Users.AsNoTracking()
             .Where(u => u.TenantId == tenantId)
             .OrderByDescending(u => u.IsTenantAdmin)
-            .ThenBy(u => u.FullName)
-            .ToListAsync();
+            .ThenBy(u => u.FullName);
+
+        var (users, total, p, pageSize) = await AppPaging.ToPageAsync(usersQuery, page);
 
         var profiles = await _db.Profiles.AsNoTracking()
-            .Where(p => p.TenantId == tenantId)
-            .ToDictionaryAsync(p => p.Id, p => p.Name);
+            .Where(pr => pr.TenantId == tenantId)
+            .ToDictionaryAsync(pr => pr.Id, pr => pr.Name);
 
         var roles = await _db.CrmRoles.AsNoTracking()
             .Where(r => r.TenantId == tenantId)
@@ -58,9 +60,11 @@ public class TeamUsersController : AppControllerBase
         }).ToList();
 
         ViewBag.Limits = await _quota.GetLimitsAsync(tenantId);
-        ViewBag.UserCount = users.Count(u => u.IsActive);
+        ViewBag.UserCount = await _db.Users.AsNoTracking()
+            .CountAsync(u => u.TenantId == tenantId && u.IsActive);
         ViewBag.Profiles = profiles;
         ViewBag.Roles = roles;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
 
         ViewData["Title"] = "همکاران";
         return View(model);

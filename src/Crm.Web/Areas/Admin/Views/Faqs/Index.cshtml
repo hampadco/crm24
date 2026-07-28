@@ -42,8 +42,7 @@
                         <td>@item.SortOrder.ToFa()</td>
                         <td class="text-end">
                             <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary">ویرایش</a>
-                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
-                                  onsubmit="return confirm('حذف شود؟');">
+                            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" data-confirm="حذف شود؟">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
                             </form>
                         </td>

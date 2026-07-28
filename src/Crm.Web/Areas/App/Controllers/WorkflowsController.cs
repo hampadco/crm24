@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -55,13 +56,13 @@ public class WorkflowsController : AppControllerBase
     }
 
     [HttpGet("/App/workflows")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var rules = await _db.WorkflowRules.AsNoTracking()
-            .Include(r => r.Module)
-            .Include(r => r.Actions)
-            .OrderByDescending(r => r.Id)
-            .ToListAsync();
+        var (rules, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.WorkflowRules.AsNoTracking()
+                .Include(r => r.Module)
+                .Include(r => r.Actions)
+                .OrderByDescending(r => r.Id), page);
 
         var logCounts = await _db.WorkflowLogs.AsNoTracking()
             .GroupBy(l => l.RuleId)
@@ -70,6 +71,7 @@ public class WorkflowsController : AppControllerBase
 
         ViewData["Title"] = "گردش‌کار";
         ViewBag.LogCounts = logCounts;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(rules);
     }
 

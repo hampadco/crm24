@@ -111,8 +111,7 @@
                         <td class="text-end">
                             @if (Model.Module.Name == "leads" && Model.CanEdit)
                             {
-                                <form action="/App/m/leads/@record.Id/convert" method="post" class="d-inline"
-                                      onsubmit="return confirm('این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟');">
+                                <form action="/App/m/leads/@record.Id/convert" method="post" class="d-inline" data-confirm="این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟">
                                     @Html.AntiForgeryToken()
                                     <button type="submit" class="btn btn-sm btn-icon btn-text-success" title="تبدیل سرنخ">
                                         <i class="bx bx-transfer-alt"></i>
@@ -129,8 +128,7 @@
                             @if (Model.CanDelete)
                             {
                                 <form asp-action="Delete" asp-route-moduleName="@Model.Module.Name" asp-route-id="@record.Id"
-                                      method="post" class="d-inline"
-                                      onsubmit="return confirm('این رکورد به سطل بازیابی منتقل شود؟');">
+                                      method="post" class="d-inline" data-confirm="این رکورد به سطل بازیابی منتقل شود؟">
                                     <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
                                         <i class="bx bx-trash"></i>
                                     </button>

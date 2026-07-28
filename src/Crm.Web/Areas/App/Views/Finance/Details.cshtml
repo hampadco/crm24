@@ -30,8 +30,7 @@
         @if (Model.Kind != SalesDocumentKind.Invoice && Model.Status is SalesDocumentStatus.Draft or SalesDocumentStatus.Confirmed)
         {
             var targetLabel = Model.Kind == SalesDocumentKind.Quote ? "سفارش فروش" : "فاکتور";
-            <form action="/App/finance/doc/@Model.Id/convert" method="post" class="d-inline"
-                  onsubmit="return confirm('این سند به @targetLabel تبدیل شود؟');">
+            <form action="/App/finance/doc/@Model.Id/convert" method="post" class="d-inline" data-confirm="این سند به @targetLabel تبدیل شود؟">
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-primary"><i class="bx bx-transfer-alt me-1"></i> تبدیل به @targetLabel</button>
             </form>

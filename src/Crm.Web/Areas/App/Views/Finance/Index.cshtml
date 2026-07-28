@@ -12,7 +12,7 @@
     <h4 class="mb-0">
         <i class="bx bx-receipt text-primary me-1"></i>
         @(kindLabel)ها
-        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.Count</span>
+        <span class="badge bg-label-secondary rounded-pill align-middle">@(ViewBag.TotalCount ?? Model.Count)</span>
     </h4>
     <a href="/App/finance/@kindSlug/create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> @kindLabel جدید</a>
 </div>
@@ -68,4 +68,5 @@
             </tbody>
         </table>
     </div>
+    <partial name="_AppPagination" />
 </div>

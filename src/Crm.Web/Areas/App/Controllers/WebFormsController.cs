@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -27,12 +28,12 @@ public class WebFormsController : AppControllerBase
     }
 
     [HttpGet("/App/webforms")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var forms = await _db.WebForms.AsNoTracking()
-            .Include(f => f.Module)
-            .OrderByDescending(f => f.Id).Take(300).ToListAsync();
+        var (forms, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.WebForms.AsNoTracking().Include(f => f.Module).OrderByDescending(f => f.Id), page);
         ViewData["Title"] = "وب‌فرم‌ها";
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         return View(forms);
     }
 

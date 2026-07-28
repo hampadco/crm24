@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Web.Areas.App.Models;
+using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -20,12 +21,13 @@ public class PortalUsersController : AppControllerBase
     }
 
     [HttpGet("/App/portal-users")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var users = await _db.PortalUsers.AsNoTracking()
-            .OrderByDescending(u => u.Id).Take(300).ToListAsync();
+        var (users, total, p, pageSize) = await AppPaging.ToPageAsync(
+            _db.PortalUsers.AsNoTracking().OrderByDescending(u => u.Id), page);
 
         ViewBag.Contacts = await LoadContactsAsync();
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
         ViewData["Title"] = "کاربران پورتال";
         return View(users);
     }
