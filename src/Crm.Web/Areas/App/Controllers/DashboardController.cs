@@ -113,7 +113,7 @@ public class DashboardController : AppControllerBase
                     view.CounterValue = countByModule.GetValueOrDefault(module.Id);
                     break;
 
-                case "pie" or "bar" when widget.FieldName is not null:
+                case "pie" or "bar" or "funnel" when widget.FieldName is not null:
                 {
                     var cacheKey = (module.Id, widget.FieldName);
                     if (!fieldAggCache.TryGetValue(cacheKey, out var groups))
@@ -130,9 +130,24 @@ public class DashboardController : AppControllerBase
                         field = fields.FirstOrDefault(f => f.Name == widget.FieldName);
                     }
 
-                    view.Series = groups
-                        .Select(g => (Label: ResolvePicklistLabel(field, g.Value), Value: g.Count))
+                    var series = groups
+                        .Select(g => (Label: ResolvePicklistLabel(field, g.Value), Value: g.Count, Raw: g.Value))
                         .ToList();
+
+                    if (widget.Type == "funnel" && field?.PicklistValues.Count > 0)
+                    {
+                        var orderMap = field.PicklistValues
+                            .OrderBy(p => p.SortOrder)
+                            .Select((p, i) => (p.Value, Index: i))
+                            .ToDictionary(x => x.Value, x => x.Index, StringComparer.OrdinalIgnoreCase);
+
+                        series = series
+                            .OrderBy(s => orderMap.TryGetValue(s.Raw, out var idx) ? idx : int.MaxValue)
+                            .ThenByDescending(s => s.Value)
+                            .ToList();
+                    }
+
+                    view.Series = series.Select(s => (s.Label, s.Value)).ToList();
                     break;
                 }
 
@@ -183,7 +198,7 @@ public class DashboardController : AppControllerBase
         _db.DashboardWidgets.Add(new DashboardWidget
         {
             UserId = userId,
-            Type = type is "pie" or "monthly" or "bar" ? type : "counter",
+            Type = type is "pie" or "monthly" or "bar" or "funnel" ? type : "counter",
             Title = string.IsNullOrWhiteSpace(title) ? module.PluralLabel : title.Trim(),
             ModuleId = moduleId,
             FieldName = fieldName,

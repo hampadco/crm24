@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Crm.Core.Abstractions;
@@ -9,6 +10,8 @@ namespace Crm.Infrastructure.Services;
 /// <summary>دسترسی به متادیتای ماژول‌ها و فیلدها (با کش per-tenant).</summary>
 public class MetadataService
 {
+    private static readonly Regex SystemNameRegex = new(@"^[a-z][a-z0-9_]*$", RegexOptions.Compiled);
+
     private readonly CrmDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly IMemoryCache _cache;
@@ -45,7 +48,7 @@ public class MetadataService
 
     public async Task<IReadOnlyList<FieldDef>> GetFieldsAsync(int moduleId)
     {
-        var cacheKey = $"fields:{_tenant.TenantId}:{moduleId}";
+        var cacheKey = FieldsCacheKey(moduleId);
         if (_cache.TryGetValue(cacheKey, out IReadOnlyList<FieldDef>? cached) && cached is not null)
             return cached;
 
@@ -61,11 +64,300 @@ public class MetadataService
         return fields;
     }
 
-    public void InvalidateFieldCache(int moduleId) =>
-        _cache.Remove($"fields:{_tenant.TenantId}:{moduleId}");
+    public async Task<IReadOnlyList<FieldBlock>> GetBlocksAsync(int moduleId)
+    {
+        var cacheKey = BlocksCacheKey(moduleId);
+        if (_cache.TryGetValue(cacheKey, out IReadOnlyList<FieldBlock>? cached) && cached is not null)
+            return cached;
+
+        var blocks = await _db.FieldBlocks
+            .AsNoTracking()
+            .Where(b => b.ModuleId == moduleId)
+            .OrderBy(b => b.SortOrder)
+            .ThenBy(b => b.Id)
+            .ToListAsync();
+
+        _cache.Set(cacheKey, (IReadOnlyList<FieldBlock>)blocks, TimeSpan.FromMinutes(5));
+        return blocks;
+    }
+
+    public async Task<FieldBlock> CreateBlockAsync(int moduleId, string name, string label, int sortOrder)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId)
+            ?? throw new InvalidOperationException("ماژول یافت نشد.");
+
+        name = NormalizeSystemName(name);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("نام سیستمی بلاک معتبر نیست.");
+
+        if (await _db.FieldBlocks.AnyAsync(b => b.ModuleId == moduleId && b.Name == name))
+            throw new InvalidOperationException("بلاکی با این نام سیستمی از قبل وجود دارد.");
+
+        var block = new FieldBlock
+        {
+            ModuleId = module.Id,
+            Name = name,
+            Label = string.IsNullOrWhiteSpace(label) ? name : label.Trim(),
+            SortOrder = sortOrder
+        };
+        _db.FieldBlocks.Add(block);
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(moduleId);
+        return block;
+    }
+
+    public async Task UpdateBlockAsync(
+        int id, string label, int sortOrder, bool isCollapsed, string? visibilityRuleJson = null)
+    {
+        var block = await _db.FieldBlocks.FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw new InvalidOperationException("بلاک یافت نشد.");
+
+        block.Label = string.IsNullOrWhiteSpace(label) ? block.Label : label.Trim();
+        block.SortOrder = sortOrder;
+        block.IsCollapsed = isCollapsed;
+        if (visibilityRuleJson is not null)
+            block.VisibilityRuleJson = string.IsNullOrWhiteSpace(visibilityRuleJson) ? null : visibilityRuleJson.Trim();
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(block.ModuleId);
+    }
+
+    public async Task DeleteBlockAsync(int id)
+    {
+        var block = await _db.FieldBlocks.FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw new InvalidOperationException("بلاک یافت نشد.");
+
+        var moduleId = block.ModuleId;
+        var fields = await _db.Fields.Where(f => f.BlockId == id).ToListAsync();
+        foreach (var field in fields)
+            field.BlockId = null;
+
+        _db.FieldBlocks.Remove(block);
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(moduleId);
+    }
+
+    public async Task<FieldDef> CreateFieldAsync(
+        int moduleId,
+        string name,
+        string label,
+        FieldType type,
+        bool isRequired = false,
+        bool showInList = true,
+        int? blockId = null,
+        int? maxLength = null,
+        bool isVisible = true,
+        bool isUniqueCheck = false,
+        string? defaultValue = null,
+        string? visibilityRuleJson = null,
+        string? lookupModule = null)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId)
+            ?? throw new InvalidOperationException("ماژول یافت نشد.");
+
+        name = NormalizeSystemName(name);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("نام سیستمی فیلد معتبر نیست.");
+
+        if (await _db.Fields.AnyAsync(f => f.ModuleId == moduleId && f.Name == name))
+            throw new InvalidOperationException("فیلدی با این نام سیستمی از قبل وجود دارد.");
+
+        if (blockId is int bid)
+        {
+            var blockOk = await _db.FieldBlocks.AnyAsync(b => b.Id == bid && b.ModuleId == moduleId);
+            if (!blockOk)
+                throw new InvalidOperationException("بلاک انتخاب‌شده معتبر نیست.");
+        }
+
+        var maxSort = await _db.Fields.Where(f => f.ModuleId == moduleId).MaxAsync(f => (int?)f.SortOrder) ?? 0;
+        var field = new FieldDef
+        {
+            ModuleId = module.Id,
+            Name = name,
+            Label = string.IsNullOrWhiteSpace(label) ? name : label.Trim(),
+            Type = type,
+            IsCustom = true,
+            IsRequired = isRequired,
+            ShowInList = showInList,
+            BlockId = blockId,
+            MaxLength = maxLength,
+            IsVisible = isVisible,
+            IsUniqueCheck = isUniqueCheck,
+            DefaultValue = defaultValue,
+            VisibilityRuleJson = visibilityRuleJson,
+            LookupModule = lookupModule,
+            SortOrder = maxSort + 1
+        };
+        _db.Fields.Add(field);
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(moduleId);
+        return field;
+    }
+
+    public async Task UpdateFieldAsync(
+        int id,
+        string label,
+        bool isRequired,
+        bool showInList,
+        int sortOrder,
+        int? blockId,
+        int? maxLength,
+        bool isVisible,
+        bool isUniqueCheck,
+        string? defaultValue,
+        string? visibilityRuleJson)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == id)
+            ?? throw new InvalidOperationException("فیلد یافت نشد.");
+
+        if (blockId is int bid)
+        {
+            var blockOk = await _db.FieldBlocks.AnyAsync(b => b.Id == bid && b.ModuleId == field.ModuleId);
+            if (!blockOk)
+                throw new InvalidOperationException("بلاک انتخاب‌شده معتبر نیست.");
+        }
+
+        field.Label = string.IsNullOrWhiteSpace(label) ? field.Label : label.Trim();
+        field.IsRequired = isRequired;
+        field.ShowInList = showInList;
+        field.SortOrder = sortOrder;
+        field.BlockId = blockId;
+        field.MaxLength = maxLength;
+        field.IsVisible = isVisible;
+        field.IsUniqueCheck = isUniqueCheck;
+        field.DefaultValue = defaultValue;
+        field.VisibilityRuleJson = visibilityRuleJson;
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(field.ModuleId);
+    }
+
+    /// <summary>
+    /// ذخیره ترتیب بلاک‌ها و فیلدها.
+    /// هر آیتم: شناسه بلاک (null = بدون بلاک) و لیست شناسه فیلدها به ترتیب.
+    /// </summary>
+    public async Task ReorderLayoutAsync(int moduleId, List<(int? BlockId, List<int> FieldIds)> layout)
+    {
+        var moduleExists = await _db.Modules.AnyAsync(m => m.Id == moduleId);
+        if (!moduleExists)
+            throw new InvalidOperationException("ماژول یافت نشد.");
+
+        var blocks = await _db.FieldBlocks.Where(b => b.ModuleId == moduleId).ToListAsync();
+        var fields = await _db.Fields.Where(f => f.ModuleId == moduleId).ToListAsync();
+        var fieldMap = fields.ToDictionary(f => f.Id);
+        var blockMap = blocks.ToDictionary(b => b.Id);
+
+        var blockOrder = 0;
+        foreach (var (blockId, fieldIds) in layout)
+        {
+            if (blockId is int bid && blockMap.TryGetValue(bid, out var block))
+            {
+                block.SortOrder = ++blockOrder;
+            }
+
+            var fieldOrder = 0;
+            foreach (var fieldId in fieldIds)
+            {
+                if (!fieldMap.TryGetValue(fieldId, out var field))
+                    continue;
+                field.BlockId = blockId;
+                field.SortOrder = ++fieldOrder;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(moduleId);
+    }
+
+    public async Task<IReadOnlyList<RelationDef>> GetRelationsForModuleAsync(int moduleId)
+    {
+        return await _db.Relations
+            .AsNoTracking()
+            .Where(r => r.SourceModuleId == moduleId || r.TargetModuleId == moduleId)
+            .OrderBy(r => r.Id)
+            .ToListAsync();
+    }
+
+    public async Task<RelationDef> CreateRelationAsync(
+        int sourceModuleId,
+        int targetModuleId,
+        string label,
+        bool isManyToMany,
+        string? linkFieldName = null)
+    {
+        var sourceOk = await _db.Modules.AnyAsync(m => m.Id == sourceModuleId);
+        var targetOk = await _db.Modules.AnyAsync(m => m.Id == targetModuleId);
+        if (!sourceOk || !targetOk)
+            throw new InvalidOperationException("ماژول مبدأ یا مقصد یافت نشد.");
+
+        if (sourceModuleId == targetModuleId)
+            throw new InvalidOperationException("مبدأ و مقصد نمی‌توانند یک ماژول باشند.");
+
+        if (string.IsNullOrWhiteSpace(label))
+            throw new InvalidOperationException("برچسب رابطه الزامی است.");
+
+        var link = string.IsNullOrWhiteSpace(linkFieldName) ? null : linkFieldName.Trim();
+        if (link is not null)
+        {
+            var linkOk = await _db.Fields.AnyAsync(f =>
+                f.Type == FieldType.Lookup
+                && f.Name == link
+                && (f.ModuleId == targetModuleId || f.ModuleId == sourceModuleId));
+            if (!linkOk)
+                throw new InvalidOperationException("فیلد لینک Lookup معتبر نیست.");
+        }
+
+        var relation = new RelationDef
+        {
+            SourceModuleId = sourceModuleId,
+            TargetModuleId = targetModuleId,
+            Label = label.Trim(),
+            IsManyToMany = isManyToMany,
+            LinkFieldName = link
+        };
+        _db.Relations.Add(relation);
+        await _db.SaveChangesAsync();
+        return relation;
+    }
+
+    public async Task DeleteRelationAsync(int id)
+    {
+        var relation = await _db.Relations.FirstOrDefaultAsync(r => r.Id == id)
+            ?? throw new InvalidOperationException("رابطه یافت نشد.");
+        _db.Relations.Remove(relation);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateModuleDuplicateModeAsync(int moduleId, string mode)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId)
+            ?? throw new InvalidOperationException("ماژول یافت نشد.");
+
+        mode = (mode ?? "or").Trim().ToLowerInvariant();
+        if (mode is not ("or" or "and"))
+            throw new InvalidOperationException("حالت تطبیق تکراری فقط or یا and است.");
+
+        module.DuplicateMatchMode = mode;
+        await _db.SaveChangesAsync();
+        InvalidateModulesCache();
+    }
+
+    public void InvalidateFieldCache(int moduleId)
+    {
+        _cache.Remove(FieldsCacheKey(moduleId));
+        _cache.Remove(BlocksCacheKey(moduleId));
+    }
 
     public void InvalidateModulesCache() =>
         _cache.Remove(ModulesCacheKey());
 
     private string ModulesCacheKey() => $"modules:{_tenant.TenantId}";
+    private string FieldsCacheKey(int moduleId) => $"fields:{_tenant.TenantId}:{moduleId}";
+    private string BlocksCacheKey(int moduleId) => $"blocks:{_tenant.TenantId}:{moduleId}";
+
+    private static string NormalizeSystemName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return string.Empty;
+        name = name.Trim().ToLowerInvariant().Replace(' ', '_').Replace('-', '_');
+        return SystemNameRegex.IsMatch(name) ? name : string.Empty;
+    }
 }

@@ -1,0 +1,294 @@
+@model Crm.Web.Areas.App.Models.RecordListViewModel
+@using Crm.Core.Entities
+@{
+    var colCount = Model.Fields.Count + 2; // tools/check + fields + actions
+    const string filterFormId = "crmDtFilterForm";
+    var hasActiveFilters = Model.Filters.Count > 0 || !string.IsNullOrWhiteSpace(Model.Search);
+
+    string SortIcon(string field)
+    {
+        if (!string.Equals(Model.SortField, field, StringComparison.OrdinalIgnoreCase))
+            return "bx-sort-alt-2";
+        return string.Equals(Model.SortDir, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "bx-sort-up"
+            : "bx-sort-down";
+    }
+
+    bool IsTitleLike(FieldDef field) =>
+        field.Name is "name" or "title" or "subject" or "firstName" or "lastName";
+
+    bool IsPickFilter(FieldDef field) =>
+        field.Type is FieldType.Picklist or FieldType.MultiPicklist;
+
+    string DefaultOp(FieldDef field) => IsPickFilter(field) ? "equals" : "contains";
+}
+
+<div class="crm-dt" data-crm-datatable data-module="@Model.Module.Name" data-can-delete="@Model.CanDelete.ToString().ToLowerInvariant()">
+    @* نوار انتخاب گروهی — بالای جدول، جدا از هدر ستون‌ها *@
+    <div class="crm-dt-selectbar" data-crm-dt-selectbar hidden>
+        <div class="crm-dt-selectbar-inner">
+            <span class="crm-dt-selectbar-count">
+                <strong data-count>0</strong> مورد انتخاب شده
+            </span>
+            <div class="crm-dt-selectbar-actions">
+                @if (Model.CanDelete)
+                {
+                    <form id="crmDtBulkDeleteForm" class="crm-dt-bulk-form" method="post"
+                          action="/App/m/@Model.Module.Name/bulk-delete"
+                          data-confirm="رکوردهای انتخاب‌شده به سطل بازیابی منتقل شوند؟">
+                        @Html.AntiForgeryToken()
+                        <div data-bulk-ids></div>
+                        <button type="submit" class="btn btn-sm btn-danger">
+                            <i class="bx bx-trash me-1"></i> حذف انتخاب‌شده‌ها
+                        </button>
+                    </form>
+                }
+                <button type="button" class="btn btn-sm btn-light" data-crm-dt-clear-selection>
+                    لغو انتخاب
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <form id="@filterFormId" method="get" asp-action="Index" asp-route-moduleName="@Model.Module.Name"
+          class="crm-dt-filter-form">
+        @if (!string.IsNullOrWhiteSpace(Model.SortField))
+        {
+            <input type="hidden" name="sort" value="@Model.SortField" />
+            <input type="hidden" name="dir" value="@Model.SortDir" />
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Search))
+        {
+            <input type="hidden" name="q" value="@Model.Search" />
+        }
+    </form>
+
+    @* نوار ابزار فیلتر — جدا از ستون چک‌باکس تا ستون‌ها هم‌تراز بمانند *@
+    <div class="crm-dt-filterbar">
+        <button type="submit" form="@filterFormId" class="crm-dt-search-btn" title="اعمال فیلترها">
+            <i class="bx bx-search"></i>
+            <span>جستجو</span>
+        </button>
+        <a href="/App/customize/@Model.Module.Name" class="crm-dt-gear-btn" title="سفارشی‌سازی">
+            <i class="bx bx-cog"></i>
+        </a>
+        @if (hasActiveFilters)
+        {
+            <a href="/App/m/@Model.Module.Name" class="crm-dt-clear-btn" title="پاک کردن فیلترها">
+                <i class="bx bx-x"></i>
+                <span>پاک کردن</span>
+            </a>
+        }
+    </div>
+
+    <div class="crm-dt-table-wrap">
+        <table class="crm-dt-table">
+            <thead>
+                <tr>
+                    <th class="crm-dt-check">
+                        <input type="checkbox" class="form-check-input crm-dt-check-all" title="انتخاب همه" aria-label="انتخاب همه" />
+                    </th>
+
+                    @foreach (var field in Model.Fields)
+                    {
+                        var active = string.Equals(Model.SortField, field.Name, StringComparison.OrdinalIgnoreCase);
+                        var sortRoutes = Model.SortRouteValues(field.Name);
+                        var op = Model.Filters.FirstOrDefault(f => string.Equals(f.Field, field.Name, StringComparison.OrdinalIgnoreCase))?.Op
+                                 ?? DefaultOp(field);
+                        var val = Model.FilterValue(field.Name) ?? "";
+                        var isPick = IsPickFilter(field);
+                        var ops = isPick ? RecordListViewModel.PicklistFilterOps : RecordListViewModel.FilterOps;
+                        var needsValue = RecordListViewModel.OpNeedsValue(op);
+                        var opLabel = ops.FirstOrDefault(o => o.Op == op).Label ?? op;
+
+                        <th>
+                            <div class="crm-dt-colhead" data-field="@field.Name">
+                                <input type="hidden" form="@filterFormId" name="op_@field.Name" value="@op"
+                                       class="crm-dt-op-hidden" data-field="@field.Name" />
+
+                                <div class="crm-dt-filter-shell @(isPick ? "is-select" : "is-text") @(needsValue ? null : "is-novalue")">
+                                    @if (isPick)
+                                    {
+                                        <select form="@filterFormId"
+                                                name="cf_@field.Name"
+                                                class="crm-dt-filter-select"
+                                                data-field="@field.Name"
+                                                data-placeholder="@field.Label"
+                                                aria-label="@field.Label"
+                                                @(needsValue ? null : "disabled")>
+                                            <option value=""></option>
+                                            @foreach (var pv in field.PicklistValues.OrderBy(p => p.SortOrder).ThenBy(p => p.Label))
+                                            {
+                                                if (val == pv.Value)
+                                                {
+                                                    <option value="@pv.Value" selected>@pv.Label</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@pv.Value">@pv.Label</option>
+                                                }
+                                            }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input form="@filterFormId"
+                                               type="text"
+                                               name="cf_@field.Name"
+                                               value="@val"
+                                               class="crm-dt-filter-input"
+                                               placeholder="@field.Label"
+                                               autocomplete="off"
+                                               aria-label="@field.Label"
+                                               @(needsValue ? null : "disabled") />
+                                    }
+
+                                    <div class="crm-dt-filter-actions">
+                                        <a class="crm-dt-sort @(active ? "is-active" : null)"
+                                           asp-action="Index"
+                                           asp-route-moduleName="@Model.Module.Name"
+                                           asp-all-route-data="sortRoutes"
+                                           title="مرتب‌سازی @field.Label">
+                                            <i class="bx @SortIcon(field.Name)"></i>
+                                        </a>
+
+                                        <button type="button"
+                                                class="crm-dt-op-btn"
+                                                data-crm-op-trigger
+                                                data-field="@field.Name"
+                                                data-op="@op"
+                                                data-ops='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ops.Select(o => new { op = o.Op, label = o.Label })))'
+                                                title="@opLabel"
+                                                aria-haspopup="listbox"
+                                                aria-expanded="false">
+                                            <i class="bx bx-slider-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </th>
+                    }
+
+                    <th class="crm-dt-actions-head"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Records.Count == 0)
+                {
+                    <tr>
+                        <td colspan="@colCount" class="crm-dt-empty">
+                            @(hasActiveFilters ? "با این فیلتر رکوردی پیدا نشد." : "هنوز رکوردی ثبت نشده است.")
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var record in Model.Records)
+                    {
+                        var data = Model.RecordData[record.Id];
+                        <tr data-record-id="@record.Id">
+                            <td class="crm-dt-check">
+                                <input type="checkbox" class="form-check-input crm-dt-row-check" value="@record.Id" aria-label="انتخاب ردیف" />
+                            </td>
+                            @foreach (var field in Model.Fields)
+                            {
+                                var value = data.GetValueOrDefault(field.Name);
+                                <td>
+                                    @if (field.Type == FieldType.Picklist && value is not null)
+                                    {
+                                        var pick = field.PicklistValues.FirstOrDefault(p => p.Value == value);
+                                        var bg = pick?.Color ?? "#69809a";
+                                        <span class="crm-dt-badge" style="--badge-bg:@bg">@(pick?.Label ?? value)</span>
+                                    }
+                                    else if (field.Type == FieldType.Lookup && value is not null)
+                                    {
+                                        var lookupText = Model.LookupTitles.TryGetValue(field.Name, out var titles) && titles.TryGetValue(value, out var title)
+                                            ? title
+                                            : value;
+                                        if (IsTitleLike(field))
+                                        {
+                                            <a class="crm-dt-title-link" href="/App/m/@Model.Module.Name/@record.Id">@lookupText</a>
+                                        }
+                                        else
+                                        {
+                                            @lookupText
+                                        }
+                                    }
+                                    else if (field.Type == FieldType.Checkbox)
+                                    {
+                                        @(value == "true" ? "✓" : "—")
+                                    }
+                                    else if ((field.Type == FieldType.Date || field.Type == FieldType.DateTime)
+                                             && DateTime.TryParse(value, out var dateValue))
+                                    {
+                                        @(field.Type == FieldType.Date
+                                            ? PersianDateHelper.ToJalaliDate(DateTime.SpecifyKind(dateValue, DateTimeKind.Local))
+                                            : PersianDateHelper.ToJalaliDateTime(DateTime.SpecifyKind(dateValue, DateTimeKind.Local)))
+                                    }
+                                    else if (field.Type == FieldType.Email && !string.IsNullOrWhiteSpace(value))
+                                    {
+                                        <a class="crm-dt-soft-link" href="mailto:@value">@value</a>
+                                    }
+                                    else if (field.Type == FieldType.Phone && !string.IsNullOrWhiteSpace(value))
+                                    {
+                                        <a class="crm-dt-soft-link" href="tel:@value" dir="ltr">@value</a>
+                                    }
+                                    else if (field.Type == FieldType.Url && !string.IsNullOrWhiteSpace(value))
+                                    {
+                                        var href = value.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? value : $"https://{value}";
+                                        <a class="crm-dt-soft-link" href="@href" target="_blank" rel="noopener">@value</a>
+                                    }
+                                    else if (IsTitleLike(field) && value is not null)
+                                    {
+                                        <a class="crm-dt-title-link" href="/App/m/@Model.Module.Name/@record.Id">@value</a>
+                                    }
+                                    else
+                                    {
+                                        @(value ?? "—")
+                                    }
+                                </td>
+                            }
+                            <td class="crm-dt-actions">
+                                <div class="crm-dt-action-btns">
+                                    <a href="/App/m/@Model.Module.Name/@record.Id" class="crm-dt-action" title="جزئیات">
+                                        <i class="bx bx-show"></i>
+                                    </a>
+                                    @if (Model.Module.Name == "leads" && Model.CanEdit)
+                                    {
+                                        <form action="/App/m/leads/@record.Id/convert" method="post" class="d-inline" data-confirm="این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="crm-dt-action" title="تبدیل سرنخ">
+                                                <i class="bx bx-transfer-alt"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (Model.CanEdit)
+                                    {
+                                        <a asp-action="Edit" asp-route-moduleName="@Model.Module.Name" asp-route-id="@record.Id"
+                                           class="crm-dt-action" title="ویرایش">
+                                            <i class="bx bx-edit"></i>
+                                        </a>
+                                    }
+                                    @if (Model.CanDelete)
+                                    {
+                                        <form asp-action="Delete" asp-route-moduleName="@Model.Module.Name" asp-route-id="@record.Id"
+                                              method="post" class="d-inline" data-confirm="این رکورد به سطل بازیابی منتقل شود؟">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="crm-dt-action crm-dt-action--danger" title="حذف">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="crm-dt-footer">
+        <partial name="_AppPagination" />
+    </div>
+</div>

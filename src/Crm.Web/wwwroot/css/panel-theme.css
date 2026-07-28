@@ -23,6 +23,13 @@
 
 .panel-skin .content-wrapper {
     background-color: var(--panel-canvas);
+    min-width: 0;
+    max-width: 100%;
+}
+
+.panel-skin .layout-page {
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ===== هدر (Navbar) ===== */

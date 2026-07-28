@@ -34,6 +34,24 @@ public class ModuleDef : TenantEntity
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
 
+    /// <summary>or = هر فیلد Unique جداگانه؛ and = همه فیلدهای Unique با هم یک کلید تکراری</summary>
+    public string DuplicateMatchMode { get; set; } = "or";
+
+    public ICollection<FieldDef> Fields { get; set; } = new List<FieldDef>();
+    public ICollection<FieldBlock> Blocks { get; set; } = new List<FieldBlock>();
+}
+
+/// <summary>بلاک چیدمان فیلدهای یک ماژول (استودیوی سفارشی‌سازی).</summary>
+public class FieldBlock : TenantEntity
+{
+    public int ModuleId { get; set; }
+    public ModuleDef Module { get; set; } = null!;
+    public string Name { get; set; } = string.Empty; // system name
+    public string Label { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public bool IsCollapsed { get; set; }
+    /// <summary>json dependency: { "field":"stage","op":"eq","value":"Closed Won" }</summary>
+    public string? VisibilityRuleJson { get; set; }
     public ICollection<FieldDef> Fields { get; set; } = new List<FieldDef>();
 }
 
@@ -42,6 +60,9 @@ public class FieldDef : TenantEntity
 {
     public int ModuleId { get; set; }
     public ModuleDef Module { get; set; } = null!;
+
+    public int? BlockId { get; set; }
+    public FieldBlock? Block { get; set; }
 
     /// <summary>نام سیستمی؛ برای فیلدهای سفارشی کلید داخل CustomData است.</summary>
     public string Name { get; set; } = string.Empty;
@@ -57,6 +78,10 @@ public class FieldDef : TenantEntity
     public bool IsUniqueCheck { get; set; }
     public int SortOrder { get; set; }
     public string? DefaultValue { get; set; }
+    public int? MaxLength { get; set; }
+    public bool IsVisible { get; set; } = true;
+    /// <summary>json dependency: { "field":"stage","op":"eq","value":"Closed Won" }</summary>
+    public string? VisibilityRuleJson { get; set; }
 
     /// <summary>برای Lookup: نام ماژول مقصد.</summary>
     public string? LookupModule { get; set; }
@@ -83,4 +108,6 @@ public class RelationDef : TenantEntity
     public int TargetModuleId { get; set; }
     public string Label { get; set; } = string.Empty;
     public bool IsManyToMany { get; set; }
+    /// <summary>نام فیلد Lookup روی ماژول مقصد که به مبدأ اشاره می‌کند (برای لیست مرتبط).</summary>
+    public string? LinkFieldName { get; set; }
 }

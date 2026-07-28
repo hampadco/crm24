@@ -114,6 +114,7 @@
                         <option value="counter">شمارنده رکوردها</option>
                         <option value="pie">نمودار دایره‌ای (گروه‌بندی)</option>
                         <option value="bar">نمودار میله‌ای (گروه‌بندی)</option>
+                        <option value="funnel">قیف فروش</option>
                         <option value="monthly">روند ماهانه رکوردها</option>
                     </select>
                 </div>
@@ -154,11 +155,13 @@
         const type = document.getElementById('widgetType').value;
         const moduleId = document.getElementById('widgetModule').value;
         const box = document.getElementById('widgetFieldBox');
-        box.style.display = (type === 'pie' || type === 'bar') ? '' : 'none';
-        if (type === 'pie' || type === 'bar') {
+        const needsField = type === 'pie' || type === 'bar' || type === 'funnel';
+        box.style.display = needsField ? '' : 'none';
+        if (needsField) {
             const fields = picklistFields[moduleId] || [];
+            const preferred = type === 'funnel' ? 'stage' : null;
             document.getElementById('widgetField').innerHTML =
-                fields.map(f => `<option value="${f.name}">${f.label}</option>`).join('');
+                fields.map(f => `<option value="${f.name}"${preferred && f.name === preferred ? ' selected' : ''}>${f.label}</option>`).join('');
         }
     }
     document.getElementById('widgetType').addEventListener('change', refreshWidgetFields);
@@ -219,6 +222,42 @@
                 },
                 grid: { strokeDashArray: 4 }
             }).render();
+        } else if (type === 'funnel') {
+            const funnelOpts = {
+                chart: { type: 'bar', height: 300, toolbar: { show: false }, fontFamily: 'inherit' },
+                series: [{ name: 'تعداد', data: series.map(s => s.value) }],
+                xaxis: { categories: series.map(s => s.label) },
+                colors: chartColors,
+                plotOptions: {
+                    bar: {
+                        borderRadius: 0,
+                        horizontal: true,
+                        distributed: true,
+                        barHeight: '70%',
+                        isFunnel: true
+                    }
+                },
+                legend: { show: false },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val, opt) {
+                        return opt.w.globals.labels[opt.dataPointIndex] + ': ' + val;
+                    },
+                    dropShadow: { enabled: false },
+                    style: { fontSize: '12px', colors: ['#fff'] }
+                },
+                grid: { show: false },
+                yaxis: { labels: { show: false } }
+            };
+            try {
+                const chart = new ApexCharts(el, funnelOpts);
+                chart.render();
+            } catch (e) {
+                delete funnelOpts.plotOptions.bar.isFunnel;
+                funnelOpts.plotOptions.bar.borderRadius = 4;
+                funnelOpts.dataLabels.style.colors = ['#566a7f'];
+                new ApexCharts(el, funnelOpts).render();
+            }
         } else {
             new ApexCharts(el, {
                 chart: { type: 'area', height: 280, toolbar: { show: false }, fontFamily: 'inherit' },

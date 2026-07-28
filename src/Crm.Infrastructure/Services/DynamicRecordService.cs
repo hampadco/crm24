@@ -56,27 +56,305 @@ public class DynamicRecordService
                 engine.ExecuteForRecordAsync(tenantId, moduleId, recordId, trigger));
     }
 
+    public Task<(IReadOnlyList<DynamicRecord> Items, int TotalCount)> ListAsync(
+        int moduleId, string? search, int page, int pageSize, bool includeTotal = true) =>
+        ListAsync(moduleId, new RecordListQuery
+        {
+            Search = search,
+            Page = page,
+            PageSize = pageSize
+        }, includeTotal);
+
     public async Task<(IReadOnlyList<DynamicRecord> Items, int TotalCount)> ListAsync(
-        int moduleId, string? search, int page, int pageSize, bool includeTotal = true)
+        int moduleId, RecordListQuery listQuery, bool includeTotal = true)
     {
+        var page = Math.Max(1, listQuery.Page);
+        var pageSize = Math.Clamp(listQuery.PageSize <= 0 ? 20 : listQuery.PageSize, 1, 10_000);
+        var asc = string.Equals(listQuery.SortDir, "asc", StringComparison.OrdinalIgnoreCase);
+
         var query = _db.Records.AsNoTracking().Where(r => r.ModuleId == moduleId);
         query = await _access.ApplyVisibilityAsync(query, moduleId);
 
-        if (!string.IsNullOrWhiteSpace(search))
+        if (!string.IsNullOrWhiteSpace(listQuery.Search))
         {
-            var term = search.Trim();
+            var term = listQuery.Search.Trim();
             query = query.Where(r => EF.Functions.ILike(r.Title, $"%{term}%"));
         }
 
-        var total = includeTotal ? await query.CountAsync() : 0;
-        var items = await query
-            .OrderByDescending(r => r.Id)
+        var filters = listQuery.Filters
+            .Where(f => IsSafeFieldName(f.Field) && !string.IsNullOrWhiteSpace(f.Value))
+            .ToList();
+
+        if (filters.Count > 0)
+        {
+            var filteredIds = await FilterIdsByColumnsAsync(moduleId, filters);
+            if (filteredIds.Count == 0)
+                return ([], 0);
+            query = query.Where(r => filteredIds.Contains(r.Id));
+        }
+
+        var sortField = listQuery.SortField?.Trim();
+        var useJsonSort = IsSafeFieldName(sortField) && !IsTitleField(sortField!);
+
+        if (useJsonSort)
+        {
+            var matchingIds = await query.Select(r => r.Id).ToListAsync();
+            var total = matchingIds.Count;
+            if (matchingIds.Count == 0)
+                return ([], 0);
+
+            var skip = (page - 1) * pageSize;
+            var idArray = matchingIds.ToArray();
+            var pageIds = asc
+                ? await _db.Database.SqlQuery<IdRow>($"""
+                    SELECT r."Id" AS "Id"
+                    FROM "Records" r
+                    WHERE r."Id" = ANY({idArray})
+                    ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') ASC, r."Id" ASC
+                    OFFSET {skip} LIMIT {pageSize}
+                    """).ToListAsync()
+                : await _db.Database.SqlQuery<IdRow>($"""
+                    SELECT r."Id" AS "Id"
+                    FROM "Records" r
+                    WHERE r."Id" = ANY({idArray})
+                    ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') DESC, r."Id" DESC
+                    OFFSET {skip} LIMIT {pageSize}
+                    """).ToListAsync();
+
+            var orderedIds = pageIds.Select(x => x.Id).ToList();
+            if (orderedIds.Count == 0)
+                return ([], total);
+
+            var map = await _db.Records.AsNoTracking()
+                .Where(r => orderedIds.Contains(r.Id))
+                .ToDictionaryAsync(r => r.Id);
+            var items = orderedIds.Where(map.ContainsKey).Select(id => map[id]).ToList();
+            return (items, total);
+        }
+
+        var totalCount = includeTotal ? await query.CountAsync() : 0;
+
+        IOrderedQueryable<DynamicRecord> ordered;
+        if (string.IsNullOrWhiteSpace(sortField) ||
+            string.Equals(sortField, "id", StringComparison.OrdinalIgnoreCase))
+        {
+            ordered = asc ? query.OrderBy(r => r.Id) : query.OrderByDescending(r => r.Id);
+        }
+        else if (IsTitleField(sortField))
+        {
+            ordered = asc ? query.OrderBy(r => r.Title) : query.OrderByDescending(r => r.Title);
+        }
+        else
+        {
+            ordered = query.OrderByDescending(r => r.Id);
+        }
+
+        var pageItems = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        return (items, total);
+        return (pageItems, totalCount);
     }
+
+    private async Task<HashSet<int>> FilterIdsByColumnsAsync(int moduleId, List<ColumnFilter> filters)
+    {
+        HashSet<int>? current = null;
+        foreach (var filter in filters)
+        {
+            var ids = await ApplyOneColumnFilterAsync(moduleId, filter);
+            if (ids.Count == 0)
+                return [];
+
+            current = current is null
+                ? ids
+                : current.Intersect(ids).ToHashSet();
+
+            if (current.Count == 0)
+                return [];
+        }
+
+        return current ?? [];
+    }
+
+    private async Task<HashSet<int>> ApplyOneColumnFilterAsync(int moduleId, ColumnFilter filter)
+    {
+        var tenantId = _tenant.TenantId;
+        var field = filter.Field.Trim();
+        var value = filter.Value.Trim();
+        var op = NormalizeFilterOp(filter.Op);
+        var isTitle = IsTitleField(field);
+
+        List<IdRow> rows;
+        if (op is "isempty" or "isnotempty")
+        {
+            var wantEmpty = op == "isempty";
+            if (isTitle)
+            {
+                rows = wantEmpty
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(TRIM(r."Title"), '') = ''
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(TRIM(r."Title"), '') <> ''
+                        """).ToListAsync();
+            }
+            else
+            {
+                rows = wantEmpty
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(TRIM(r."CustomData" ->> {field}), '') = ''
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(TRIM(r."CustomData" ->> {field}), '') <> ''
+                        """).ToListAsync();
+            }
+        }
+        else if (op is "equals" or "notequals")
+        {
+            var negate = op == "notequals";
+            if (isTitle)
+            {
+                rows = negate
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND LOWER(COALESCE(r."Title", '')) <> LOWER({value})
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND LOWER(COALESCE(r."Title", '')) = LOWER({value})
+                        """).ToListAsync();
+            }
+            else
+            {
+                rows = negate
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND LOWER(COALESCE(r."CustomData" ->> {field}, '')) <> LOWER({value})
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND LOWER(COALESCE(r."CustomData" ->> {field}, '')) = LOWER({value})
+                        """).ToListAsync();
+            }
+        }
+        else
+        {
+            var escaped = EscapeLike(value);
+            var pattern = op switch
+            {
+                "startswith" => escaped + "%",
+                "endswith" => "%" + escaped,
+                _ => "%" + escaped + "%"
+            };
+            var negateLike = op == "notcontains";
+
+            if (isTitle)
+            {
+                rows = negateLike
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(r."Title", '') NOT ILIKE {pattern} ESCAPE '\'
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND r."Title" ILIKE {pattern} ESCAPE '\'
+                        """).ToListAsync();
+            }
+            else
+            {
+                rows = negateLike
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(r."CustomData" ->> {field}, '') NOT ILIKE {pattern} ESCAPE '\'
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."ModuleId" = {moduleId}
+                          AND r."TenantId" = {tenantId}
+                          AND r."IsDeleted" = FALSE
+                          AND COALESCE(r."CustomData" ->> {field}, '') ILIKE {pattern} ESCAPE '\'
+                        """).ToListAsync();
+            }
+        }
+
+        return rows.Select(r => r.Id).ToHashSet();
+    }
+
+    private static string NormalizeFilterOp(string? op) =>
+        (op ?? "contains").Trim().ToLowerInvariant() switch
+        {
+            "startswith" => "startswith",
+            "endswith" => "endswith",
+            "equals" => "equals",
+            "notequals" => "notequals",
+            "notcontains" => "notcontains",
+            "isempty" => "isempty",
+            "isnotempty" => "isnotempty",
+            _ => "contains"
+        };
+
+    private static bool IsTitleField(string field) =>
+        string.Equals(field, "title", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsSafeFieldName(string? name) =>
+        !string.IsNullOrWhiteSpace(name) &&
+        name.Length <= 64 &&
+        name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
+
+    private static string EscapeLike(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 
     /// <summary>
     /// رکوردهایی که مقدار تاریخِ فیلد jsonb در بازهٔ [from, to] است (برای تقویم).
@@ -342,29 +620,74 @@ public class DynamicRecordService
         return data;
     }
 
-    /// <summary>تشخیص تکراری روی فیلدهای علامت‌خورده با IsUniqueCheck.</summary>
+    /// <summary>تشخیص تکراری روی فیلدهای علامت‌خورده با IsUniqueCheck (حالت or / and).</summary>
     private async Task CheckDuplicatesAsync(
         int moduleId, IReadOnlyList<FieldDef> fields,
         Dictionary<string, string?> data, int? excludeRecordId)
     {
+        var uniqueFields = fields.Where(f => f.IsUniqueCheck).ToList();
+        if (uniqueFields.Count == 0)
+            return;
+
+        var mode = await _db.Modules.AsNoTracking()
+            .Where(m => m.Id == moduleId)
+            .Select(m => m.DuplicateMatchMode)
+            .FirstOrDefaultAsync() ?? "or";
+
         var errors = new Dictionary<string, string>();
 
-        foreach (var field in fields.Where(f => f.IsUniqueCheck))
+        if (string.Equals(mode, "and", StringComparison.OrdinalIgnoreCase))
         {
-            if (!data.TryGetValue(field.Name, out var value) || value is null)
-                continue;
+            var valued = uniqueFields
+                .Select(f => (Field: f, Value: data.TryGetValue(f.Name, out var v) ? v : null))
+                .Where(x => !string.IsNullOrEmpty(x.Value))
+                .ToList();
 
-            // مقایسه مقدار jsonb با عملگر ->> در SQL خام (LINQ روی jsonb ترجمه نمی‌شود)
-            var duplicate = await _db.Records
-                .FromSqlInterpolated($"""
-                    SELECT * FROM "Records"
-                    WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {field.Name} = {value}
-                    """)
-                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                .AnyAsync();
+            // فقط وقتی همه فیلدهای یکتا مقدار دارند، ترکیب را بررسی کن
+            if (valued.Count == uniqueFields.Count && valued.Count > 0)
+            {
+                var sb = new System.Text.StringBuilder("""SELECT * FROM "Records" WHERE "ModuleId" = {0}""");
+                var args = new List<object> { moduleId };
+                var i = 1;
+                foreach (var (field, value) in valued)
+                {
+                    sb.Append($" AND \"CustomData\" ->> {{{i}}} = {{{i + 1}}}");
+                    args.Add(field.Name);
+                    args.Add(value!);
+                    i += 2;
+                }
 
-            if (duplicate)
-                errors[field.Name] = $"رکوردی با همین «{field.Label}» از قبل وجود دارد.";
+                var duplicate = await _db.Records
+                    .FromSqlRaw(sb.ToString(), args.ToArray())
+                    .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
+                    .AnyAsync();
+
+                if (duplicate)
+                {
+                    var first = valued[0].Field;
+                    errors[first.Name] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
+                    errors["_duplicate"] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
+                }
+            }
+        }
+        else
+        {
+            foreach (var field in uniqueFields)
+            {
+                if (!data.TryGetValue(field.Name, out var value) || value is null)
+                    continue;
+
+                var duplicate = await _db.Records
+                    .FromSqlInterpolated($"""
+                        SELECT * FROM "Records"
+                        WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {field.Name} = {value}
+                        """)
+                    .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
+                    .AnyAsync();
+
+                if (duplicate)
+                    errors[field.Name] = $"رکوردی با همین «{field.Label}» از قبل وجود دارد.";
+            }
         }
 
         if (errors.Count > 0)

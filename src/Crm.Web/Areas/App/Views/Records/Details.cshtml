@@ -1,0 +1,442 @@
+@using System.Text.Json
+@using Crm.Core.Entities
+@model Crm.Web.Areas.App.Models.RecordDetailViewModel
+@{
+    ViewData["PanelTitle"] = Model.Module.PluralLabel;
+    string AuditActionLabel(string action) => action switch
+    {
+        "Create" => "ایجاد",
+        "Update" => "بروزرسانی",
+        "Delete" => "حذف",
+        "Restore" => "بازیابی",
+        _ => action
+    };
+
+    string FormatFieldDisplay(FieldDef field)
+    {
+        var text = Model.DisplayValue(field);
+        if (text is null) return "—";
+
+        if ((field.Type is FieldType.Date or FieldType.DateTime)
+            && DateTime.TryParse(Model.Values.GetValueOrDefault(field.Name), out var dt))
+        {
+            return field.Type == FieldType.Date
+                ? PersianDateHelper.ToJalaliDate(DateTime.SpecifyKind(dt, DateTimeKind.Local))
+                : PersianDateHelper.ToJalaliDateTime(DateTime.SpecifyKind(dt, DateTimeKind.Local));
+        }
+
+        return text;
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-record-detail.css" asp-append-version="true" />
+}
+
+<div class="crm-rd">
+    <div class="crm-rd-header">
+        <div>
+            <h4>
+                <i class="bx @Model.Module.Icon text-primary me-1"></i>
+                @Model.Record.Title
+                <span class="badge bg-label-primary align-middle ms-1">@Model.Module.SingularLabel</span>
+            </h4>
+            <div class="crm-rd-meta">
+                ایجاد: @PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)
+                @if (Model.Record.UpdatedAtUtc is DateTime updated)
+                {
+                    <span class="mx-1">·</span>
+                    <span>بروزرسانی: @PersianDateHelper.ToJalaliDateTime(updated)</span>
+                }
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary">
+                <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
+            </a>
+            @if (Model.CanEdit)
+            {
+                <a asp-action="Edit" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
+                   class="btn btn-primary">
+                    <i class="bx bx-edit me-1"></i> ویرایش
+                </a>
+            }
+            @if (Model.CanDelete)
+            {
+                <form asp-action="Delete" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
+                      method="post" class="d-inline" data-confirm="این رکورد به سطل بازیابی منتقل شود؟">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bx bx-trash me-1"></i> حذف
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <partial name="_Alerts" />
+
+    <div class="crm-rd-layout">
+        <div class="crm-rd-main">
+            <section id="summary" class="crm-rd-panel is-active" data-crm-rd-panel="summary">
+                <h5 class="crm-rd-panel-title">خلاصه</h5>
+                <dl class="crm-rd-dl">
+                    <div>
+                        <dt>عنوان</dt>
+                        <dd>@Model.Record.Title</dd>
+                    </div>
+                    @foreach (var field in Model.SummaryFields())
+                    {
+                        <div>
+                            <dt>@field.Label</dt>
+                            <dd>
+                                @{
+                                    var lookupMod = Model.LookupModuleFor(field);
+                                    var lookupId = Model.LookupRecordId(field);
+                                    var display = FormatFieldDisplay(field);
+                                }
+                                @if (lookupMod is not null && lookupId is not null && display != "—")
+                                {
+                                    <a href="/App/m/@lookupMod/@lookupId">@display</a>
+                                }
+                                else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
+                                {
+                                    var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
+                                    <span class="badge rounded-pill" style="background-color:@(pick?.Color ?? "#69809a")">@(pick?.Label ?? pv)</span>
+                                }
+                                else
+                                {
+                                    @display
+                                }
+                            </dd>
+                        </div>
+                    }
+                    <div>
+                        <dt>تاریخ ایجاد</dt>
+                        <dd>@PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)</dd>
+                    </div>
+                    <div>
+                        <dt>آخرین بروزرسانی</dt>
+                        <dd>@(Model.Record.UpdatedAtUtc is DateTime u ? PersianDateHelper.ToJalaliDateTime(u) : "—")</dd>
+                    </div>
+                </dl>
+
+                @if (Model.Relations.Count > 0)
+                {
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-3">ارتباطات مرتبط</h6>
+                        @foreach (var group in Model.Relations)
+                        {
+                            <div class="mb-3">
+                                <div class="small text-muted mb-1">@group.Label</div>
+                                @if (group.Records.Count == 0)
+                                {
+                                    <div class="text-muted small">موردی ثبت نشده است.</div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @foreach (var item in group.Records)
+                                        {
+                                            <a class="badge bg-label-primary text-decoration-none"
+                                               href="/App/m/@item.ModuleName/@item.RecordId">@item.Title</a>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section id="information" class="crm-rd-panel" data-crm-rd-panel="information">
+                <h5 class="crm-rd-panel-title">اطلاعات</h5>
+                @foreach (var (block, groupFields) in Model.GroupedFields())
+                {
+                    <div class="crm-rd-block">
+                        @if (block is not null)
+                        {
+                            <h6>@block.Label</h6>
+                        }
+                        <dl class="crm-rd-dl">
+                            @foreach (var field in groupFields)
+                            {
+                                <div>
+                                    <dt>@field.Label</dt>
+                                    <dd>
+                                        @{
+                                            var lookupMod = Model.LookupModuleFor(field);
+                                            var lookupId = Model.LookupRecordId(field);
+                                            var display = FormatFieldDisplay(field);
+                                        }
+                                        @if (lookupMod is not null && lookupId is not null && display != "—")
+                                        {
+                                            <a href="/App/m/@lookupMod/@lookupId">@display</a>
+                                        }
+                                        else if (field.Type == FieldType.Url && display != "—")
+                                        {
+                                            <a href="@display" target="_blank" rel="noopener">@display</a>
+                                        }
+                                        else if (field.Type == FieldType.Email && display != "—")
+                                        {
+                                            <a href="mailto:@display">@display</a>
+                                        }
+                                        else if (field.Type == FieldType.MultilineText)
+                                        {
+                                            <span style="white-space: pre-wrap">@display</span>
+                                        }
+                                        else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
+                                        {
+                                            var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
+                                            <span class="badge rounded-pill" style="background-color:@(pick?.Color ?? "#69809a")">@(pick?.Label ?? pv)</span>
+                                        }
+                                        else
+                                        {
+                                            @display
+                                        }
+                                    </dd>
+                                </div>
+                            }
+                        </dl>
+                    </div>
+                }
+            </section>
+
+            <section id="updates" class="crm-rd-panel" data-crm-rd-panel="updates">
+                <h5 class="crm-rd-panel-title">بروزرسانی‌ها</h5>
+                @if (Model.AuditLogs.Count == 0)
+                {
+                    <div class="crm-rd-empty">هنوز تغییری ثبت نشده است.</div>
+                }
+                else
+                {
+                    <ul class="crm-rd-timeline">
+                        @foreach (var log in Model.AuditLogs)
+                        {
+                            <li>
+                                <div class="fw-semibold">@AuditActionLabel(log.Action)</div>
+                                <div class="crm-rd-time">@PersianDateHelper.ToJalaliDateTime(log.AtUtc)</div>
+                                @if (!string.IsNullOrWhiteSpace(log.Changes) && log.Changes != "{}")
+                                {
+                                    <div class="small text-muted mt-1" style="word-break: break-word; direction: ltr; text-align: left;">
+                                        @{
+                                            try
+                                            {
+                                                using var doc = JsonDocument.Parse(log.Changes);
+                                                foreach (var prop in doc.RootElement.EnumerateObject().Take(8))
+                                                {
+                                                    if (prop.Value.ValueKind == JsonValueKind.Object
+                                                        && prop.Value.TryGetProperty("old", out var oldEl)
+                                                        && prop.Value.TryGetProperty("new", out var newEl))
+                                                    {
+                                                        <div><code>@prop.Name</code>: @oldEl.ToString() → @newEl.ToString()</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div><code>@prop.Name</code>: @prop.Value.ToString()</div>
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                <span>@log.Changes</span>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section id="notes" class="crm-rd-panel" data-crm-rd-panel="notes">
+                <h5 class="crm-rd-panel-title">یادداشت‌ها</h5>
+                <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/notes" class="mb-4">
+                    @Html.AntiForgeryToken()
+                    <label class="form-label" for="noteText">یادداشت جدید</label>
+                    <textarea id="noteText" name="text" class="form-control" rows="3" maxlength="4000" required
+                              placeholder="متن یادداشت را بنویسید..."></textarea>
+                    <div class="mt-2 text-end">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bx bx-plus me-1"></i> افزودن یادداشت
+                        </button>
+                    </div>
+                </form>
+
+                @if (Model.Notes.Count == 0)
+                {
+                    <div class="crm-rd-empty">یادداشتی ثبت نشده است.</div>
+                }
+                else
+                {
+                    @foreach (var note in Model.Notes)
+                    {
+                        <div class="crm-rd-note">
+                            <div class="crm-rd-note-meta">@PersianDateHelper.ToJalaliDateTime(note.CreatedAtUtc)</div>
+                            <div style="white-space: pre-wrap">@note.Body</div>
+                        </div>
+                    }
+                }
+            </section>
+
+            <section id="activities" class="crm-rd-panel" data-crm-rd-panel="activities">
+                <h5 class="crm-rd-panel-title">فعالیت‌ها</h5>
+                @if (Model.Activities.Count == 0)
+                {
+                    <div class="crm-rd-empty">فعالیت مرتبطی یافت نشد.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>نوع</th>
+                                    <th>عنوان</th>
+                                    <th>فیلد ارتباط</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Activities)
+                                {
+                                    <tr>
+                                        <td><span class="badge bg-label-info">@item.ModuleLabel</span></td>
+                                        <td>
+                                            <a href="/App/m/@item.ModuleName/@item.RecordId">@item.Title</a>
+                                        </td>
+                                        <td class="text-muted small">@(item.FieldLabel ?? "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+
+            <section id="attachments" class="crm-rd-panel" data-crm-rd-panel="attachments">
+                <h5 class="crm-rd-panel-title">پیوست‌ها</h5>
+                @if (Model.Attachments.Count == 0)
+                {
+                    <div class="crm-rd-empty">
+                        <i class="bx bx-paperclip bx-md d-block mb-2"></i>
+                        هنوز پیوستی بارگذاری نشده است.
+                        <div class="small mt-1">آپلود فایل به‌زودی در دسترس قرار می‌گیرد.</div>
+                    </div>
+                }
+                else
+                {
+                    <ul class="list-group list-group-flush">
+                        @foreach (var file in Model.Attachments)
+                        {
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>
+                                    <i class="bx bx-file me-1"></i> @file.FileName
+                                    <span class="text-muted small">(@(file.SizeBytes / 1024) KB)</span>
+                                </span>
+                                <span class="text-muted small">@PersianDateHelper.ToJalaliDate(file.CreatedAtUtc)</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section id="tags" class="crm-rd-panel" data-crm-rd-panel="tags">
+                <h5 class="crm-rd-panel-title">تگ‌ها</h5>
+                @if (Model.Tags.Count == 0)
+                {
+                    <div class="crm-rd-empty">
+                        <i class="bx bx-purchase-tag bx-md d-block mb-2"></i>
+                        تگی به این رکورد متصل نیست.
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        @foreach (var tag in Model.Tags)
+                        {
+                            <span class="crm-rd-tag" style="@(string.IsNullOrWhiteSpace(tag.Color) ? null : $"border-color:{tag.Color}; color:{tag.Color}")">
+                                <i class="bx bx-purchase-tag"></i> @tag.Name
+                            </span>
+                        }
+                    </div>
+                }
+            </section>
+        </div>
+
+        <aside class="crm-rd-sidebar">
+            <nav class="crm-rd-nav nav flex-column" data-crm-rd-nav>
+                <button type="button" class="nav-link active" data-crm-rd-target="summary">
+                    <i class="bx bx-info-circle"></i> خلاصه
+                </button>
+                <button type="button" class="nav-link" data-crm-rd-target="information">
+                    <i class="bx bx-detail"></i> اطلاعات
+                </button>
+                <button type="button" class="nav-link" data-crm-rd-target="updates">
+                    <i class="bx bx-history"></i> بروزرسانی‌ها
+                </button>
+                <button type="button" class="nav-link" data-crm-rd-target="notes">
+                    <i class="bx bx-note"></i> یادداشت‌ها
+                    @if (Model.Notes.Count > 0)
+                    {
+                        <span class="badge bg-label-secondary ms-auto">@Model.Notes.Count</span>
+                    }
+                </button>
+                <button type="button" class="nav-link" data-crm-rd-target="activities">
+                    <i class="bx bx-calendar-check"></i> فعالیت‌ها
+                    @if (Model.Activities.Count > 0)
+                    {
+                        <span class="badge bg-label-secondary ms-auto">@Model.Activities.Count</span>
+                    }
+                </button>
+                <button type="button" class="nav-link" data-crm-rd-target="attachments">
+                    <i class="bx bx-paperclip"></i> پیوست‌ها
+                </button>
+                <button type="button" class="nav-link" data-crm-rd-target="tags">
+                    <i class="bx bx-purchase-tag"></i> تگ‌ها
+                </button>
+            </nav>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    var root = document.querySelector('.crm-rd');
+    if (!root) return;
+
+    var nav = root.querySelector('[data-crm-rd-nav]');
+    var panels = root.querySelectorAll('[data-crm-rd-panel]');
+    if (!nav) return;
+
+    function showPanel(id, pushHash) {
+        panels.forEach(function (p) {
+            p.classList.toggle('is-active', p.getAttribute('data-crm-rd-panel') === id);
+        });
+        nav.querySelectorAll('[data-crm-rd-target]').forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-crm-rd-target') === id);
+        });
+        if (pushHash) {
+            history.replaceState(null, '', '#' + id);
+        }
+        var active = root.querySelector('[data-crm-rd-panel="' + id + '"]');
+        if (active) {
+            active.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    nav.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-crm-rd-target]');
+        if (!btn) return;
+        e.preventDefault();
+        showPanel(btn.getAttribute('data-crm-rd-target'), true);
+    });
+
+    var hash = (location.hash || '').replace(/^#/, '');
+    if (hash && root.querySelector('[data-crm-rd-panel="' + hash + '"]')) {
+        showPanel(hash, false);
+    }
+})();
+</script>
+}

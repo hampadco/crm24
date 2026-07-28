@@ -1,4 +1,5 @@
 @inject Crm.Infrastructure.Services.MetadataService Metadata
+@inject Crm.Core.Abstractions.ITenantContext Tenant
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var currentPath = Context.Request.Path.Value ?? "";
@@ -196,6 +197,15 @@
         </li>
 
         <li class="menu-header small text-uppercase"><span class="menu-header-text">تنظیمات</span></li>
+        @if (Tenant.IsTenantAdmin)
+        {
+            <li class="menu-item @(currentPath.StartsWith("/App/customize") ? "active" : "")">
+                <a href="/App/customize" class="menu-link">
+                    <i class="menu-icon tf-icons bx bx-customize"></i>
+                    <div>سفارشی‌سازی ماژول</div>
+                </a>
+            </li>
+        }
         <li class="menu-item @(currentPath.StartsWith("/App/team-users") ? "active" : "")">
             <a href="/App/team-users" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-group"></i>

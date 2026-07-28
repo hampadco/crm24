@@ -3,6 +3,7 @@ using System;
 using Crm.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Crm.Infrastructure.Migrations
 {
     [DbContext(typeof(CrmDbContext))]
-    partial class CrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260728192708_ModuleStudioFieldBlocks")]
+    partial class ModuleStudioFieldBlocks
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -924,10 +927,6 @@ namespace Crm.Infrastructure.Migrations
 
                     b.Property<int?>("DeletedByUserId")
                         .HasColumnType("integer");
-
-                    b.Property<string>("DuplicateMatchMode")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("Icon")
                         .IsRequired()
@@ -2053,9 +2052,6 @@ namespace Crm.Infrastructure.Migrations
 
                     b.Property<string>("Label")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("LinkFieldName")
                         .HasColumnType("text");
 
                     b.Property<int>("SourceModuleId")

@@ -24,6 +24,7 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
 
     public DbSet<ModuleDef> Modules => Set<ModuleDef>();
     public DbSet<FieldDef> Fields => Set<FieldDef>();
+    public DbSet<FieldBlock> FieldBlocks => Set<FieldBlock>();
     public DbSet<PicklistValue> PicklistValues => Set<PicklistValue>();
     public DbSet<RelationDef> Relations => Set<RelationDef>();
     public DbSet<DynamicRecord> Records => Set<DynamicRecord>();
@@ -130,6 +131,13 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         {
             e.HasIndex(f => new { f.TenantId, f.ModuleId, f.Name }).IsUnique();
             e.HasOne(f => f.Module).WithMany(m => m.Fields).HasForeignKey(f => f.ModuleId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.Block).WithMany(b => b.Fields).HasForeignKey(f => f.BlockId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<FieldBlock>(e =>
+        {
+            e.HasIndex(b => new { b.TenantId, b.ModuleId, b.Name }).IsUnique();
+            e.HasOne(b => b.Module).WithMany(m => m.Blocks).HasForeignKey(b => b.ModuleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<PicklistValue>(e =>

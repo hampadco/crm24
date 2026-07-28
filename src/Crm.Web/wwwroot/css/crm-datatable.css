@@ -1,0 +1,491 @@
+/* CRM DataTable — competitor-style filter grid */
+.crm-list-page {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  min-width: 0;
+}
+
+.crm-dt {
+  --crm-dt-border: #e8eaed;
+  --crm-dt-head-bg: #fff;
+  --crm-dt-row-alt: #fafbfc;
+  --crm-dt-hover: #f5f7ff;
+  --crm-dt-accent: #2f6fed;
+  --crm-dt-accent-soft: rgba(47, 111, 237, 0.1);
+  --crm-dt-muted: #8a94a6;
+  --crm-dt-text: #2d3748;
+  --crm-dt-input-border: #d0d5dd;
+  --crm-dt-selectbar: #1e3a5f;
+  background: #fff;
+  border: 1px solid var(--crm-dt-border);
+  border-radius: 0.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden; /* صفحه اسکرول افقی نگیرد؛ اسکرول فقط داخل table-wrap */
+  display: flex;
+  flex-direction: column;
+}
+
+/* —— selection bar —— */
+.crm-dt-selectbar {
+  flex: 0 0 auto;
+  background: var(--crm-dt-selectbar);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  position: relative;
+  z-index: 5;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.crm-dt-selectbar[hidden] {
+  display: none !important;
+}
+
+.crm-dt-selectbar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.crm-dt-selectbar-count {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.crm-dt-selectbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+.crm-dt-bulk-form {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+}
+
+.crm-dt-selectbar .btn-light {
+  border: 0;
+}
+
+/* —— filter toolbar (search / gear) —— */
+.crm-dt-filterbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--crm-dt-border);
+  background: #fafbfc;
+}
+
+.crm-dt-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--crm-dt-accent);
+  background: var(--crm-dt-accent);
+  color: #fff;
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.crm-dt-search-btn:hover {
+  filter: brightness(1.05);
+  color: #fff;
+}
+
+.crm-dt-gear-btn,
+.crm-dt-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 1.85rem;
+  height: 1.85rem;
+  padding: 0 0.45rem;
+  border-radius: 0.35rem;
+  color: var(--crm-dt-muted);
+  text-decoration: none;
+  border: 1px solid var(--crm-dt-border);
+  background: #fff;
+  font-size: 0.75rem;
+}
+
+.crm-dt-gear-btn:hover,
+.crm-dt-clear-btn:hover {
+  color: var(--crm-dt-accent);
+  border-color: var(--crm-dt-accent);
+}
+
+/* —— table scroll container —— */
+.crm-dt-table-wrap {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.crm-dt-table {
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--crm-dt-text);
+  font-size: 0.875rem;
+  table-layout: auto;
+}
+
+.crm-dt-table thead th {
+  background: var(--crm-dt-head-bg);
+  border-bottom: 1px solid var(--crm-dt-border);
+  vertical-align: middle;
+  padding: 0.45rem 0.4rem;
+  font-weight: 500;
+  min-width: 8.25rem;
+}
+
+.crm-dt-table thead th.crm-dt-check,
+.crm-dt-table tbody td.crm-dt-check {
+  min-width: 2.75rem;
+  width: 2.75rem;
+  max-width: 2.75rem;
+  text-align: center;
+  padding-inline: 0.5rem;
+  position: static; /* بدون sticky تا اسکرول/اورلپ خراب نشود */
+}
+
+.crm-dt-table thead th.crm-dt-actions-head,
+.crm-dt-table tbody td.crm-dt-actions {
+  min-width: 6.5rem;
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* filter shell: input + sort/op icons inside one bordered box */
+.crm-dt-filter-shell {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--crm-dt-input-border);
+  border-radius: 0.35rem;
+  background: #fff;
+  min-height: 2rem;
+  min-width: 7.5rem;
+  overflow: visible; /* منوی عملگر نباید بریده شود */
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.crm-dt-filter-shell:focus-within {
+  border-color: var(--crm-dt-accent);
+  box-shadow: 0 0 0 2px var(--crm-dt-accent-soft);
+}
+
+.crm-dt-filter-shell.is-novalue {
+  background: #f3f4f6;
+}
+
+.crm-dt-filter-input {
+  flex: 1;
+  min-width: 0;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--crm-dt-text);
+  min-height: 1.9rem;
+}
+
+.crm-dt-filter-input::placeholder {
+  color: #9aa3b2;
+  font-weight: 500;
+}
+
+.crm-dt-filter-input:disabled {
+  cursor: not-allowed;
+}
+
+.crm-dt-filter-shell.is-select {
+  padding: 0;
+}
+
+.crm-dt-filter-shell .select2-container {
+  flex: 1;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.crm-dt-filter-shell .select2-container--default .select2-selection--single {
+  border: 0 !important;
+  background: transparent !important;
+  height: 1.9rem;
+  min-height: 1.9rem;
+}
+
+.crm-dt-filter-shell .select2-container--default .select2-selection--single .select2-selection__rendered {
+  padding-right: 0.5rem;
+  padding-left: 0.25rem;
+  line-height: 1.9rem;
+  font-size: 0.75rem;
+  color: var(--crm-dt-text);
+}
+
+.crm-dt-filter-shell .select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 1.9rem;
+  left: 0.15rem;
+}
+
+.crm-dt-filter-shell .select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: #9aa3b2;
+  font-weight: 500;
+}
+
+.crm-dt-filter-actions {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--crm-dt-border);
+  background: #fafbfc;
+  flex-shrink: 0;
+}
+
+.crm-dt-sort,
+.crm-dt-op-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.9rem;
+  border: 0;
+  background: transparent;
+  color: var(--crm-dt-muted);
+  padding: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.crm-dt-sort:hover,
+.crm-dt-op-btn:hover,
+.crm-dt-sort.is-active,
+.crm-dt-op-btn[aria-expanded="true"],
+.crm-dt-op-btn.is-open {
+  color: var(--crm-dt-accent);
+  background: var(--crm-dt-accent-soft);
+}
+
+/* پنل عملگر — روی body تا overflow جدول آن را نبرد */
+.crm-dt-op-panel {
+  position: absolute;
+  z-index: 2000;
+  background: #fff;
+  border: 1px solid #e4e6ea;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+
+.crm-dt-op-panel .crm-dt-op-menu-head {
+  padding: 0.55rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #243044;
+  border-bottom: 1px solid #e4e6ea;
+  background: #fafbfc;
+}
+
+.crm-dt-op-panel .crm-dt-op-menu-search {
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid #e4e6ea;
+}
+
+.crm-dt-op-panel .crm-dt-op-list {
+  max-height: 14rem;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+.crm-dt-op-panel .crm-dt-op-pick {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: right;
+  font-size: 0.8125rem;
+  padding: 0.45rem 0.85rem;
+  color: #2d3748;
+  cursor: pointer;
+}
+
+.crm-dt-op-panel .crm-dt-op-pick:hover {
+  background: rgba(47, 111, 237, 0.08);
+}
+
+.crm-dt-op-panel .crm-dt-op-pick.active {
+  background: #2f6fed;
+  color: #fff;
+}
+
+.crm-dt-op-panel .crm-dt-op-pick.is-hidden {
+  display: none;
+}
+
+/* body */
+.crm-dt-table tbody td {
+  padding: 0.62rem 0.65rem;
+  border-bottom: 1px solid var(--crm-dt-border);
+  vertical-align: middle;
+}
+
+.crm-dt-table tbody tr:nth-child(even) {
+  background: var(--crm-dt-row-alt);
+}
+
+.crm-dt-table tbody tr:hover {
+  background: var(--crm-dt-hover);
+}
+
+.crm-dt-table tbody tr.is-selected {
+  background: var(--crm-dt-accent-soft) !important;
+}
+
+.crm-dt-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.crm-dt-check .form-check-input {
+  margin: 0;
+  cursor: pointer;
+  width: 1.05rem;
+  height: 1.05rem;
+  vertical-align: middle;
+}
+
+.crm-dt-title-link {
+  color: var(--crm-dt-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crm-dt-soft-link {
+  color: var(--crm-dt-accent);
+  text-decoration: none;
+}
+
+.crm-dt-title-link:hover,
+.crm-dt-soft-link:hover {
+  text-decoration: underline;
+}
+
+.crm-dt-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #fff;
+  background: var(--badge-bg, #69809a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crm-dt-empty {
+  text-align: center;
+  color: var(--crm-dt-muted);
+  padding: 2.75rem 1rem !important;
+  background: #fff !important;
+}
+
+.crm-dt-action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.crm-dt-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--crm-dt-muted);
+  border-radius: 0.35rem;
+  padding: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.crm-dt-action:hover {
+  color: var(--crm-dt-accent);
+  background: var(--crm-dt-accent-soft);
+}
+
+.crm-dt-action--danger:hover {
+  color: #d9534f;
+  background: rgba(217, 83, 79, 0.1);
+}
+
+.crm-dt-action .bx {
+  font-size: 1.05rem;
+}
+
+.crm-dt-footer {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.crm-dt-footer .card-footer {
+  border-top: 1px solid var(--crm-dt-border);
+  background: #fff;
+  border-radius: 0;
+}
+
+.crm-list-page-head .crm-view-toggle .btn {
+  min-width: 4.5rem;
+}
+
+/* جلوگیری از پهن شدن layout پنل به‌خاطر جدول */
+.panel-skin .layout-page,
+.panel-skin .content-wrapper {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.panel-skin .content-wrapper > .container-fluid {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
+}
+
+@media (max-width: 768px) {
+  .crm-dt-table thead th {
+    min-width: 7.25rem;
+  }
+
+  .crm-dt-search-btn span,
+  .crm-dt-clear-btn span {
+    display: none;
+  }
+}

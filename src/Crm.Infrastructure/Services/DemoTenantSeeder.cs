@@ -344,7 +344,7 @@ public class DemoTenantSeeder
             ("counter", "contacts", null, $"تعداد {LabelOf("contacts")}"),
             ("counter", "opportunities", null, "فرصت‌های فروش"),
             ("pie", "leads", "status", "قیف وضعیت سرنخ‌ها"),
-            ("pie", "opportunities", "stage", "مراحل فروش"),
+            ("funnel", "opportunities", "stage", "قیف فروش"),
             ("bar", "tasks", "status", "وضعیت وظایف"),
             ("monthly", "leads", null, "روند جذب سرنخ"),
             ("monthly", "opportunities", null, "روند ثبت فرصت")

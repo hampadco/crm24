@@ -165,11 +165,23 @@ public class SalesModuleSeeder
         _db.Modules.Add(module);
         await _db.SaveChangesAsync();
 
+        var mainBlock = new FieldBlock
+        {
+            TenantId = tenantId,
+            ModuleId = module.Id,
+            Name = "main",
+            Label = "اطلاعات اصلی",
+            SortOrder = 1
+        };
+        _db.FieldBlocks.Add(mainBlock);
+        await _db.SaveChangesAsync();
+
         var order = 0;
         var fields = specs.Select(s => new FieldDef
         {
             TenantId = tenantId,
             ModuleId = module.Id,
+            BlockId = mainBlock.Id,
             Name = s.Name,
             Label = s.Label,
             Type = s.Type,

@@ -1,0 +1,691 @@
+@using Crm.Core.Entities
+@{
+    var module = (ModuleDef)ViewBag.Module;
+    var blocks = (IReadOnlyList<FieldBlock>)ViewBag.Blocks;
+    var fields = (IReadOnlyList<FieldDef>)ViewBag.Fields;
+    var tab = (string)ViewBag.Tab;
+    ViewData["PanelTitle"] = $"سفارشی‌سازی — {module.PluralLabel}";
+
+    var allModules = ViewBag.AllModules as IReadOnlyList<ModuleDef> ?? Array.Empty<ModuleDef>();
+    var relations = ViewBag.Relations as IReadOnlyList<RelationDef> ?? Array.Empty<RelationDef>();
+    var moduleMap = allModules.ToDictionary(m => m.Id);
+
+    var ungrouped = fields.Where(f => f.BlockId is null).OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList();
+    var fieldsByBlock = fields.Where(f => f.BlockId is not null)
+        .GroupBy(f => f.BlockId!.Value)
+        .ToDictionary(g => g.Key, g => g.OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList());
+
+    var controllingFields = fields
+        .Where(f => f.Type is FieldType.Picklist or FieldType.Text or FieldType.MultilineText)
+        .OrderBy(f => f.SortOrder)
+        .ToList();
+
+    var lookupFields = ViewBag.LookupFields as IReadOnlyList<FieldDef>
+        ?? fields.Where(f => f.Type == FieldType.Lookup).ToList();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-1">
+            <i class="bx @module.Icon text-primary me-1"></i>
+            سفارشی‌سازی — @module.PluralLabel
+        </h4>
+        <small class="text-muted" dir="ltr">@module.Name</small>
+    </div>
+    <a href="/App/customize" class="btn btn-outline-secondary">
+        <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
+    </a>
+</div>
+
+<partial name="_Alerts" />
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link @(tab == "layout" ? "active" : "")" href="/App/customize/@module.Name?tab=layout">چیدمان</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(tab == "fields" ? "active" : "")" href="/App/customize/@module.Name?tab=fields">فیلدها</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(tab == "relations" ? "active" : "")" href="/App/customize/@module.Name?tab=relations">روابط</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(tab == "duplicates" ? "active" : "")" href="/App/customize/@module.Name?tab=duplicates">تکراری‌ها</a>
+    </li>
+</ul>
+
+@if (tab == "fields")
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">لیست فیلدها</h5>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
+                <i class="bx bx-plus me-1"></i> فیلد جدید
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>برچسب</th>
+                        <th>نام سیستمی</th>
+                        <th>نوع</th>
+                        <th>الزامی</th>
+                        <th>لیست</th>
+                        <th>قابل‌مشاهده</th>
+                        <th>سفارشی</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var field in fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id))
+                    {
+                        <tr>
+                            <td>@field.Label</td>
+                            <td dir="ltr"><code>@field.Name</code></td>
+                            <td>@field.Type</td>
+                            <td>@(field.IsRequired ? "بله" : "—")</td>
+                            <td>@(field.ShowInList ? "بله" : "—")</td>
+                            <td>@(field.IsVisible ? "بله" : "خیر")</td>
+                            <td>@(field.IsCustom ? "بله" : "سیستمی")</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-label-primary"
+                                        data-bs-toggle="modal" data-bs-target="#editFieldModal"
+                                        data-id="@field.Id"
+                                        data-label="@field.Label"
+                                        data-required="@field.IsRequired.ToString().ToLowerInvariant()"
+                                        data-showinlist="@field.ShowInList.ToString().ToLowerInvariant()"
+                                        data-sort="@field.SortOrder"
+                                        data-blockid="@(field.BlockId?.ToString() ?? "")"
+                                        data-maxlength="@(field.MaxLength?.ToString() ?? "")"
+                                        data-visible="@field.IsVisible.ToString().ToLowerInvariant()"
+                                        data-unique="@field.IsUniqueCheck.ToString().ToLowerInvariant()"
+                                        data-default="@(field.DefaultValue ?? "")"
+                                        data-rule="@(field.VisibilityRuleJson ?? "")">
+                                    ویرایش
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else if (tab == "relations")
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">روابط ماژول</h5>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRelationModal">
+                <i class="bx bx-plus me-1"></i> رابطه جدید
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>برچسب</th>
+                        <th>ماژول مقابل</th>
+                        <th>چند-به-چند</th>
+                        <th>فیلد لینک</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (relations.Count == 0)
+                    {
+                        <tr><td colspan="5" class="text-muted text-center py-4">هنوز رابطه‌ای تعریف نشده است.</td></tr>
+                    }
+                    @foreach (var rel in relations)
+                    {
+                        var otherId = rel.SourceModuleId == module.Id ? rel.TargetModuleId : rel.SourceModuleId;
+                        var otherLabel = moduleMap.TryGetValue(otherId, out ModuleDef? other)
+                            ? other.PluralLabel
+                            : $"#{otherId}";
+                        <tr>
+                            <td>@rel.Label</td>
+                            <td>@otherLabel</td>
+                            <td>@(rel.IsManyToMany ? "بله" : "—")</td>
+                            <td dir="ltr"><code>@(rel.LinkFieldName ?? "—")</code></td>
+                            <td class="text-end">
+                                <form method="post" action="/App/customize/@module.Name/relations/@rel.Id/delete" class="d-inline"
+                                      onsubmit="return confirm('رابطه حذف شود؟');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addRelationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="post" action="/App/customize/@module.Name/relations" class="modal-content" id="addRelationForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">رابطه جدید</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-12">
+                        <label class="form-label">ماژول مقصد</label>
+                        <select name="targetModuleId" id="relTargetModule" class="form-select" required>
+                            <option value="">— انتخاب کنید —</option>
+                            @foreach (var m in allModules.Where(m => m.Id != module.Id))
+                            {
+                                <option value="@m.Id">@m.PluralLabel</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">برچسب</label>
+                        <input type="text" name="label" class="form-control" required placeholder="مثلاً فرصت‌های مرتبط" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="isManyToMany" value="true" id="relMany" />
+                            <label class="form-check-label" for="relMany">چند-به-چند</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">فیلد لینک (Lookup)</label>
+                        <select name="linkFieldName" id="relLinkField" class="form-select">
+                            <option value="">— اختیاری —</option>
+                            @foreach (var lf in lookupFields)
+                            {
+                                var ownerLabel = moduleMap.TryGetValue(lf.ModuleId, out ModuleDef? owner)
+                                    ? owner.PluralLabel
+                                    : $"#{lf.ModuleId}";
+                                <option value="@lf.Name" data-module-id="@lf.ModuleId">
+                                    @lf.Label (@lf.Name) — @ownerLabel
+                                </option>
+                            }
+                        </select>
+                        <small class="text-muted">Lookup روی مقصد یا مبدأ که برای لیست مرتبط استفاده می‌شود.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">افزودن</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else if (tab == "duplicates")
+{
+    var mode = string.IsNullOrWhiteSpace(module.DuplicateMatchMode) ? "or" : module.DuplicateMatchMode.ToLowerInvariant();
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">تنظیمات تشخیص تکراری</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-4">
+                فیلدهای علامت‌خورده به‌عنوان معیار یکتایی در ایجاد/ویرایش رکورد بررسی می‌شوند.
+                در حالت <strong>OR</strong> هر فیلد جداگانه تطبیق داده می‌شود؛ در حالت <strong>AND</strong>
+                فقط وقتی همه فیلدهای یکتا با هم روی یک رکورد موجود منطبق باشند، تکراری اعلام می‌شود.
+            </p>
+            <form method="post" action="/App/customize/@module.Name/duplicates">
+                @Html.AntiForgeryToken()
+                <div class="mb-4">
+                    <label class="form-label fw-medium">حالت تطبیق</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" id="modeOr" value="or"
+                               @(mode == "or" ? "checked" : null) />
+                        <label class="form-check-label" for="modeOr">تطبیق با OR (هر فیلد جداگانه)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="mode" id="modeAnd" value="and"
+                               @(mode == "and" ? "checked" : null) />
+                        <label class="form-check-label" for="modeAnd">تطبیق با AND (ترکیب فیلدها)</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium">فیلدهای یکتا</label>
+                    @foreach (var field in fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id))
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="uniqueFieldIds" value="@field.Id"
+                                   id="uniq_@field.Id" @(field.IsUniqueCheck ? "checked" : null) />
+                            <label class="form-check-label" for="uniq_@field.Id">
+                                @field.Label <span class="text-muted" dir="ltr">(@field.Name)</span>
+                            </label>
+                        </div>
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save me-1"></i> ذخیره
+                </button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addBlockModal">
+                <i class="bx bx-plus me-1"></i> بلاک جدید
+            </button>
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
+                <i class="bx bx-plus me-1"></i> فیلد جدید
+            </button>
+        </div>
+        <form method="post" action="/App/customize/@module.Name/layout" id="saveLayoutForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="layoutJson" id="layoutJson" />
+            <button type="submit" class="btn btn-primary" id="btnSaveLayout">
+                <i class="bx bx-save me-1"></i> ذخیره چیدمان
+            </button>
+        </form>
+    </div>
+
+    <div id="studio-layout" class="studio-layout">
+        @foreach (var block in blocks.OrderBy(b => b.SortOrder).ThenBy(b => b.Id))
+        {
+            var blockFields = fieldsByBlock.GetValueOrDefault(block.Id) ?? new List<FieldDef>();
+            <div class="card mb-3 studio-block" data-block-id="@block.Id">
+                <div class="card-header d-flex justify-content-between align-items-center studio-block-handle flex-wrap gap-2">
+                    <strong>@block.Label</strong>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-label-secondary"
+                                data-bs-toggle="modal" data-bs-target="#editBlockRuleModal"
+                                data-id="@block.Id"
+                                data-label="@block.Label"
+                                data-sort="@block.SortOrder"
+                                data-collapsed="@block.IsCollapsed.ToString().ToLowerInvariant()"
+                                data-rule="@(block.VisibilityRuleJson ?? "")">
+                            شرط نمایش
+                        </button>
+                        <form method="post" action="/App/customize/@module.Name/blocks/@block.Id/delete" class="m-0"
+                              onsubmit="return confirm('بلاک حذف شود؟ فیلدها بدون گروه می‌مانند.');">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-label-danger">حذف بلاک</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="studio-fields row g-2" data-block-id="@block.Id">
+                        @foreach (var field in blockFields)
+                        {
+                            <div class="col-md-6 studio-field" data-field-id="@field.Id">
+                                <div class="border rounded p-2 bg-label-secondary d-flex align-items-center gap-2">
+                                    <i class="bx bx-move text-muted"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-medium">@field.Label</div>
+                                        <small class="text-muted" dir="ltr">@field.Name · @field.Type</small>
+                                    </div>
+                                    @if (field.IsRequired)
+                                    {
+                                        <span class="badge bg-label-danger">الزامی</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card mb-3 studio-block" data-block-id="">
+            <div class="card-header">
+                <strong>بدون بلاک</strong>
+                <small class="text-muted ms-2">فیلدهایی که هنوز گروه نشده‌اند</small>
+            </div>
+            <div class="card-body">
+                <div class="studio-fields row g-2" data-block-id="">
+                    @foreach (var field in ungrouped)
+                    {
+                        <div class="col-md-6 studio-field" data-field-id="@field.Id">
+                            <div class="border rounded p-2 bg-label-secondary d-flex align-items-center gap-2">
+                                <i class="bx bx-move text-muted"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium">@field.Label</div>
+                                    <small class="text-muted" dir="ltr">@field.Name · @field.Type</small>
+                                </div>
+                                @if (field.IsRequired)
+                                {
+                                    <span class="badge bg-label-danger">الزامی</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal: add block *@
+<div class="modal fade" id="addBlockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="/App/customize/@module.Name/blocks" class="modal-content">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title">بلاک جدید</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">برچسب</label>
+                <input type="text" name="label" class="form-control" required placeholder="مثلاً اطلاعات تماس" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">افزودن</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Modal: block visibility rule *@
+<div class="modal fade" id="editBlockRuleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" id="editBlockRuleForm" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="label" id="blockRuleLabel" />
+            <input type="hidden" name="sortOrder" id="blockRuleSort" />
+            <input type="hidden" name="isCollapsed" id="blockRuleCollapsed" value="false" />
+            <input type="hidden" name="visibilityRuleJson" id="blockRuleJson" />
+            <div class="modal-header">
+                <h5 class="modal-title">شرط نمایش بلاک</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body row g-3">
+                <div class="col-12">
+                    <label class="form-label">فیلد کنترل‌کننده</label>
+                    <select id="blockDepField" class="form-select">
+                        <option value="">— بدون شرط —</option>
+                        @foreach (var cf in controllingFields)
+                        {
+                            <option value="@cf.Name">@cf.Label</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">عملگر</label>
+                    <select id="blockDepOp" class="form-select">
+                        <option value="eq">برابر (eq)</option>
+                        <option value="neq">نابرابر (neq)</option>
+                        <option value="contains">شامل (contains)</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">مقدار</label>
+                    <input type="text" id="blockDepValue" class="form-control" dir="ltr" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Modal: add field *@
+<div class="modal fade" id="addFieldModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="/App/customize/@module.Name/fields" class="modal-content">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title">فیلد سفارشی جدید</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">نام سیستمی</label>
+                    <input type="text" name="name" class="form-control" dir="ltr" required pattern="[a-z][a-z0-9_]*" placeholder="custom_field" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">برچسب</label>
+                    <input type="text" name="label" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">نوع</label>
+                    <select name="type" class="form-select">
+                        @foreach (FieldType ft in Enum.GetValues(typeof(FieldType)))
+                        {
+                            if (ft == FieldType.Lookup || ft == FieldType.MultiPicklist) { continue; }
+                            <option value="@((int)ft)">@ft</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">بلاک</label>
+                    <select name="blockId" class="form-select">
+                        <option value="">— بدون بلاک —</option>
+                        @foreach (var block in blocks)
+                        {
+                            <option value="@block.Id">@block.Label</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="isRequired" value="true" id="addIsRequired" />
+                        <label class="form-check-label" for="addIsRequired">الزامی</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" name="showInList" value="true" id="addShowInList" checked />
+                        <label class="form-check-label" for="addShowInList">نمایش در لیست</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">افزودن</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Modal: edit field *@
+<div class="modal fade" id="editFieldModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <form method="post" id="editFieldForm" class="modal-content">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="visibilityRuleJson" id="editRule" />
+            <div class="modal-header">
+                <h5 class="modal-title">ویرایش فیلد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">برچسب</label>
+                    <input type="text" name="label" id="editLabel" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ترتیب</label>
+                    <input type="number" name="sortOrder" id="editSort" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">حداکثر طول</label>
+                    <input type="number" name="maxLength" id="editMaxLength" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">بلاک</label>
+                    <select name="blockId" id="editBlockId" class="form-select">
+                        <option value="">— بدون بلاک —</option>
+                        @foreach (var block in blocks)
+                        {
+                            <option value="@block.Id">@block.Label</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">مقدار پیش‌فرض</label>
+                    <input type="text" name="defaultValue" id="editDefault" class="form-control" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">شرط نمایش</label>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <select id="editDepField" class="form-select">
+                                <option value="">— بدون شرط —</option>
+                                @foreach (var cf in controllingFields)
+                                {
+                                    <option value="@cf.Name">@cf.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="editDepOp" class="form-select">
+                                <option value="eq">برابر (eq)</option>
+                                <option value="neq">نابرابر (neq)</option>
+                                <option value="contains">شامل (contains)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" id="editDepValue" class="form-control" dir="ltr" placeholder="مقدار" />
+                        </div>
+                    </div>
+                    <small class="text-muted">مثلاً وقتی مرحله = Closed Won این فیلد نمایش داده شود.</small>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isRequired" value="true" id="editRequired" />
+                        <label class="form-check-label" for="editRequired">الزامی</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="showInList" value="true" id="editShowInList" />
+                        <label class="form-check-label" for="editShowInList">نمایش در لیست</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isVisible" value="true" id="editVisible" />
+                        <label class="form-check-label" for="editVisible">قابل‌مشاهده</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="isUniqueCheck" value="true" id="editUnique" />
+                        <label class="form-check-label" for="editUnique">یکتا</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script>
+        (function () {
+            function parseRule(json) {
+                if (!json) return null;
+                try { return JSON.parse(json); } catch { return null; }
+            }
+            function buildRule(field, op, value) {
+                if (!field) return '';
+                return JSON.stringify({ field: field, op: op || 'eq', value: value || '' });
+            }
+            function applyRuleToUi(rule, fieldEl, opEl, valueEl) {
+                if (rule && rule.field) {
+                    fieldEl.value = rule.field;
+                    opEl.value = rule.op || 'eq';
+                    valueEl.value = rule.value || '';
+                } else {
+                    fieldEl.value = '';
+                    opEl.value = 'eq';
+                    valueEl.value = '';
+                }
+            }
+
+            const containers = document.querySelectorAll('.studio-fields');
+            containers.forEach(function (el) {
+                new Sortable(el, {
+                    group: 'studio-fields',
+                    animation: 150,
+                    draggable: '.studio-field',
+                    handle: '.studio-field'
+                });
+            });
+
+            const form = document.getElementById('saveLayoutForm');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    const layout = [];
+                    document.querySelectorAll('.studio-block').forEach(function (blockEl) {
+                        const raw = blockEl.getAttribute('data-block-id');
+                        const blockId = raw === '' || raw == null ? null : parseInt(raw, 10);
+                        const fieldIds = [];
+                        blockEl.querySelectorAll('.studio-field').forEach(function (fieldEl) {
+                            fieldIds.push(parseInt(fieldEl.getAttribute('data-field-id'), 10));
+                        });
+                        layout.push({ blockId: blockId, fieldIds: fieldIds });
+                    });
+                    document.getElementById('layoutJson').value = JSON.stringify(layout);
+                });
+            }
+
+            const editModal = document.getElementById('editFieldModal');
+            if (editModal) {
+                editModal.addEventListener('show.bs.modal', function (event) {
+                    const btn = event.relatedTarget;
+                    if (!btn) return;
+                    const id = btn.getAttribute('data-id');
+                    document.getElementById('editFieldForm').action = '/App/customize/@module.Name/fields/' + id;
+                    document.getElementById('editLabel').value = btn.getAttribute('data-label') || '';
+                    document.getElementById('editSort').value = btn.getAttribute('data-sort') || '0';
+                    document.getElementById('editMaxLength').value = btn.getAttribute('data-maxlength') || '';
+                    document.getElementById('editBlockId').value = btn.getAttribute('data-blockid') || '';
+                    document.getElementById('editDefault').value = btn.getAttribute('data-default') || '';
+                    document.getElementById('editRequired').checked = btn.getAttribute('data-required') === 'true';
+                    document.getElementById('editShowInList').checked = btn.getAttribute('data-showinlist') === 'true';
+                    document.getElementById('editVisible').checked = btn.getAttribute('data-visible') === 'true';
+                    document.getElementById('editUnique').checked = btn.getAttribute('data-unique') === 'true';
+                    applyRuleToUi(
+                        parseRule(btn.getAttribute('data-rule')),
+                        document.getElementById('editDepField'),
+                        document.getElementById('editDepOp'),
+                        document.getElementById('editDepValue'));
+                });
+
+                document.getElementById('editFieldForm').addEventListener('submit', function () {
+                    document.getElementById('editRule').value = buildRule(
+                        document.getElementById('editDepField').value,
+                        document.getElementById('editDepOp').value,
+                        document.getElementById('editDepValue').value);
+                });
+            }
+
+            const blockRuleModal = document.getElementById('editBlockRuleModal');
+            if (blockRuleModal) {
+                blockRuleModal.addEventListener('show.bs.modal', function (event) {
+                    const btn = event.relatedTarget;
+                    if (!btn) return;
+                    const id = btn.getAttribute('data-id');
+                    document.getElementById('editBlockRuleForm').action = '/App/customize/@module.Name/blocks/' + id;
+                    document.getElementById('blockRuleLabel').value = btn.getAttribute('data-label') || '';
+                    document.getElementById('blockRuleSort').value = btn.getAttribute('data-sort') || '0';
+                    document.getElementById('blockRuleCollapsed').value = btn.getAttribute('data-collapsed') === 'true' ? 'true' : 'false';
+                    applyRuleToUi(
+                        parseRule(btn.getAttribute('data-rule')),
+                        document.getElementById('blockDepField'),
+                        document.getElementById('blockDepOp'),
+                        document.getElementById('blockDepValue'));
+                });
+
+                document.getElementById('editBlockRuleForm').addEventListener('submit', function () {
+                    document.getElementById('blockRuleJson').value = buildRule(
+                        document.getElementById('blockDepField').value,
+                        document.getElementById('blockDepOp').value,
+                        document.getElementById('blockDepValue').value);
+                });
+            }
+        })();
+    </script>
+}
