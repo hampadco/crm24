@@ -19,7 +19,7 @@ public static partial class AppHelpContent
                 new HelpSection
                 {
                     Title = "صفحه لیست تیکت‌ها",
-                    Route = "/App/tickets",
+                    Route = "/App/m/tickets",
                     Body = "لیست تیکت‌ها با موضوع، اولویت، وضعیت (باز، در حال بررسی، پاسخ داده‌شده، بسته) و تاریخ ثبت شمسی.",
                     Steps =
                     [
@@ -74,7 +74,7 @@ public static partial class AppHelpContent
                 new HelpSection
                 {
                     Title = "صفحه لیست قراردادها",
-                    Route = "/App/contracts",
+                    Route = "/App/m/contracts",
                     Body = "لیست قراردادها با مشتری، بازه شمسی، مبلغ و وضعیت.",
                     Steps = ["قرارداد جدید را با دکمه بالای صفحه بسازید.", "قراردادهای نزدیک به انقضا را برای تمدید پیگیری کنید."]
                 },

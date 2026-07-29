@@ -778,7 +778,7 @@ public class RecordsController : AppControllerBase
             if (target is null)
                 continue;
 
-            var (items, _) = await _records.ListAsync(target.Id, search: null, page: 1, pageSize: 100, includeTotal: false);
+            var (items, _) = await _records.ListAsync(target.Id, search: null, page: 1, pageSize: 40, includeTotal: false);
             lookupOptions[field.Name] = items.Select(r => (r.Id, r.Title)).ToList();
         }
 

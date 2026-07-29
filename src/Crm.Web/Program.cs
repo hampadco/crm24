@@ -51,6 +51,7 @@ builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<TenantLifecycleService>();
 builder.Services.AddScoped<TenantQuotaService>();
 builder.Services.AddScoped<SalesModuleSeeder>();
+builder.Services.AddScoped<BusinessModuleSeeder>();
 builder.Services.AddScoped<DemoTenantSeeder>();
 builder.Services.AddScoped<LeadConversionService>();
 builder.Services.AddScoped<FinanceService>();
@@ -206,6 +207,20 @@ if (app.Environment.IsDevelopment())
         });
     }).AllowAnonymous();
 }
+
+app.MapGet("/App/tickets", () => Results.Redirect("/App/m/tickets"));
+app.MapGet("/App/products", () => Results.Redirect("/App/m/products"));
+app.MapGet("/App/campaigns", () => Results.Redirect("/App/m/campaigns"));
+app.MapGet("/App/vendors", () => Results.Redirect("/App/m/vendors"));
+app.MapGet("/App/contracts", () => Results.Redirect("/App/m/contracts"));
+app.MapGet("/App/warranties", () => Results.Redirect("/App/m/warranties"));
+app.MapGet("/App/projects", () => Results.Redirect("/App/m/projects"));
+app.MapGet("/App/leaves", () => Results.Redirect("/App/m/leaves"));
+app.MapGet("/App/commissions", () => Results.Redirect("/App/m/commissions"));
+app.MapGet("/App/purchase-orders", () => Results.Redirect("/App/m/purchase_orders"));
+app.MapGet("/App/finance/quotes", () => Results.Redirect("/App/m/quotes"));
+app.MapGet("/App/finance/orders", () => Results.Redirect("/App/m/sales_orders"));
+app.MapGet("/App/finance/invoices", () => Results.Redirect("/App/m/invoices"));
 
 app.MapControllerRoute(
     name: "articles-detail",

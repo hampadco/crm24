@@ -2,15 +2,18 @@
 @inject Crm.Core.Abstractions.ITenantContext Tenant
 @{
     var currentPath = Context.Request.Path.Value ?? "";
-    var modules = await Metadata.GetActiveModulesAsync();
-    string Mod(string name) => modules.FirstOrDefault(m => m.Name == name)?.PluralLabel ?? name;
-    string? ModIcon(string name) => modules.FirstOrDefault(m => m.Name == name)?.Icon;
-    bool Has(string name) => modules.Any(m => m.Name == name);
+    var modules = (await Metadata.GetActiveModulesAsync())
+        .Where(m => m.ShowInMenu)
+        .OrderBy(m => m.SortOrder)
+        .ThenBy(m => m.Id)
+        .ToList();
 
-    // لینک‌های پویا از ماژول‌های metadata
-    var marketingMods = new[] { "leads" }.Where(Has).ToList();
-    var salesMods = new[] { "contacts", "organizations", "opportunities" }.Where(Has).ToList();
-    var activityMods = new[] { "tasks", "events", "calls" }.Where(Has).ToList();
+    IEnumerable<Crm.Core.Entities.ModuleDef> Group(string g) =>
+        modules.Where(m => string.Equals(m.MenuGroup, g, StringComparison.OrdinalIgnoreCase));
+
+    string ModHref(Crm.Core.Entities.ModuleDef m) => $"/App/m/{m.Name}";
+    bool IsActiveMod(Crm.Core.Entities.ModuleDef m) =>
+        currentPath.StartsWith($"/App/m/{m.Name}", StringComparison.OrdinalIgnoreCase);
 }
 @* منوی کشویی بالای صفحه (جایگزین سایدبار) *@
 <div id="crm-topnav-backdrop" class="crm-topnav-backdrop" hidden></div>
@@ -21,11 +24,10 @@
             <section class="crm-topnav-col">
                 <h3 class="crm-topnav-col-title">بازاریابی</h3>
                 <ul class="crm-topnav-links">
-                    @foreach (var n in marketingMods)
+                    @foreach (var m in Group("marketing"))
                     {
-                        <li><a href="/App/m/@n" class="@(currentPath.StartsWith($"/App/m/{n}") ? "is-active" : "")"><i class="bx @(ModIcon(n) ?? "bx-user-plus")"></i>@Mod(n)</a></li>
+                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
                     }
-                    <li><a href="/App/campaigns" class="@(currentPath.StartsWith("/App/campaigns") ? "is-active" : "")"><i class="bx bx-broadcast"></i>کمپین‌ها</a></li>
                     <li><a href="/App/webforms" class="@(currentPath.StartsWith("/App/webforms") ? "is-active" : "")"><i class="bx bx-layout"></i>وب‌فرم‌ها</a></li>
                     <li><a href="/App/surveys" class="@(currentPath.StartsWith("/App/surveys") ? "is-active" : "")"><i class="bx bx-poll"></i>نظرسنجی‌ها</a></li>
                     <li><a href="/App/templates" class="@(currentPath.StartsWith("/App/templates") ? "is-active" : "")"><i class="bx bx-message-square-detail"></i>قالب‌های پیام</a></li>
@@ -35,14 +37,10 @@
             <section class="crm-topnav-col">
                 <h3 class="crm-topnav-col-title">فروش</h3>
                 <ul class="crm-topnav-links">
-                    @foreach (var n in salesMods)
+                    @foreach (var m in Group("sales"))
                     {
-                        <li><a href="/App/m/@n" class="@(currentPath.StartsWith($"/App/m/{n}") ? "is-active" : "")"><i class="bx @(ModIcon(n) ?? "bx-group")"></i>@Mod(n)</a></li>
+                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
                     }
-                    <li><a href="/App/finance/quotes" class="@(currentPath.StartsWith("/App/finance/quotes") ? "is-active" : "")"><i class="bx bx-file"></i>پیش‌فاکتورها</a></li>
-                    <li><a href="/App/finance/orders" class="@(currentPath.StartsWith("/App/finance/orders") ? "is-active" : "")"><i class="bx bx-cart"></i>سفارش‌های فروش</a></li>
-                    <li><a href="/App/finance/invoices" class="@(currentPath.StartsWith("/App/finance/invoices") ? "is-active" : "")"><i class="bx bx-receipt"></i>فاکتورها</a></li>
-                    <li><a href="/App/commissions" class="@(currentPath.StartsWith("/App/commissions") ? "is-active" : "")"><i class="bx bx-gift"></i>پورسانت</a></li>
                     <li><a href="/App/kanban/opportunities" class="@(currentPath.StartsWith("/App/kanban") ? "is-active" : "")"><i class="bx bx-columns"></i>کاریز فروش</a></li>
                 </ul>
             </section>
@@ -50,13 +48,10 @@
             <section class="crm-topnav-col">
                 <h3 class="crm-topnav-col-title">پشتیبانی</h3>
                 <ul class="crm-topnav-links">
-                    @if (Has("calls"))
+                    @foreach (var m in Group("support"))
                     {
-                        <li><a href="/App/m/calls" class="@(currentPath.StartsWith("/App/m/calls") ? "is-active" : "")"><i class="bx @(ModIcon("calls") ?? "bx-phone-call")"></i>@Mod("calls")</a></li>
+                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
                     }
-                    <li><a href="/App/tickets" class="@(currentPath.StartsWith("/App/tickets") ? "is-active" : "")"><i class="bx bx-support"></i>تیکت‌ها</a></li>
-                    <li><a href="/App/contracts" class="@(currentPath.StartsWith("/App/contracts") ? "is-active" : "")"><i class="bx bx-file-blank"></i>قراردادهای خدمات</a></li>
-                    <li><a href="/App/warranties" class="@(currentPath.StartsWith("/App/warranties") ? "is-active" : "")"><i class="bx bx-shield-quarter"></i>گارانتی‌ها</a></li>
                     <li><a href="/App/kb" class="@(currentPath.StartsWith("/App/kb") ? "is-active" : "")"><i class="bx bx-book-open"></i>پایگاه دانش</a></li>
                     <li><a href="/App/portal-users" class="@(currentPath.StartsWith("/App/portal-users") ? "is-active" : "")"><i class="bx bx-user-circle"></i>کاربران پورتال</a></li>
                 </ul>
@@ -65,23 +60,26 @@
             <section class="crm-topnav-col">
                 <h3 class="crm-topnav-col-title">موجودی و خرید</h3>
                 <ul class="crm-topnav-links">
-                    <li><a href="/App/products" class="@(currentPath.StartsWith("/App/products") ? "is-active" : "")"><i class="bx bx-package"></i>محصولات و انبار</a></li>
-                    <li><a href="/App/vendors" class="@(currentPath.StartsWith("/App/vendors") ? "is-active" : "")"><i class="bx bx-store"></i>تأمین‌کنندگان</a></li>
-                    <li><a href="/App/purchase-orders" class="@(currentPath.StartsWith("/App/purchase-orders") ? "is-active" : "")"><i class="bx bx-cart-download"></i>سفارش‌های خرید</a></li>
+                    @foreach (var m in Group("inventory"))
+                    {
+                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
+                    }
                 </ul>
                 <h3 class="crm-topnav-col-title mt-3">پروژه‌ها و منابع انسانی</h3>
                 <ul class="crm-topnav-links">
-                    <li><a href="/App/projects" class="@(currentPath.StartsWith("/App/projects") ? "is-active" : "")"><i class="bx bx-briefcase-alt-2"></i>پروژه‌ها</a></li>
-                    <li><a href="/App/leaves" class="@(currentPath.StartsWith("/App/leaves") ? "is-active" : "")"><i class="bx bx-calendar-minus"></i>مرخصی و مأموریت</a></li>
+                    @foreach (var m in Group("projects"))
+                    {
+                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
+                    }
                 </ul>
             </section>
 
             <section class="crm-topnav-col">
                 <h3 class="crm-topnav-col-title">ابزارها</h3>
                 <ul class="crm-topnav-links">
-                    @foreach (var n in activityMods.Where(x => x != "calls"))
+                    @foreach (var m in Group("tools"))
                     {
-                        <li><a href="/App/m/@n" class="@(currentPath.StartsWith($"/App/m/{n}") ? "is-active" : "")"><i class="bx @(ModIcon(n) ?? "bx-task")"></i>@Mod(n)</a></li>
+                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
                     }
                     <li><a href="/App/calendar" class="@(currentPath.StartsWith("/App/calendar") ? "is-active" : "")"><i class="bx bx-calendar"></i>تقویم</a></li>
                     <li><a href="/App/workflows" class="@(currentPath.StartsWith("/App/workflows") ? "is-active" : "")"><i class="bx bx-git-branch"></i>گردش‌کار</a></li>

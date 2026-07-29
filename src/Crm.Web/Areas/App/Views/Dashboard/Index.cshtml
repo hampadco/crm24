@@ -54,15 +54,19 @@
                                 <span class="avatar-initial rounded bg-label-primary"><i class="bx @(widget.Module?.Icon ?? "bx-cube")"></i></span>
                             </div>
                             <div>
-                                <h3 class="mb-0">@widget.CounterValue.ToString("N0")</h3>
+                                <h3 class="mb-0" data-widget-counter="@widget.Widget.Id">@widget.CounterValue.ToString("N0")</h3>
                                 <small class="text-muted">@widget.Module?.PluralLabel</small>
                             </div>
                         </div>
                     }
                     else
                     {
-                        <div class="widget-chart" data-type="@widget.Widget.Type"
-                             data-series="@System.Text.Json.JsonSerializer.Serialize(widget.Series.Select(s => new { label = s.Label, value = s.Value }))"></div>
+                        <div class="widget-chart" data-widget-id="@widget.Widget.Id" data-type="@widget.Widget.Type">
+                            <div class="d-flex align-items-center justify-content-center text-muted py-5">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                در حال بارگذاری…
+                            </div>
+                        </div>
                     }
                 </div>
             </div>
@@ -147,8 +151,8 @@
 @section Scripts {
 <script src="~/panel-assets/vendor/libs/apex-charts/apexcharts.js"></script>
 <script>
-    const picklistFields = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        Model.PicklistFields.ToDictionary(kv => kv.Key, kv => kv.Value.Select(f => new { name = f.Name, label = f.Label }))));
+    let picklistFields = {};
+    let picklistLoaded = false;
     const chartColors = ['#696cff', '#03c3ec', '#71dd37', '#ffab00', '#ff3e1d', '#8592a3', '#28c76f', '#00cfe8', '#a8aaae', '#ff9f43'];
 
     function refreshWidgetFields() {
@@ -164,13 +168,28 @@
                 fields.map(f => `<option value="${f.name}"${preferred && f.name === preferred ? ' selected' : ''}>${f.label}</option>`).join('');
         }
     }
+
+    async function ensurePicklistFields() {
+        if (picklistLoaded) return;
+        try {
+            const res = await fetch('/App/dashboard/picklist-fields');
+            picklistFields = await res.json();
+            picklistLoaded = true;
+            refreshWidgetFields();
+        } catch (_) { /* ignore */ }
+    }
+
     document.getElementById('widgetType').addEventListener('change', refreshWidgetFields);
     document.getElementById('widgetModule').addEventListener('change', refreshWidgetFields);
+    document.getElementById('widgetModal')?.addEventListener('show.bs.modal', ensurePicklistFields);
     refreshWidgetFields();
 
-    document.querySelectorAll('.widget-chart').forEach(el => {
-        const series = JSON.parse(el.dataset.series);
-        const type = el.dataset.type;
+    function renderChart(el, type, series) {
+        el.innerHTML = '';
+        if (!series || !series.length) {
+            el.innerHTML = '<div class="text-muted text-center py-5">داده‌ای نیست</div>';
+            return;
+        }
         if (type === 'pie') {
             new ApexCharts(el, {
                 chart: { type: 'donut', height: 280, fontFamily: 'inherit' },
@@ -250,8 +269,7 @@
                 yaxis: { labels: { show: false } }
             };
             try {
-                const chart = new ApexCharts(el, funnelOpts);
-                chart.render();
+                new ApexCharts(el, funnelOpts).render();
             } catch (e) {
                 delete funnelOpts.plotOptions.bar.isFunnel;
                 funnelOpts.plotOptions.bar.borderRadius = 4;
@@ -274,6 +292,30 @@
                 grid: { strokeDashArray: 4 }
             }).render();
         }
-    });
+    }
+
+    @if (Model.DeferWidgets && Model.Widgets.Any(w => w.Widget.Type != "counter"))
+    {
+        <text>
+    fetch('/App/dashboard/widgets-data')
+        .then(r => r.json())
+        .then(items => {
+            items.forEach(item => {
+                if (item.type === 'counter') {
+                    const el = document.querySelector(`[data-widget-counter="${item.id}"]`);
+                    if (el) el.textContent = Number(item.counter || 0).toLocaleString('en-US');
+                    return;
+                }
+                const chartEl = document.querySelector(`.widget-chart[data-widget-id="${item.id}"]`);
+                if (chartEl) renderChart(chartEl, item.type, item.series || []);
+            });
+        })
+        .catch(() => {
+            document.querySelectorAll('.widget-chart').forEach(el => {
+                el.innerHTML = '<div class="text-muted text-center py-5">خطا در بارگذاری</div>';
+            });
+        });
+        </text>
+    }
 </script>
 }

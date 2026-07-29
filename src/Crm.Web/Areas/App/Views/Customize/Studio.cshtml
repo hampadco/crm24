@@ -1,4 +1,6 @@
 @using Crm.Core.Entities
+@using Crm.Web.Services
+@using System.Text.Json
 @{
     var module = (ModuleDef)ViewBag.Module;
     var blocks = (IReadOnlyList<FieldBlock>)ViewBag.Blocks;
@@ -242,139 +244,562 @@
 }
 else if (tab == "duplicates")
 {
+    var enabled = module.DuplicateCheckEnabled;
     var mode = string.IsNullOrWhiteSpace(module.DuplicateMatchMode) ? "or" : module.DuplicateMatchMode.ToLowerInvariant();
-    <div class="crm-studio-panel">
-        <div class="crm-studio-panel-header">
-            <h5>مدیریت تکرار رکوردها</h5>
+    var ignoreEmpty = module.DuplicateIgnoreEmpty;
+    var syncPolicy = string.IsNullOrWhiteSpace(module.DuplicateSyncPolicy) ? "latest" : module.DuplicateSyncPolicy.ToLowerInvariant();
+    var globalEnabled = module.GlobalDuplicateEnabled;
+    var uniqueFields = fields.Where(f => f.IsUniqueCheck).OrderBy(f => f.SortOrder).ThenBy(f => f.Id).Take(3).ToList();
+    var globalFields = fields.Where(f => f.IsGlobalUniqueCheck && f.Type == FieldType.Phone).OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList();
+    var phoneFields = fields.Where(f => f.Type == FieldType.Phone).OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList();
+    var orderedFields = fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList();
+
+    string DupTypeFa(FieldType t) => t switch
+    {
+        FieldType.Phone => "شماره تماس",
+        FieldType.Email => "ایمیل",
+        _ => FieldTypeFa(t)
+    };
+
+    var cardTints = new[] { "tint-sky", "tint-peach", "tint-mint", "tint-lavender", "tint-sand" };
+    <form method="post" action="/App/customize/@module.Name/duplicates" id="dupForm" class="crm-dup-wizard" data-dup-wizard>
+        @Html.AntiForgeryToken()
+
+        <div class="crm-dup-intro">
+            مدیریت تکرار، تنها رکوردهای جدیدی که توسط کاربر یا نرم‌افزارهای متصل ثبت می‌شوند را بررسی می‌کند
+            و از ایجاد رکورد تکراری جلوگیری می‌کند.
         </div>
-        <div class="crm-studio-panel-body">
-            <p class="text-muted small mb-4">
-                فیلدهای علامت‌خورده به‌عنوان معیار یکتایی در ایجاد/ویرایش رکورد بررسی می‌شوند.
-                در حالت <strong>OR</strong> هر فیلد جداگانه تطبیق داده می‌شود؛ در حالت <strong>AND</strong>
-                فقط وقتی همه فیلدهای یکتا با هم روی یک رکورد موجود منطبق باشند، تکراری اعلام می‌شود.
-            </p>
-            <form method="post" action="/App/customize/@module.Name/duplicates">
-                @Html.AntiForgeryToken()
-                <div class="mb-4">
-                    <label class="form-label fw-medium">حالت تطبیق</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="mode" id="modeOr" value="or"
-                               @(mode == "or" ? "checked" : null) />
-                        <label class="form-check-label" for="modeOr">تطبیق با OR (هر فیلد جداگانه)</label>
+
+        <div class="crm-dup-master">
+            <label class="crm-dup-switch">
+                <input type="checkbox" name="enabled" value="true" data-dup-enabled @(enabled ? "checked" : null) />
+                <span class="crm-dup-switch-ui" aria-hidden="true"></span>
+                <span class="crm-dup-switch-label">فعال کردن بررسی رکوردهای تکراری</span>
+            </label>
+        </div>
+
+        <div class="crm-dup-steps @(enabled ? null : "is-disabled")" data-dup-steps>
+            @* ── Step 1: field selection ── *@
+            <section class="crm-dup-step">
+                <aside class="crm-dup-step-rail">
+                    <span class="crm-dup-step-num">۱</span>
+                    <span class="crm-dup-step-title">انتخاب فیلد</span>
+                </aside>
+                <div class="crm-dup-step-body">
+                    <p class="crm-dup-step-lead">
+                        برای بررسی رکوردهای تکراری، فیلد یکتایی انتخاب کنید
+                        <span class="text-muted">(حداکثر ۳ فیلد)</span>
+                    </p>
+
+                    <div class="crm-dup-cards" data-dup-unique-cards data-max="3">
+                        @if (uniqueFields.Count == 0)
+                        {
+                            <div class="crm-dup-empty" data-dup-unique-empty>هنوز فیلد یکتایی انتخاب نشده است.</div>
+                        }
+                        @for (var i = 0; i < uniqueFields.Count; i++)
+                        {
+                            var field = uniqueFields[i];
+                            <div class="crm-dup-card @cardTints[i % cardTints.Length]" data-dup-card data-field-id="@field.Id">
+                                <input type="hidden" name="uniqueFieldIds" value="@field.Id" />
+                                <div class="crm-dup-card-main">
+                                    <span class="crm-dup-card-key"><i class="bx bx-key"></i></span>
+                                    <div class="crm-dup-card-text">
+                                        <strong>@field.Label</strong>
+                                        <span class="crm-dup-card-type">(@DupTypeFa(field.Type))</span>
+                                    </div>
+                                </div>
+                                <div class="crm-dup-card-actions">
+                                    <span class="crm-dup-card-handle" title="جابجایی"><i class="bx bx-grid-alt"></i></span>
+                                    <div class="dropdown">
+                                        <button type="button" class="crm-dup-card-edit dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bx bx-edit-alt"></i><span>ویرایش</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger" data-dup-unique-remove>
+                                                    <i class="bx bx-trash me-1"></i> حذف از معیار تکرار
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="mode" id="modeAnd" value="and"
-                               @(mode == "and" ? "checked" : null) />
-                        <label class="form-check-label" for="modeAnd">تطبیق با AND (ترکیب فیلدها)</label>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-medium">فیلدهای یکتا</label>
-                    @foreach (var field in fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id))
-                    {
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="uniqueFieldIds" value="@field.Id"
-                                   id="uniq_@field.Id" @(field.IsUniqueCheck ? "checked" : null) />
-                            <label class="form-check-label" for="uniq_@field.Id">
-                                @field.Label <span class="text-muted" dir="ltr">(@field.Name)</span>
-                            </label>
+
+                    <div class="crm-dup-picker">
+                        <label class="crm-dup-picker-label" for="dupUniqueSelect">افزودن فیلد یکتا</label>
+                        <div class="crm-dup-picker-row">
+                            <select id="dupUniqueSelect" class="form-select" data-dup-unique-select>
+                                <option value="">انتخاب فیلد…</option>
+                                @foreach (var field in orderedFields)
+                                {
+                                    var taken = field.IsUniqueCheck;
+                                    if (taken)
+                                    {
+                                        <option value="@field.Id" data-label="@field.Label" data-type="@DupTypeFa(field.Type)" disabled>@field.Label</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@field.Id" data-label="@field.Label" data-type="@DupTypeFa(field.Type)">@field.Label</option>
+                                    }
+                                }
+                            </select>
+                            <button type="button" class="btn btn-studio-outline" data-dup-unique-add disabled>
+                                <i class="bx bx-plus me-1"></i> افزودن
+                            </button>
                         </div>
-                    }
+                    </div>
+
+                    <label class="crm-dup-check">
+                        <input type="checkbox" name="ignoreEmpty" value="true" @(ignoreEmpty ? "checked" : null) />
+                        <span>
+                            <strong>نادیده گرفتن مقادیر خالی</strong>
+                            <small>هنگام بررسی موارد تکراری، مقادیر یکتای خالی را نادیده می‌گیرد</small>
+                        </span>
+                    </label>
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bx bx-save me-1"></i> ذخیره
-                </button>
-            </form>
+            </section>
+
+            @* ── Step 2: match condition ── *@
+            <section class="crm-dup-step">
+                <aside class="crm-dup-step-rail">
+                    <span class="crm-dup-step-num">۲</span>
+                    <span class="crm-dup-step-title">شرط تکراری بودن</span>
+                </aside>
+                <div class="crm-dup-step-body">
+                    <div class="crm-dup-radio-stack" role="radiogroup">
+                        <label class="crm-dup-radio">
+                            <input type="radio" name="mode" value="and" @(mode == "and" ? "checked" : null) />
+                            <span>
+                                <strong>فقط در صورتی تکراری در نظر گرفته شود که همه فیلدهای یکتا مطابقت داشته باشند</strong>
+                                <small>حالت AND — ترکیب همه فیلدها باید یکی باشد</small>
+                            </span>
+                        </label>
+                        <label class="crm-dup-radio">
+                            <input type="radio" name="mode" value="or" @(mode != "and" ? "checked" : null) />
+                            <span>
+                                <strong>اگر حداقل یکی از فیلدهای یکتا مطابقت داشته باشد، تکراری در نظر گرفته شود</strong>
+                                <small>حالت OR — هر فیلد جداگانه بررسی می‌شود</small>
+                            </span>
+                        </label>
+                    </div>
+                    <p class="crm-dup-note mb-0">
+                        <i class="bx bx-info-circle"></i>
+                        عملیات ذخیره با این گزینه‌ها ممکن است در ماژول‌های پرترافیک کمی کندتر شود؛ فقط فیلدهای ضروری را انتخاب کنید.
+                    </p>
+                </div>
+            </section>
+
+            @* ── Step 3: sync conflict policy ── *@
+            <section class="crm-dup-step">
+                <aside class="crm-dup-step-rail">
+                    <span class="crm-dup-step-num">۳</span>
+                    <span class="crm-dup-step-title">نوع مدیریت تکرار</span>
+                </aside>
+                <div class="crm-dup-step-body">
+                    <p class="crm-dup-step-lead">روش برخورد با رکورد تکراری هنگام همگام‌سازی با اپلیکیشن خارجی</p>
+                    <div class="crm-dup-radio-stack" role="radiogroup">
+                        <label class="crm-dup-radio">
+                            <input type="radio" name="syncPolicy" value="latest" @(syncPolicy == "latest" ? "checked" : null) />
+                            <span>
+                                <strong>ترجیح آخرین رکورد</strong>
+                                <small>رکوردی که اخیراً به‌روزرسانی شده است ترجیح داده می‌شود</small>
+                            </span>
+                        </label>
+                        <label class="crm-dup-radio">
+                            <input type="radio" name="syncPolicy" value="internal" @(syncPolicy == "internal" ? "checked" : null) />
+                            <span>
+                                <strong>ترجیح رکورد داخلی</strong>
+                                <small>رکورد داخلی بدون تغییر حفظ می‌شود</small>
+                            </span>
+                        </label>
+                        <label class="crm-dup-radio">
+                            <input type="radio" name="syncPolicy" value="external" @(syncPolicy == "external" ? "checked" : null) />
+                            <span>
+                                <strong>ترجیح رکورد خارجی</strong>
+                                <small>دادهٔ ورودی از اپلیکیشن خارجی جایگزین می‌شود</small>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            @* ── Step 4: global phone detection ── *@
+            <section class="crm-dup-step">
+                <aside class="crm-dup-step-rail">
+                    <span class="crm-dup-step-num">۴</span>
+                    <span class="crm-dup-step-title">تشخیص تکراری سراسری</span>
+                </aside>
+                <div class="crm-dup-step-body">
+                    <div class="crm-dup-banner mb-3">
+                        <div class="crm-dup-banner-icon"><i class="bx bx-info-circle"></i></div>
+                        <p class="mb-0">
+                            با فعال‌سازی این قابلیت، سیستم هنگام ثبت هر رکورد جدید، مقدار فیلدهای انتخاب‌شده را
+                            در <strong>تمام ماژول‌ها</strong> بررسی می‌کند تا از ایجاد رکوردهای تکراری در سطح کل CRM جلوگیری شود.
+                        </p>
+                    </div>
+
+                    <label class="crm-dup-switch mb-3">
+                        <input type="checkbox" name="globalEnabled" value="true" data-dup-global-enabled @(globalEnabled ? "checked" : null) />
+                        <span class="crm-dup-switch-ui" aria-hidden="true"></span>
+                        <span class="crm-dup-switch-label">فعال‌سازی تشخیص تکراری سراسری</span>
+                    </label>
+
+                    <div class="crm-dup-global-body @(globalEnabled ? null : "is-disabled")" data-dup-global-body>
+                        <div class="crm-dup-cards" data-dup-global-cards>
+                            @if (globalFields.Count == 0)
+                            {
+                                <div class="crm-dup-empty" data-dup-global-empty>فیلد شماره تماسی برای تشخیص سراسری انتخاب نشده است.</div>
+                            }
+                            @for (var i = 0; i < globalFields.Count; i++)
+                            {
+                                var field = globalFields[i];
+                                <div class="crm-dup-card @cardTints[i % cardTints.Length]" data-dup-card data-field-id="@field.Id">
+                                    <input type="hidden" name="globalFieldIds" value="@field.Id" />
+                                    <div class="crm-dup-card-main">
+                                        <span class="crm-dup-card-key"><i class="bx bx-key"></i></span>
+                                        <div class="crm-dup-card-text">
+                                            <strong>@field.Label</strong>
+                                            <span class="crm-dup-card-type">(شماره تماس)</span>
+                                        </div>
+                                    </div>
+                                    <div class="crm-dup-card-actions">
+                                        <span class="crm-dup-card-handle" title="جابجایی"><i class="bx bx-grid-alt"></i></span>
+                                        <div class="dropdown">
+                                            <button type="button" class="crm-dup-card-edit dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bx bx-edit-alt"></i><span>ویرایش</span>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                <li>
+                                                    <button type="button" class="dropdown-item text-danger" data-dup-global-remove>
+                                                        <i class="bx bx-trash me-1"></i> حذف از تشخیص سراسری
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="crm-dup-picker">
+                            <label class="crm-dup-picker-label" for="dupGlobalSelect">انتخاب فیلد تلفن</label>
+                            <div class="crm-dup-picker-row">
+                                <select id="dupGlobalSelect" class="form-select" data-dup-global-select>
+                                    <option value="">انتخاب فیلد تلفن…</option>
+                                    @foreach (var field in phoneFields)
+                                    {
+                                        if (field.IsGlobalUniqueCheck)
+                                        {
+                                            <option value="@field.Id" data-label="@field.Label" data-type="شماره تماس" disabled>@field.Label</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@field.Id" data-label="@field.Label" data-type="شماره تماس">@field.Label</option>
+                                        }
+                                    }
+                                </select>
+                                <button type="button" class="btn btn-studio-outline" data-dup-global-add disabled>
+                                    <i class="bx bx-plus me-1"></i> افزودن
+                                </button>
+                            </div>
+                            @if (phoneFields.Count == 0)
+                            {
+                                <p class="text-muted small mb-0 mt-2">در این ماژول فیلد تلفن تعریف نشده است.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
-    </div>
+
+        <div class="crm-dup-footer">
+            <button type="submit" class="btn btn-studio-primary">
+                <i class="bx bx-save me-1"></i> ذخیره تنظیمات تکرار
+            </button>
+        </div>
+    </form>
+
+    <template id="dupCardTemplate">
+        <div class="crm-dup-card tint-sky" data-dup-card data-field-id="">
+            <input type="hidden" value="" />
+            <div class="crm-dup-card-main">
+                <span class="crm-dup-card-key"><i class="bx bx-key"></i></span>
+                <div class="crm-dup-card-text">
+                    <strong data-label></strong>
+                    <span class="crm-dup-card-type" data-type></span>
+                </div>
+            </div>
+            <div class="crm-dup-card-actions">
+                <span class="crm-dup-card-handle" title="جابجایی"><i class="bx bx-grid-alt"></i></span>
+                <div class="dropdown">
+                    <button type="button" class="crm-dup-card-edit dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bx bx-edit-alt"></i><span>ویرایش</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                            <button type="button" class="dropdown-item text-danger" data-remove>
+                                <i class="bx bx-trash me-1"></i> <span data-remove-label>حذف از معیار</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </template>
 }
 else if (tab == "dependencies")
 {
+    var depMode = (ViewBag.DepMode as string) ?? "field";
+    var isBlockMode = depMode == "block";
+    var picklistControllers = fields
+        .Where(f => f.Type is FieldType.Picklist or FieldType.MultiPicklist)
+        .OrderBy(f => f.SortOrder)
+        .ToList();
+    var fieldLabel = fields.ToDictionary(f => f.Name, f => f.Label, StringComparer.OrdinalIgnoreCase);
+    string ValueLabel(string fieldName, string value)
+    {
+        var f = fields.FirstOrDefault(x => string.Equals(x.Name, fieldName, StringComparison.OrdinalIgnoreCase));
+        if (f is null) return value;
+        var opt = f.PicklistValues.FirstOrDefault(p => string.Equals(p.Value, value, StringComparison.OrdinalIgnoreCase));
+        return opt?.Label ?? value;
+    }
+    string Summarize(string? json)
+    {
+        var rule = VisibilityRuleHelper.Parse(json);
+        if (rule is null) return "";
+        return VisibilityRuleHelper.SummarizeConditionsFa(
+            rule,
+            n => fieldLabel.TryGetValue(n, out var l) ? l : n,
+            ValueLabel);
+    }
     var depFields = fields.Where(f => !string.IsNullOrWhiteSpace(f.VisibilityRuleJson)).OrderBy(f => f.SortOrder).ToList();
     var depBlocks = blocks.Where(b => !string.IsNullOrWhiteSpace(b.VisibilityRuleJson)).OrderBy(b => b.SortOrder).ToList();
+    var nestedFieldIds = new HashSet<int>();
+    if (isBlockMode)
+    {
+        foreach (var b in depBlocks)
+        {
+            foreach (var f in depFields.Where(x => x.BlockId == b.Id))
+                nestedFieldIds.Add(f.Id);
+        }
+    }
+    var picklistMeta = picklistControllers.ToDictionary(
+        f => f.Name,
+        f => f.PicklistValues.OrderBy(p => p.SortOrder).Select(p => new { value = p.Value, label = p.Label }).ToList());
     <div class="crm-studio-panel">
         <div class="crm-studio-panel-header">
             <h5>بلاک / فیلدهای وابسته</h5>
         </div>
         <div class="crm-studio-panel-body">
-            <p class="text-muted small mb-4">
-                وابستگی‌ها مشخص می‌کنند یک فیلد یا بلاک فقط وقتی نمایش داده شود که شرط روی فیلد دیگری برقرار باشد.
-                برای تنظیم، از «ویرایش گروه» روی بلاک یا مداد فیلد در تب صفحه‌بندی استفاده کنید.
+            <p class="text-muted small mb-3">
+                فیلدها یا بلاک‌هایی که اینجا انتخاب می‌کنید در فرم مخفی می‌مانند و فقط وقتی همهٔ شرط‌ها برقرار باشند نمایش داده می‌شوند.
+                فقط فیلدهای انتخابی (picklist) در شرط قابل استفاده‌اند. با «افزودن عمل» می‌توانید چند هدف را با هم تعریف کنید.
             </p>
-            <h6 class="mb-2">فیلدهای وابسته (@depFields.Count)</h6>
-            @if (depFields.Count == 0)
-            {
-                <p class="text-muted small">هنوز فیلد وابسته‌ای تعریف نشده است.</p>
-            }
-            else
-            {
-                <div class="table-responsive mb-4">
-                    <table class="table table-sm">
-                        <thead><tr><th>فیلد</th><th>شرط</th><th></th></tr></thead>
-                        <tbody>
-                        @foreach (var field in depFields)
-                        {
-                            <tr>
-                                <td>@field.Label</td>
-                                <td dir="ltr"><code class="small">@field.VisibilityRuleJson</code></td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-label-primary"
-                                            data-bs-toggle="modal" data-bs-target="#editFieldModal"
-                                            data-id="@field.Id"
-                                            data-label="@field.Label"
-                                            data-required="@field.IsRequired.ToString().ToLowerInvariant()"
-                                            data-showinlist="@field.ShowInList.ToString().ToLowerInvariant()"
-                                            data-sort="@field.SortOrder"
-                                            data-blockid="@(field.BlockId?.ToString() ?? "")"
-                                            data-maxlength="@(field.MaxLength?.ToString() ?? "")"
-                                            data-visible="@field.IsVisible.ToString().ToLowerInvariant()"
-                                            data-unique="@field.IsUniqueCheck.ToString().ToLowerInvariant()"
-                                            data-default="@(field.DefaultValue ?? "")"
-                                            data-rule="@(field.VisibilityRuleJson ?? "")"
-                                            data-type="@((int)field.Type)"
-                                            data-integerdigits="@(field.IntegerDigits?.ToString() ?? "")"
-                                            data-decimaldigits="@(field.DecimalDigits?.ToString() ?? "")"
-                                            data-formula="@(field.FormulaExpression ?? "")"
-                                            data-validation="@(field.ValidationRulesJson ?? "")"
-                                            data-picklist="@(field.Type is FieldType.Picklist or FieldType.MultiPicklist ? string.Join("\n", field.PicklistValues.OrderBy(p => p.SortOrder).Select(p => p.Label)) : "")">ویرایش</button>
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+
+            <div class="crm-dep-toolbar">
+                <div class="crm-dep-mode" role="tablist">
+                    <a class="crm-dep-mode-btn @(isBlockMode ? "active" : null)"
+                       href="/App/customize/@module.Name?tab=dependencies&amp;dep=block">وابستگی بلاک</a>
+                    <a class="crm-dep-mode-btn @(!isBlockMode ? "active" : null)"
+                       href="/App/customize/@module.Name?tab=dependencies&amp;dep=field">وابستگی فیلد</a>
                 </div>
-            }
-            <h6 class="mb-2">بلاک‌های وابسته (@depBlocks.Count)</h6>
-            @if (depBlocks.Count == 0)
-            {
-                <p class="text-muted small mb-0">هنوز بلاک وابسته‌ای تعریف نشده است.</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead><tr><th>بلاک</th><th>شرط</th><th></th></tr></thead>
-                        <tbody>
-                        @foreach (var block in depBlocks)
-                        {
-                            <tr>
-                                <td>@block.Label</td>
-                                <td dir="ltr"><code class="small">@block.VisibilityRuleJson</code></td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-label-primary"
-                                            data-bs-toggle="modal" data-bs-target="#editBlockRuleModal"
-                                            data-id="@block.Id"
-                                            data-label="@block.Label"
-                                            data-sort="@block.SortOrder"
-                                            data-collapsed="@block.IsCollapsed.ToString().ToLowerInvariant()"
-                                            data-rule="@(block.VisibilityRuleJson ?? "")">ویرایش</button>
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+                <button type="button" class="btn btn-primary btn-sm" id="crmDepAddBtn">
+                    <i class="bx bx-plus"></i> افزودن وابستگی
+                </button>
+            </div>
+
+            <div class="crm-dep-list" id="crmDepList" data-mode="@depMode" data-module="@module.Name">
+                @if (isBlockMode)
+                {
+                    @if (depBlocks.Count == 0 && depFields.Count == 0)
+                    {
+                        <p class="text-muted small crm-dep-empty" data-dep-empty>هنوز هیچ فیلد یا بلاک وابسته‌ای تنظیم نشده است.</p>
+                    }
+                    @foreach (var block in depBlocks)
+                    {
+                        var rule = VisibilityRuleHelper.Parse(block.VisibilityRuleJson);
+                        var children = depFields.Where(f => f.BlockId == block.Id).ToList();
+                        <div class="crm-dep-group" data-dep-group data-kind="block" data-id="@block.Id"
+                             data-rule="@(block.VisibilityRuleJson ?? "")">
+                            <div class="crm-dep-row" data-dep-row data-kind="block" data-id="@block.Id"
+                                 data-rule="@(block.VisibilityRuleJson ?? "")">
+                                <div class="crm-dep-summary" data-dep-summary>
+                                    <span class="crm-dep-target-label">@block.Label</span>
+                                    <span class="crm-dep-sep" aria-hidden="true"></span>
+                                    <span class="crm-dep-action-label">@VisibilityRuleHelper.ActionLabelFa(rule?.Action)</span>
+                                    <span class="crm-dep-sep" aria-hidden="true"></span>
+                                    <span class="crm-dep-cond-label">@Summarize(block.VisibilityRuleJson)</span>
+                                    <div class="crm-dep-row-actions">
+                                        <button type="button" class="btn btn-sm btn-label-primary" data-dep-edit>ویرایش</button>
+                                        <form method="post" action="/App/customize/@module.Name/blocks/@block.Id/visibility/clear" class="d-inline"
+                                              data-confirm="با حذف وابستگی بلاک، وابستگی فیلدهای داخل آن هم حذف می‌شود. ادامه می‌دهید؟">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="dep" value="block" />
+                                            <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            @foreach (var child in children)
+                            {
+                                var cr = VisibilityRuleHelper.Parse(child.VisibilityRuleJson);
+                                <div class="crm-dep-nest" data-dep-nest>
+                                    <div class="crm-dep-nest-rail" aria-hidden="true"></div>
+                                    <div class="crm-dep-row crm-dep-row-child" data-dep-row data-kind="field" data-id="@child.Id"
+                                         data-name="@child.Name" data-block-id="@block.Id"
+                                         data-rule="@(child.VisibilityRuleJson ?? "")">
+                                        <div class="crm-dep-summary" data-dep-summary>
+                                            <span class="crm-dep-target-label">@child.Label</span>
+                                            <span class="crm-dep-sep" aria-hidden="true"></span>
+                                            <span class="crm-dep-action-label">@VisibilityRuleHelper.ActionLabelFa(cr?.Action)</span>
+                                            <span class="crm-dep-sep" aria-hidden="true"></span>
+                                            <span class="crm-dep-cond-label">@Summarize(child.VisibilityRuleJson)</span>
+                                            <div class="crm-dep-row-actions">
+                                                <button type="button" class="btn btn-sm btn-label-primary" data-dep-edit>ویرایش</button>
+                                                <form method="post" action="/App/customize/@module.Name/fields/@child.Id/visibility/clear" class="d-inline"
+                                                      data-confirm="این وابستگی فیلد حذف شود؟">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="dep" value="block" />
+                                                    <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @* فیلدهای وابستهٔ مستقل (بلاکشان وابستگی ندارد) *@
+                    @foreach (var field in depFields.Where(f => !nestedFieldIds.Contains(f.Id)))
+                    {
+                        var rule = VisibilityRuleHelper.Parse(field.VisibilityRuleJson);
+                        <div class="crm-dep-row" data-dep-row data-kind="field" data-id="@field.Id"
+                             data-name="@field.Name" data-rule="@(field.VisibilityRuleJson ?? "")"
+                             data-block-id="@(field.BlockId?.ToString() ?? "")">
+                            <div class="crm-dep-summary" data-dep-summary>
+                                <span class="crm-dep-target-label">@field.Label</span>
+                                <span class="crm-dep-sep" aria-hidden="true"></span>
+                                <span class="crm-dep-action-label">@VisibilityRuleHelper.ActionLabelFa(rule?.Action)</span>
+                                <span class="crm-dep-sep" aria-hidden="true"></span>
+                                <span class="crm-dep-cond-label">@Summarize(field.VisibilityRuleJson)</span>
+                                <div class="crm-dep-row-actions">
+                                    <button type="button" class="btn btn-sm btn-label-primary" data-dep-edit>ویرایش</button>
+                                    <form method="post" action="/App/customize/@module.Name/fields/@field.Id/visibility/clear" class="d-inline"
+                                          data-confirm="این وابستگی حذف شود؟">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="dep" value="block" />
+                                        <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    @if (depFields.Count == 0)
+                    {
+                        <p class="text-muted small crm-dep-empty" data-dep-empty>هنوز وابستگی فیلدی تعریف نشده است.</p>
+                    }
+                    @foreach (var field in depFields)
+                    {
+                        var rule = VisibilityRuleHelper.Parse(field.VisibilityRuleJson);
+                        <div class="crm-dep-row" data-dep-row data-kind="field" data-id="@field.Id"
+                             data-name="@field.Name" data-rule="@(field.VisibilityRuleJson ?? "")"
+                             data-block-id="@(field.BlockId?.ToString() ?? "")">
+                            <div class="crm-dep-summary" data-dep-summary>
+                                <span class="crm-dep-target-label">@field.Label</span>
+                                <span class="crm-dep-sep" aria-hidden="true"></span>
+                                <span class="crm-dep-action-label">@VisibilityRuleHelper.ActionLabelFa(rule?.Action)</span>
+                                <span class="crm-dep-sep" aria-hidden="true"></span>
+                                <span class="crm-dep-cond-label">@Summarize(field.VisibilityRuleJson)</span>
+                                <div class="crm-dep-row-actions">
+                                    <button type="button" class="btn btn-sm btn-label-primary" data-dep-edit>ویرایش</button>
+                                    <form method="post" action="/App/customize/@module.Name/fields/@field.Id/visibility/clear" class="d-inline"
+                                          data-confirm="این وابستگی حذف شود؟">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="dep" value="field" />
+                                        <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <button type="button" class="crm-dep-add-link" id="crmDepAddLink">
+                <i class="bx bx-plus"></i>
+                @(isBlockMode ? "افزودن وابستگی بلاک" : "افزودن وابستگی فیلد")
+            </button>
+
+            <script type="application/json" id="crm-dep-meta">
+@Html.Raw(JsonSerializer.Serialize(new {
+    mode = depMode,
+    module = module.Name,
+    fields = fields.OrderBy(f => f.SortOrder).Select(f => new { id = f.Id, name = f.Name, label = f.Label, blockId = f.BlockId }),
+    blocks = blocks.OrderBy(b => b.SortOrder).Select(b => new { id = b.Id, name = b.Name, label = b.Label }),
+    controlling = picklistControllers.Select(f => new { name = f.Name, label = f.Label }),
+    picklists = picklistMeta
+}))
+            </script>
+
+            <template id="crm-dep-editor-tpl">
+                <form method="post" action="/App/customize/@module.Name/visibility/batch" class="crm-dep-editor-form" data-dep-form>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="dep" value="@depMode" />
+                    <input type="hidden" name="actionsJson" data-dep-actions-json />
+                    <div class="crm-dep-actions" data-dep-actions></div>
+                    <div class="crm-dep-editor-footer">
+                        <button type="button" class="crm-dep-add-action" data-dep-add-action>
+                            <i class="bx bx-plus"></i> افزودن عمل
+                        </button>
+                        <div class="crm-dep-editor-btns">
+                            <button type="submit" class="crm-dep-ok" title="ذخیره"><i class="bx bx-check"></i></button>
+                            <button type="button" class="crm-dep-cancel" data-dep-cancel title="انصراف"><i class="bx bx-x"></i></button>
+                        </div>
+                    </div>
+                </form>
+            </template>
+
+            <template id="crm-dep-action-tpl">
+                <div class="crm-dep-action" data-dep-action>
+                    <div class="crm-dep-action-inner">
+                        <div class="crm-dep-target-wrap">
+                            <select class="form-select form-select-sm" data-dep-target required>
+                                <option value="">انتخاب</option>
+                            </select>
+                        </div>
+                        <div class="crm-dep-action-wrap">
+                            <select class="form-select form-select-sm" data-dep-action-type disabled>
+                                <option value="show" selected>نمایش (خواندن + نوشتن)</option>
+                            </select>
+                        </div>
+                        <div class="crm-dep-conds" data-dep-conds>
+                            <div class="crm-dep-cond" data-dep-cond>
+                                <select class="form-select form-select-sm" data-dep-cfield>
+                                    <option value="">فیلد</option>
+                                </select>
+                                <select class="form-select form-select-sm" data-dep-cop>
+                                    <option value="eq">برابر با</option>
+                                    <option value="neq">نابرابر با</option>
+                                    <option value="contains">شامل شده باشد با</option>
+                                </select>
+                                <select class="form-select form-select-sm" data-dep-cvalue>
+                                    <option value="">انتخاب</option>
+                                </select>
+                                <button type="button" class="crm-dep-cond-remove" data-dep-cond-remove title="حذف شرط" hidden>&times;</button>
+                            </div>
+                            <button type="button" class="crm-dep-add-cond" data-dep-add-cond>
+                                <i class="bx bx-plus"></i> افزودن شرط
+                            </button>
+                        </div>
+                        <button type="button" class="crm-dep-action-remove" data-dep-action-remove title="حذف عمل" hidden>&times;</button>
+                    </div>
                 </div>
-            }
+            </template>
         </div>
     </div>
 }
@@ -450,6 +875,10 @@ else if (tab == "layout")
                                         <div class="studio-field-type">@FieldTypeFa(field.Type)</div>
                                     </div>
                                     <div class="studio-field-badges">
+                                        @if (!field.IsCustom)
+                                        {
+                                            <span class="studio-badge-required" title="فیلد اصلی سیستم">سیستمی</span>
+                                        }
                                         @if (field.IsRequired)
                                         {
                                             <span class="studio-badge-required">اجباری</span>
@@ -481,6 +910,16 @@ else if (tab == "layout")
                                             title="ویرایش">
                                         <i class="bx bx-pencil"></i>
                                     </button>
+                                    @if (field.IsCustom)
+                                    {
+                                        <form method="post" action="/App/customize/@module.Name/fields/@field.Id/delete" class="d-inline"
+                                              data-confirm="این فیلد سفارشی حذف شود؟">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="studio-field-edit text-danger" title="حذف فیلد سفارشی">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
                                 </div>
                             </div>
                         }
@@ -624,9 +1063,9 @@ else if (tab == "layout")
                 <div class="col-md-4">
                     <label class="form-label">عملگر</label>
                     <select id="blockDepOp" class="form-select">
-                        <option value="eq">برابر (eq)</option>
-                        <option value="neq">نابرابر (neq)</option>
-                        <option value="contains">شامل (contains)</option>
+                        <option value="eq">برابر با</option>
+                        <option value="neq">نابرابر با</option>
+                        <option value="contains">شامل شده باشد با</option>
                     </select>
                 </div>
                 <div class="col-md-8">
@@ -859,9 +1298,9 @@ else if (tab == "layout")
                                 </div>
                                 <div class="col-md-3">
                                     <select id="addDepOp" class="form-select">
-                                        <option value="eq">برابر</option>
-                                        <option value="neq">نابرابر</option>
-                                        <option value="contains">شامل</option>
+                                        <option value="eq">برابر با</option>
+                                        <option value="neq">نابرابر با</option>
+                                        <option value="contains">شامل شده باشد با</option>
                                     </select>
                                 </div>
                                 <div class="col-md-5">
@@ -953,9 +1392,9 @@ else if (tab == "layout")
                         </div>
                         <div class="col-md-3">
                             <select id="editDepOp" class="form-select">
-                                <option value="eq">برابر (eq)</option>
-                                <option value="neq">نابرابر (neq)</option>
-                                <option value="contains">شامل (contains)</option>
+                                <option value="eq">برابر با</option>
+                                <option value="neq">نابرابر با</option>
+                                <option value="contains">شامل شده باشد با</option>
                             </select>
                         </div>
                         <div class="col-md-5">
@@ -1003,11 +1442,23 @@ else if (tab == "layout")
         (function () {
             function parseRule(json) {
                 if (!json) return null;
-                try { return JSON.parse(json); } catch { return null; }
+                try {
+                    var r = JSON.parse(json);
+                    if (!r) return null;
+                    if (r.conditions && r.conditions.length) {
+                        return r.conditions[0];
+                    }
+                    if (r.field) return r;
+                    return null;
+                } catch { return null; }
             }
             function buildRule(field, op, value) {
                 if (!field) return '';
-                return JSON.stringify({ field: field, op: op || 'eq', value: value || '' });
+                return JSON.stringify({
+                    action: 'show',
+                    logic: 'and',
+                    conditions: [{ field: field, op: op || 'eq', value: value || '' }]
+                });
             }
             function applyRuleToUi(rule, fieldEl, opEl, valueEl) {
                 if (rule && rule.field) {
@@ -1526,6 +1977,167 @@ else if (tab == "layout")
                     if (label) label.textContent = 'باز شدن';
                 });
             });
+
+            /* ── Duplicates wizard ── */
+            (function initDuplicatesWizard() {
+                const root = document.querySelector('[data-dup-wizard]');
+                const tmpl = document.getElementById('dupCardTemplate');
+                if (!root || !tmpl) return;
+
+                const tints = ['tint-sky', 'tint-peach', 'tint-mint', 'tint-lavender', 'tint-sand'];
+                const enabledCb = root.querySelector('[data-dup-enabled]');
+                const steps = root.querySelector('[data-dup-steps]');
+                const globalCb = root.querySelector('[data-dup-global-enabled]');
+                const globalBody = root.querySelector('[data-dup-global-body]');
+
+                function syncEnabled() {
+                    if (steps) steps.classList.toggle('is-disabled', !(enabledCb && enabledCb.checked));
+                }
+                function syncGlobal() {
+                    if (globalBody) globalBody.classList.toggle('is-disabled', !(globalCb && globalCb.checked));
+                }
+                if (enabledCb) enabledCb.addEventListener('change', syncEnabled);
+                if (globalCb) globalCb.addEventListener('change', syncGlobal);
+                syncEnabled();
+                syncGlobal();
+
+                function wireList(opts) {
+                    const cards = root.querySelector(opts.cards);
+                    const select = root.querySelector(opts.select);
+                    const addBtn = root.querySelector(opts.add);
+                    const emptySel = opts.empty;
+                    const removeSel = opts.remove;
+                    const inputName = opts.inputName;
+                    const max = opts.max || 99;
+                    if (!cards || !select || !addBtn) return;
+
+                    function recolor() {
+                        cards.querySelectorAll('[data-dup-card]').forEach(function (card, i) {
+                            tints.forEach(function (t) { card.classList.remove(t); });
+                            card.classList.add(tints[i % tints.length]);
+                        });
+                    }
+
+                    function syncEmpty() {
+                        const n = cards.querySelectorAll('[data-dup-card]').length;
+                        let empty = cards.querySelector(emptySel);
+                        if (n === 0) {
+                            if (!empty) {
+                                empty = document.createElement('div');
+                                empty.className = 'crm-dup-empty';
+                                const attr = (emptySel.match(/data-[\w-]+/) || [])[0];
+                                if (attr) empty.setAttribute(attr, '');
+                                empty.textContent = opts.emptyText;
+                                cards.appendChild(empty);
+                            }
+                        } else if (empty) {
+                            empty.remove();
+                        }
+                        addBtn.disabled = !select.value || n >= max;
+                        recolor();
+                    }
+
+                    function setOptionDisabled(id, disabled) {
+                        const opt = select.querySelector('option[value="' + id + '"]');
+                        if (opt) opt.disabled = !!disabled;
+                    }
+
+                    function removeCard(card) {
+                        var msg = opts.confirmMessage || 'این فیلد از معیار حذف شود؟';
+                        var ask = typeof window.crmConfirm === 'function'
+                            ? window.crmConfirm(msg, { title: 'حذف از معیار تکرار', confirmText: 'بله، حذف شود', icon: 'warning' })
+                            : Promise.resolve(window.confirm(msg));
+                        ask.then(function (ok) {
+                            if (!ok) return;
+                            const id = card.getAttribute('data-field-id');
+                            card.remove();
+                            if (id) setOptionDisabled(id, false);
+                            syncEmpty();
+                        });
+                    }
+
+                    function addCard(id, label, typeLabel) {
+                        const n = cards.querySelectorAll('[data-dup-card]').length;
+                        if (!id || n >= max || cards.querySelector('[data-field-id="' + id + '"]')) return;
+                        const node = tmpl.content.firstElementChild.cloneNode(true);
+                        node.setAttribute('data-field-id', id);
+                        const input = node.querySelector('input');
+                        input.name = inputName;
+                        input.value = id;
+                        node.querySelector('[data-label]').textContent = label;
+                        node.querySelector('[data-type]').textContent = '(' + typeLabel + ')';
+                        const rm = node.querySelector('[data-remove]');
+                        if (rm) {
+                            rm.removeAttribute('data-remove');
+                            rm.setAttribute(removeSel.replace(/^\[|\]$/g, ''), '');
+                            const rmLabel = rm.querySelector('[data-remove-label]');
+                            if (rmLabel && opts.removeLabel) rmLabel.textContent = opts.removeLabel;
+                        }
+                        cards.appendChild(node);
+                        setOptionDisabled(id, true);
+                        select.value = '';
+                        syncEmpty();
+                    }
+
+                    cards.addEventListener('click', function (e) {
+                        const btn = e.target.closest(removeSel);
+                        if (!btn) return;
+                        const card = btn.closest('[data-dup-card]');
+                        if (card) removeCard(card);
+                    });
+
+                    select.addEventListener('change', function () {
+                        const n = cards.querySelectorAll('[data-dup-card]').length;
+                        addBtn.disabled = !select.value || n >= max;
+                    });
+
+                    addBtn.addEventListener('click', function () {
+                        const opt = select.options[select.selectedIndex];
+                        if (!opt || !opt.value) return;
+                        addCard(opt.value, opt.getAttribute('data-label') || opt.textContent.trim(),
+                            opt.getAttribute('data-type') || '');
+                    });
+
+                    if (typeof Sortable !== 'undefined') {
+                        new Sortable(cards, {
+                            animation: 150,
+                            handle: '.crm-dup-card-handle',
+                            draggable: '[data-dup-card]',
+                            ghostClass: 'sortable-ghost',
+                            onEnd: recolor
+                        });
+                    }
+
+                    syncEmpty();
+                }
+
+                wireList({
+                    cards: '[data-dup-unique-cards]',
+                    select: '[data-dup-unique-select]',
+                    add: '[data-dup-unique-add]',
+                    empty: '[data-dup-unique-empty]',
+                    remove: '[data-dup-unique-remove]',
+                    inputName: 'uniqueFieldIds',
+                    max: 3,
+                    emptyText: 'هنوز فیلد یکتایی انتخاب نشده است.',
+                    removeLabel: 'حذف از معیار تکرار',
+                    confirmMessage: 'این فیلد از معیار تشخیص تکرار این ماژول حذف شود؟'
+                });
+
+                wireList({
+                    cards: '[data-dup-global-cards]',
+                    select: '[data-dup-global-select]',
+                    add: '[data-dup-global-add]',
+                    empty: '[data-dup-global-empty]',
+                    remove: '[data-dup-global-remove]',
+                    inputName: 'globalFieldIds',
+                    max: 20,
+                    emptyText: 'فیلد شماره تماسی برای تشخیص سراسری انتخاب نشده است.',
+                    removeLabel: 'حذف از تشخیص سراسری',
+                    confirmMessage: 'این فیلد از تشخیص تکراری سراسری حذف شود؟'
+                });
+            })();
         })();
     </script>
+    <script src="~/js/crm-dep-studio.js" asp-append-version="true"></script>
 }

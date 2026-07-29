@@ -64,6 +64,65 @@ public class MetadataService
         return fields;
     }
 
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<FieldDef>>> GetFieldsForModulesAsync(IEnumerable<int> moduleIds)
+    {
+        var ids = moduleIds.Distinct().ToList();
+        var result = new Dictionary<int, IReadOnlyList<FieldDef>>();
+        var missing = new List<int>();
+
+        foreach (var id in ids)
+        {
+            var cacheKey = FieldsCacheKey(id);
+            if (_cache.TryGetValue(cacheKey, out IReadOnlyList<FieldDef>? cached) && cached is not null)
+                result[id] = cached;
+            else
+                missing.Add(id);
+        }
+
+        if (missing.Count > 0)
+        {
+            var fields = await _db.Fields
+                .AsNoTracking()
+                .Include(f => f.PicklistValues.Where(p => p.IsActive && !p.IsDeleted))
+                .Where(f => missing.Contains(f.ModuleId))
+                .OrderBy(f => f.SortOrder)
+                .ThenBy(f => f.Id)
+                .ToListAsync();
+
+            foreach (var g in fields.GroupBy(f => f.ModuleId))
+            {
+                IReadOnlyList<FieldDef> list = g.ToList();
+                _cache.Set(FieldsCacheKey(g.Key), list, TimeSpan.FromMinutes(5));
+                result[g.Key] = list;
+            }
+
+            foreach (var id in missing.Where(id => !result.ContainsKey(id)))
+            {
+                IReadOnlyList<FieldDef> empty = Array.Empty<FieldDef>();
+                _cache.Set(FieldsCacheKey(id), empty, TimeSpan.FromMinutes(5));
+                result[id] = empty;
+            }
+        }
+
+        return result;
+    }
+
+    public async Task DeleteFieldAsync(int id)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == id)
+            ?? throw new InvalidOperationException("فیلد یافت نشد.");
+
+        if (!field.IsCustom)
+            throw new InvalidOperationException("فیلدهای اصلی سیستم قابل حذف نیستند.");
+
+        var moduleId = field.ModuleId;
+        var picklists = await _db.PicklistValues.Where(p => p.FieldId == id).ToListAsync();
+        _db.PicklistValues.RemoveRange(picklists);
+        _db.Fields.Remove(field);
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(moduleId);
+    }
+
     public async Task<IReadOnlyList<FieldBlock>> GetBlocksAsync(int moduleId)
     {
         var cacheKey = BlocksCacheKey(moduleId);
@@ -121,6 +180,24 @@ public class MetadataService
         InvalidateFieldCache(block.ModuleId);
     }
 
+    public async Task SetBlockVisibilityRuleAsync(int id, string? visibilityRuleJson)
+    {
+        var block = await _db.FieldBlocks.FirstOrDefaultAsync(b => b.Id == id)
+            ?? throw new InvalidOperationException("بلاک یافت نشد.");
+        block.VisibilityRuleJson = string.IsNullOrWhiteSpace(visibilityRuleJson) ? null : visibilityRuleJson.Trim();
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(block.ModuleId);
+    }
+
+    public async Task SetFieldVisibilityRuleAsync(int id, string? visibilityRuleJson)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == id)
+            ?? throw new InvalidOperationException("فیلد یافت نشد.");
+        field.VisibilityRuleJson = string.IsNullOrWhiteSpace(visibilityRuleJson) ? null : visibilityRuleJson.Trim();
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(field.ModuleId);
+    }
+
     public async Task DeleteBlockAsync(int id)
     {
         var block = await _db.FieldBlocks.FirstOrDefaultAsync(b => b.Id == id)
@@ -135,6 +212,9 @@ public class MetadataService
         await _db.SaveChangesAsync();
         InvalidateFieldCache(moduleId);
     }
+
+    /// <summary>حذف فیلد — فقط فیلدهای سفارشی (IsCustom).</summary>
+    public Task DeleteCustomFieldAsync(int id) => DeleteFieldAsync(id);
 
     public async Task<FieldDef> CreateFieldAsync(
         int moduleId,
@@ -543,6 +623,44 @@ public class MetadataService
         module.DuplicateMatchMode = mode;
         await _db.SaveChangesAsync();
         InvalidateModulesCache();
+    }
+
+    public async Task UpdateModuleDuplicateSettingsAsync(
+        int moduleId,
+        bool enabled,
+        string mode,
+        bool ignoreEmpty,
+        string syncPolicy,
+        bool globalEnabled)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId)
+            ?? throw new InvalidOperationException("ماژول یافت نشد.");
+
+        mode = (mode ?? "or").Trim().ToLowerInvariant();
+        if (mode is not ("or" or "and"))
+            throw new InvalidOperationException("حالت تطبیق تکراری فقط or یا and است.");
+
+        syncPolicy = (syncPolicy ?? "latest").Trim().ToLowerInvariant();
+        if (syncPolicy is not ("latest" or "internal" or "external"))
+            throw new InvalidOperationException("سیاست همگام‌سازی تکراری نامعتبر است.");
+
+        module.DuplicateCheckEnabled = enabled;
+        module.DuplicateMatchMode = mode;
+        module.DuplicateIgnoreEmpty = ignoreEmpty;
+        module.DuplicateSyncPolicy = syncPolicy;
+        module.GlobalDuplicateEnabled = globalEnabled;
+        await _db.SaveChangesAsync();
+        InvalidateModulesCache();
+    }
+
+    public async Task SetFieldUniqueFlagsAsync(int fieldId, bool isUniqueCheck, bool isGlobalUniqueCheck)
+    {
+        var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == fieldId)
+            ?? throw new InvalidOperationException("فیلد یافت نشد.");
+        field.IsUniqueCheck = isUniqueCheck;
+        field.IsGlobalUniqueCheck = isGlobalUniqueCheck;
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(field.ModuleId);
     }
 
     public void InvalidateFieldCache(int moduleId)

@@ -54,12 +54,18 @@ public class DemoTenantSeeder
     private readonly CrmDbContext _db;
     private readonly UserManager<CrmUser> _users;
     private readonly SalesModuleSeeder _modules;
+    private readonly BusinessModuleSeeder _business;
 
-    public DemoTenantSeeder(CrmDbContext db, UserManager<CrmUser> users, SalesModuleSeeder modules)
+    public DemoTenantSeeder(
+        CrmDbContext db,
+        UserManager<CrmUser> users,
+        SalesModuleSeeder modules,
+        BusinessModuleSeeder business)
     {
         _db = db;
         _users = users;
         _modules = modules;
+        _business = business;
     }
 
     public async Task EnsureSeededAsync()
@@ -423,10 +429,13 @@ public class DemoTenantSeeder
                 throw new InvalidOperationException("ساخت کاربر دمو ناموفق: " + string.Join(", ", result.Errors.Select(e => e.Description)));
 
             await _modules.SeedAsync(tenant.Id, adminProfile.Id, userProfile.Id);
+            await _business.SeedAsync(tenant.Id, adminProfile.Id, userProfile.Id);
+            await _business.EnsureDemoExtrasAsync(tenant.Id);
             return (tenant, user);
         }
 
         await _modules.EnsureSeededAsync(tenant.Id);
+        await _business.EnsureSeededAsync(tenant.Id);
 
         var admin = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == tenant.Id && u.IsTenantAdmin)
             ?? await _db.Users.FirstOrDefaultAsync(u => u.TenantId == tenant.Id);

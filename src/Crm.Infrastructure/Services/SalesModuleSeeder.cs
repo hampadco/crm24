@@ -129,18 +129,19 @@ public class SalesModuleSeeder
     {
         var cacheKey = $"sales-modules-ok:{tenantId}";
         if (_cache.TryGetValue(cacheKey, out bool ok) && ok)
-        {
-            // حتی اگر ماژول‌ها کامل‌اند، بلاک/رابطه دمو را یک‌بار اطمینان بده
-            await EnsureDemoLayoutsAndRelationsAsync(tenantId);
             return;
-        }
 
         var hasAll = await _db.Modules.CountAsync(m =>
             m.TenantId == tenantId &&
             new[] { "leads", "organizations", "contacts", "opportunities", "tasks", "events", "calls" }.Contains(m.Name)) == 7;
         if (hasAll)
         {
-            await EnsureDemoLayoutsAndRelationsAsync(tenantId);
+            var layoutsKey = $"sales-layouts-ok:{tenantId}";
+            if (!_cache.TryGetValue(layoutsKey, out bool layoutsOk) || !layoutsOk)
+            {
+                await EnsureDemoLayoutsAndRelationsAsync(tenantId);
+                _cache.Set(layoutsKey, true, TimeSpan.FromHours(24));
+            }
             _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
             return;
         }
@@ -148,7 +149,9 @@ public class SalesModuleSeeder
         var adminProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
         var userProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && !p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
         await SeedAsync(tenantId, adminProfile, userProfile);
+        await EnsureDemoLayoutsAndRelationsAsync(tenantId);
         _cache.Remove($"modules:{tenantId}");
+        _cache.Set($"sales-layouts-ok:{tenantId}", true, TimeSpan.FromHours(24));
         _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
     }
 
@@ -200,10 +203,57 @@ public class SalesModuleSeeder
         if (contactsId is int contactId3 && callsId is int callId)
             await EnsureRelationAsync(tenantId, contactId3, callId, "تماس‌ها", "مخاطب", "contact", RelationKind.OneToMany);
 
+        await EnsureDemoDuplicateSettingsAsync(tenantId, modules);
+
         // کش متادیتا را خالی کن تا بلاک/رابطه جدید دیده شود
         _cache.Remove($"modules:{tenantId}");
         foreach (var m in modules)
+        {
             _cache.Remove($"fields:{tenantId}:{m.Id}");
+            _cache.Remove($"blocks:{tenantId}:{m.Id}");
+        }
+    }
+
+    /// <summary>تنظیمات دموی ویزارد مدیریت تکرار برای ماژول‌های فروش.</summary>
+    private async Task EnsureDemoDuplicateSettingsAsync(int tenantId, List<ModuleDef> modules)
+    {
+        async Task ConfigureAsync(string moduleName, string[] uniqueFieldNames, bool globalPhone, string mode = "or")
+        {
+            var module = modules.FirstOrDefault(m => m.Name == moduleName);
+            if (module is null) return;
+
+            module.DuplicateCheckEnabled = true;
+            module.DuplicateMatchMode = mode;
+            module.DuplicateIgnoreEmpty = true;
+            module.DuplicateSyncPolicy = "latest";
+            module.GlobalDuplicateEnabled = globalPhone;
+
+            var fields = await _db.Fields
+                .Where(f => f.TenantId == tenantId && f.ModuleId == module.Id)
+                .ToListAsync();
+
+            foreach (var field in fields)
+            {
+                var wantUnique = uniqueFieldNames.Contains(field.Name);
+                if (field.IsUniqueCheck != wantUnique)
+                    field.IsUniqueCheck = wantUnique;
+
+                var wantGlobal = globalPhone && field.Type == FieldType.Phone && uniqueFieldNames.Contains(field.Name);
+                // برای سراسری، فیلد تلفن اصلی ماژول را علامت بزن
+                if (globalPhone && field.Type == FieldType.Phone &&
+                    (field.Name is "phone" or "mobile"))
+                    wantGlobal = true;
+
+                if (field.IsGlobalUniqueCheck != wantGlobal)
+                    field.IsGlobalUniqueCheck = wantGlobal;
+            }
+        }
+
+        await ConfigureAsync("leads", ["phone"], globalPhone: true);
+        await ConfigureAsync("contacts", ["mobile", "email"], globalPhone: true);
+        await ConfigureAsync("organizations", ["nationalId", "phone"], globalPhone: false, mode: "and");
+
+        await _db.SaveChangesAsync();
     }
 
     private async Task EnsureBlockAsync(
@@ -304,7 +354,20 @@ public class SalesModuleSeeder
             PluralLabel = plural,
             Icon = icon,
             IsSystem = true,
-            SortOrder = sortOrder
+            SortOrder = sortOrder,
+            ShowInMenu = true,
+            MenuGroup = name switch
+            {
+                "leads" => "marketing",
+                "contacts" or "organizations" or "opportunities" => "sales",
+                "calls" => "support",
+                _ => "tools"
+            },
+            DuplicateCheckEnabled = specs.Any(s => s.Unique),
+            DuplicateMatchMode = "or",
+            DuplicateIgnoreEmpty = true,
+            DuplicateSyncPolicy = "latest",
+            GlobalDuplicateEnabled = false
         };
         _db.Modules.Add(module);
         await _db.SaveChangesAsync();

@@ -35,8 +35,26 @@ public class ModuleDef : TenantEntity
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
 
+    /// <summary>نمایش در منوی اصلی پنل.</summary>
+    public bool ShowInMenu { get; set; } = true;
+
+    /// <summary>گروه منو: marketing | sales | support | inventory | projects | tools</summary>
+    public string MenuGroup { get; set; } = "tools";
+
+    /// <summary>سوییچ اصلی بررسی رکورد تکراری برای این ماژول.</summary>
+    public bool DuplicateCheckEnabled { get; set; }
+
     /// <summary>or = هر فیلد Unique جداگانه؛ and = همه فیلدهای Unique با هم یک کلید تکراری</summary>
     public string DuplicateMatchMode { get; set; } = "or";
+
+    /// <summary>مقادیر خالی فیلدهای یکتا هنگام بررسی نادیده گرفته شوند.</summary>
+    public bool DuplicateIgnoreEmpty { get; set; } = true;
+
+    /// <summary>latest | internal | external — رفتار هنگام همگام‌سازی با اپ خارجی.</summary>
+    public string DuplicateSyncPolicy { get; set; } = "latest";
+
+    /// <summary>بررسی شماره تماس در سطح کل CRM (همه ماژول‌ها).</summary>
+    public bool GlobalDuplicateEnabled { get; set; }
 
     public ICollection<FieldDef> Fields { get; set; } = new List<FieldDef>();
     public ICollection<FieldBlock> Blocks { get; set; } = new List<FieldBlock>();
@@ -77,6 +95,8 @@ public class FieldDef : TenantEntity
     public bool IsRequired { get; set; }
     public bool ShowInList { get; set; } = true;
     public bool IsUniqueCheck { get; set; }
+    /// <summary>فیلد در تشخیص تکراری سراسری (معمولاً شماره تماس) شرکت کند.</summary>
+    public bool IsGlobalUniqueCheck { get; set; }
     public int SortOrder { get; set; }
     public string? DefaultValue { get; set; }
     public int? MaxLength { get; set; }

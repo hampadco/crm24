@@ -19,8 +19,8 @@ public static partial class AppHelpContent
                 new HelpSection
                 {
                     Title = "صفحه لیست محصولات",
-                    Route = "/App/products",
-                    Body = "لیست محصولات با قیمت فروش، قیمت خرید و درصد مالیات.",
+                    Route = "/App/m/products",
+                    Body = "لیست محصولات متادیتا‌محور با قیمت فروش و موجودی. سفارشی‌سازی از /App/customize/products.",
                     Steps =
                     [
                         "با دکمه «محصول جدید» فرم ایجاد را باز کنید.",
@@ -68,8 +68,8 @@ public static partial class AppHelpContent
                 new HelpSection
                 {
                     Title = "صفحه لیست اسناد",
-                    Route = "/App/finance/invoices",
-                    Body = "برای هر نوع سند (پیش‌فاکتور/سفارش/فاکتور) لیست جدا با شماره، مشتری، مبلغ، وضعیت و تاریخ صدور دارید.",
+                    Route = "/App/m/invoices",
+                    Body = "اسناد فروش (پیش‌فاکتور/سفارش/فاکتور) اکنون به‌صورت ماژول‌های جدا در /App/m/quotes ، /App/m/sales_orders و /App/m/invoices هستند و از استودیو قابل سفارشی‌سازی‌اند.",
                     Steps =
                     [
                         "از منوی «فروش» نوع سند را انتخاب کنید.",

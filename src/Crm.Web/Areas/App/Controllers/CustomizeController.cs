@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Services;
+using Crm.Web.Services;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -30,7 +31,7 @@ public class CustomizeController : AppControllerBase
     }
 
     [HttpGet("/App/customize/{moduleName}")]
-    public async Task<IActionResult> Studio(string moduleName, string? tab = null)
+    public async Task<IActionResult> Studio(string moduleName, string? tab = null, string? dep = null)
     {
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
@@ -54,6 +55,7 @@ public class CustomizeController : AppControllerBase
         ViewBag.Blocks = blocks;
         ViewBag.Fields = fields;
         ViewBag.Tab = activeTab;
+        ViewBag.DepMode = string.Equals(dep, "block", StringComparison.OrdinalIgnoreCase) ? "block" : "field";
 
         if (activeTab is "relations" or "duplicates" or "layout" or "dependencies")
         {
@@ -63,12 +65,10 @@ public class CustomizeController : AppControllerBase
 
             if (activeTab == "relations")
             {
-                var lookups = new List<FieldDef>();
-                foreach (var m in allModules)
-                {
-                    var mFields = await _metadata.GetFieldsAsync(m.Id);
-                    lookups.AddRange(mFields.Where(f => f.Type == FieldType.Lookup));
-                }
+                var fieldMap = await _metadata.GetFieldsForModulesAsync(allModules.Select(m => m.Id));
+                var lookups = fieldMap.Values
+                    .SelectMany(list => list.Where(f => f.Type == FieldType.Lookup))
+                    .ToList();
                 ViewBag.LookupFields = lookups;
             }
         }
@@ -123,7 +123,8 @@ public class CustomizeController : AppControllerBase
 
         try
         {
-            await _metadata.UpdateBlockAsync(id, label, sortOrder, isCollapsed, visibilityRuleJson ?? "");
+            await _metadata.UpdateBlockAsync(id, label, sortOrder, isCollapsed,
+                VisibilityRuleHelper.Normalize(visibilityRuleJson) ?? visibilityRuleJson ?? "");
             TempData["Success"] = "بلاک به‌روز شد.";
         }
         catch (InvalidOperationException ex)
@@ -240,7 +241,8 @@ public class CustomizeController : AppControllerBase
 
             await _metadata.UpdateFieldAsync(
                 id, label, isRequired, showInList, sortOrder, blockId,
-                maxLength, isVisible, isUniqueCheck, defaultValue, visibilityRuleJson,
+                maxLength, isVisible, isUniqueCheck, defaultValue,
+                VisibilityRuleHelper.Normalize(visibilityRuleJson) ?? visibilityRuleJson,
                 integerDigits, decimalDigits, formulaExpression, validationRulesJson, options);
             TempData["Success"] = "فیلد به‌روز شد.";
         }
@@ -250,6 +252,286 @@ public class CustomizeController : AppControllerBase
         }
 
         return RedirectToAction(nameof(Studio), new { moduleName, tab = "layout" });
+    }
+
+    [HttpPost("/App/customize/{moduleName}/fields/{id:int}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteField(string moduleName, int id)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            await _metadata.DeleteFieldAsync(id);
+            TempData["Success"] = "فیلد سفارشی حذف شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "layout" });
+    }
+
+    [HttpPost("/App/customize/{moduleName}/visibility/batch")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveVisibilityBatch(
+        string moduleName,
+        string? actionsJson,
+        string? dep = "field")
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(actionsJson))
+                throw new InvalidOperationException("هیچ عملی برای ذخیره ارسال نشده است.");
+
+            using var doc = JsonDocument.Parse(actionsJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0)
+                throw new InvalidOperationException("حداقل یک عمل لازم است.");
+
+            var fields = await _metadata.GetFieldsAsync(module.Id);
+            var blocks = await _metadata.GetBlocksAsync(module.Id);
+            var fieldIds = fields.Select(f => f.Id).ToHashSet();
+            var blockIds = blocks.Select(b => b.Id).ToHashSet();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var savedFieldIds = new HashSet<int>();
+            var touchedBlockIds = new HashSet<int>();
+
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                var kind = item.TryGetProperty("kind", out var k) ? (k.GetString() ?? "") : "";
+                if (!item.TryGetProperty("id", out var idEl) || !idEl.TryGetInt32(out var id))
+                    throw new InvalidOperationException("شناسه هدف نامعتبر است.");
+
+                var ruleRaw = item.TryGetProperty("rule", out var r) ? r.GetString() : null;
+                var normalized = VisibilityRuleHelper.Normalize(ruleRaw)
+                    ?? throw new InvalidOperationException("شرط وابستگی نامعتبر یا خالی است.");
+
+                var key = $"{kind}:{id}";
+                if (!seen.Add(key))
+                    throw new InvalidOperationException("هدف تکراری در لیست عمل‌ها وجود دارد.");
+
+                if (string.Equals(kind, "field", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!fieldIds.Contains(id))
+                        throw new InvalidOperationException("فیلد هدف یافت نشد.");
+                    var target = fields.First(f => f.Id == id);
+                    ValidateVisibilityRule(normalized, target.Name, fields);
+                    await _metadata.SetFieldVisibilityRuleAsync(id, normalized);
+                    savedFieldIds.Add(id);
+                }
+                else if (string.Equals(kind, "block", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!blockIds.Contains(id))
+                        throw new InvalidOperationException("بلاک هدف یافت نشد.");
+                    ValidateVisibilityRule(normalized, controllingFieldName: null, fields);
+                    await _metadata.SetBlockVisibilityRuleAsync(id, normalized);
+                    touchedBlockIds.Add(id);
+                }
+                else
+                {
+                    throw new InvalidOperationException("نوع هدف نامعتبر است.");
+                }
+            }
+
+            // اگر وابستگی بلاک ذخیره شد، فیلدهای داخل آن بلاک که در payload نیستند پاک شوند
+            // (مدل رقیب: عمل‌های تو‌در‌تو زیر بلاک کامل تعریف می‌شوند)
+            foreach (var blockId in touchedBlockIds)
+            {
+                foreach (var f in fields.Where(x =>
+                             x.BlockId == blockId
+                             && !string.IsNullOrWhiteSpace(x.VisibilityRuleJson)
+                             && !savedFieldIds.Contains(x.Id)))
+                {
+                    await _metadata.SetFieldVisibilityRuleAsync(f.Id, null);
+                }
+            }
+
+            TempData["Success"] = "وابستگی‌ها ذخیره شدند.";
+        }
+        catch (JsonException)
+        {
+            TempData["Error"] = "دادهٔ وابستگی نامعتبر است.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "dependencies", dep });
+    }
+
+    [HttpPost("/App/customize/{moduleName}/fields/{id:int}/visibility")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetFieldVisibility(
+        string moduleName,
+        int id,
+        string? visibilityRuleJson,
+        string? dep = "field")
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            var normalized = VisibilityRuleHelper.Normalize(visibilityRuleJson);
+            var fields = await _metadata.GetFieldsAsync(module.Id);
+            var target = fields.FirstOrDefault(f => f.Id == id)
+                ?? throw new InvalidOperationException("فیلد یافت نشد.");
+
+            ValidateVisibilityRule(normalized, target.Name, fields);
+
+            await _metadata.SetFieldVisibilityRuleAsync(id, normalized);
+            TempData["Success"] = "وابستگی فیلد ذخیره شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "dependencies", dep });
+    }
+
+    [HttpPost("/App/customize/{moduleName}/blocks/{id:int}/visibility")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetBlockVisibility(
+        string moduleName,
+        int id,
+        string? visibilityRuleJson,
+        string? dep = "block")
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            var normalized = VisibilityRuleHelper.Normalize(visibilityRuleJson);
+            var fields = await _metadata.GetFieldsAsync(module.Id);
+            ValidateVisibilityRule(normalized, controllingFieldName: null, fields);
+
+            await _metadata.SetBlockVisibilityRuleAsync(id, normalized);
+            TempData["Success"] = "وابستگی بلاک ذخیره شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "dependencies", dep });
+    }
+
+    [HttpPost("/App/customize/{moduleName}/fields/{id:int}/visibility/clear")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearFieldVisibility(string moduleName, int id, string? dep = "field")
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            await _metadata.SetFieldVisibilityRuleAsync(id, null);
+            TempData["Success"] = "وابستگی فیلد حذف شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "dependencies", dep });
+    }
+
+    [HttpPost("/App/customize/{moduleName}/blocks/{id:int}/visibility/clear")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearBlockVisibility(
+        string moduleName,
+        int id,
+        string? dep = "block",
+        bool clearNestedFields = true)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            await _metadata.SetBlockVisibilityRuleAsync(id, null);
+
+            // مثل رقیب: حذف وابستگی بلاک، وابستگی فیلدهای داخل همان بلاک را هم پاک می‌کند
+            if (clearNestedFields)
+            {
+                var fields = await _metadata.GetFieldsAsync(module.Id);
+                foreach (var f in fields.Where(x => x.BlockId == id && !string.IsNullOrWhiteSpace(x.VisibilityRuleJson)))
+                    await _metadata.SetFieldVisibilityRuleAsync(f.Id, null);
+            }
+
+            TempData["Success"] = "وابستگی بلاک حذف شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "dependencies", dep });
+    }
+
+    private static void ValidateVisibilityRule(
+        string? normalized,
+        string? controllingFieldName,
+        IReadOnlyList<FieldDef> fields)
+    {
+        if (string.IsNullOrWhiteSpace(normalized))
+            return;
+
+        var rule = VisibilityRuleHelper.Parse(normalized)
+            ?? throw new InvalidOperationException("شرط وابستگی نامعتبر است.");
+
+        var picklistNames = fields
+            .Where(f => f.Type is FieldType.Picklist or FieldType.MultiPicklist)
+            .Select(f => f.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var c in rule.Conditions)
+        {
+            if (string.IsNullOrWhiteSpace(c.Field))
+                throw new InvalidOperationException("فیلد شرط نمی‌تواند خالی باشد.");
+
+            if (!string.IsNullOrWhiteSpace(controllingFieldName)
+                && string.Equals(c.Field, controllingFieldName, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"نمی‌توانید فیلد «{controllingFieldName}» را هم برای وابستگی و هم برای شرط انتخاب کنید.");
+
+            if (!picklistNames.Contains(c.Field))
+                throw new InvalidOperationException("فقط فیلدهای انتخابی (picklist) می‌توانند در شرط استفاده شوند.");
+
+            if (string.IsNullOrWhiteSpace(c.Value))
+                throw new InvalidOperationException($"مقدار فیلد «{c.Field}» نمی‌تواند خالی باشد.");
+        }
     }
 
     private static List<(string Value, string Label)> ParsePicklistOptions(string? raw)
@@ -376,7 +658,15 @@ public class CustomizeController : AppControllerBase
 
     [HttpPost("/App/customize/{moduleName}/duplicates")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveDuplicates(string moduleName, string mode, int[]? uniqueFieldIds)
+    public async Task<IActionResult> SaveDuplicates(
+        string moduleName,
+        bool enabled,
+        string mode,
+        bool ignoreEmpty,
+        string syncPolicy,
+        bool globalEnabled,
+        int[]? uniqueFieldIds,
+        int[]? globalFieldIds)
     {
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
@@ -387,19 +677,22 @@ public class CustomizeController : AppControllerBase
 
         try
         {
-            await _metadata.UpdateModuleDuplicateModeAsync(module.Id, mode);
+            var selected = (uniqueFieldIds ?? Array.Empty<int>()).Distinct().Take(3).ToHashSet();
+            var globalSelected = (globalFieldIds ?? Array.Empty<int>()).Distinct().ToHashSet();
+
+            await _metadata.UpdateModuleDuplicateSettingsAsync(
+                module.Id, enabled, mode, ignoreEmpty, syncPolicy, globalEnabled);
+
             var fields = await _metadata.GetFieldsAsync(module.Id);
-            var selected = new HashSet<int>(uniqueFieldIds ?? Array.Empty<int>());
             foreach (var field in fields)
             {
                 var wantUnique = selected.Contains(field.Id);
-                if (field.IsUniqueCheck == wantUnique)
+                var wantGlobal = globalEnabled && field.Type == FieldType.Phone && globalSelected.Contains(field.Id);
+                if (field.IsUniqueCheck == wantUnique && field.IsGlobalUniqueCheck == wantGlobal)
                     continue;
-                await _metadata.UpdateFieldAsync(
-                    field.Id, field.Label, field.IsRequired, field.ShowInList, field.SortOrder,
-                    field.BlockId, field.MaxLength, field.IsVisible, wantUnique,
-                    field.DefaultValue, field.VisibilityRuleJson);
+                await _metadata.SetFieldUniqueFlagsAsync(field.Id, wantUnique, wantGlobal);
             }
+
             TempData["Success"] = "تنظیمات تکراری ذخیره شد.";
         }
         catch (InvalidOperationException ex)

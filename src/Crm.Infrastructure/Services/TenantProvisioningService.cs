@@ -25,12 +25,18 @@ public class TenantProvisioningService
     private readonly CrmDbContext _db;
     private readonly UserManager<CrmUser> _userManager;
     private readonly SalesModuleSeeder _salesSeeder;
+    private readonly BusinessModuleSeeder _businessSeeder;
 
-    public TenantProvisioningService(CrmDbContext db, UserManager<CrmUser> userManager, SalesModuleSeeder salesSeeder)
+    public TenantProvisioningService(
+        CrmDbContext db,
+        UserManager<CrmUser> userManager,
+        SalesModuleSeeder salesSeeder,
+        BusinessModuleSeeder businessSeeder)
     {
         _db = db;
         _userManager = userManager;
         _salesSeeder = salesSeeder;
+        _businessSeeder = businessSeeder;
     }
 
     public async Task<TenantProvisioningResult> RegisterAsync(
@@ -90,6 +96,8 @@ public class TenantProvisioningService
         }
 
         await _salesSeeder.SeedAsync(tenant.Id, adminProfile.Id, userProfile.Id);
+        await _businessSeeder.SeedAsync(tenant.Id, adminProfile.Id, userProfile.Id);
+        await _businessSeeder.EnsureDemoExtrasAsync(tenant.Id);
 
         return new TenantProvisioningResult { Success = true, Tenant = tenant, AdminUser = user };
     }

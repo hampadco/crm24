@@ -85,9 +85,10 @@ public class DynamicRecordService
             .Where(f => IsSafeFieldName(f.Field) && !string.IsNullOrWhiteSpace(f.Value))
             .ToList();
 
+        HashSet<int>? filteredIds = null;
         if (filters.Count > 0)
         {
-            var filteredIds = await FilterIdsByColumnsAsync(moduleId, filters);
+            filteredIds = await FilterIdsByColumnsAsync(moduleId, filters);
             if (filteredIds.Count == 0)
                 return ([], 0);
             query = query.Where(r => filteredIds.Contains(r.Id));
@@ -98,28 +99,57 @@ public class DynamicRecordService
 
         if (useJsonSort)
         {
-            var matchingIds = await query.Select(r => r.Id).ToListAsync();
-            var total = matchingIds.Count;
-            if (matchingIds.Count == 0)
+            var total = includeTotal ? await query.CountAsync() : 0;
+            if (total == 0)
                 return ([], 0);
 
             var skip = (page - 1) * pageSize;
-            var idArray = matchingIds.ToArray();
-            var pageIds = asc
-                ? await _db.Database.SqlQuery<IdRow>($"""
-                    SELECT r."Id" AS "Id"
-                    FROM "Records" r
-                    WHERE r."Id" = ANY({idArray})
-                    ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') ASC, r."Id" ASC
-                    OFFSET {skip} LIMIT {pageSize}
-                    """).ToListAsync()
-                : await _db.Database.SqlQuery<IdRow>($"""
-                    SELECT r."Id" AS "Id"
-                    FROM "Records" r
-                    WHERE r."Id" = ANY({idArray})
-                    ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') DESC, r."Id" DESC
-                    OFFSET {skip} LIMIT {pageSize}
-                    """).ToListAsync();
+            List<IdRow> pageIds;
+
+            if (filteredIds is { Count: > 0 })
+            {
+                // فقط روی مجموعهٔ فیلترشده مرتب کن — بدون بارگذاری دوبارهٔ همهٔ IDها از query
+                var idArray = filteredIds.ToArray();
+                pageIds = asc
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."Id" = ANY({idArray})
+                        ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') ASC, r."Id" ASC
+                        OFFSET {skip} LIMIT {pageSize}
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."Id" = ANY({idArray})
+                        ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') DESC, r."Id" DESC
+                        OFFSET {skip} LIMIT {pageSize}
+                        """).ToListAsync();
+            }
+            else
+            {
+                // بدون فیلتر ستونی: Count جدا؛ سپس فقط Idها برای ANY (سبک‌تر از entity کامل)
+                var idArray = await query.Select(r => r.Id).ToArrayAsync();
+                if (idArray.Length == 0)
+                    return ([], 0);
+                if (!includeTotal)
+                    total = idArray.Length;
+                pageIds = asc
+                    ? await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."Id" = ANY({idArray})
+                        ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') ASC, r."Id" ASC
+                        OFFSET {skip} LIMIT {pageSize}
+                        """).ToListAsync()
+                    : await _db.Database.SqlQuery<IdRow>($"""
+                        SELECT r."Id" AS "Id"
+                        FROM "Records" r
+                        WHERE r."Id" = ANY({idArray})
+                        ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') DESC, r."Id" DESC
+                        OFFSET {skip} LIMIT {pageSize}
+                        """).ToListAsync();
+            }
 
             var orderedIds = pageIds.Select(x => x.Id).ToList();
             if (orderedIds.Count == 0)
@@ -828,73 +858,164 @@ public class DynamicRecordService
         return (rem < 2 && check == rem) || (rem >= 2 && check == 11 - rem);
     }
 
-    /// <summary>تشخیص تکراری روی فیلدهای علامت‌خورده با IsUniqueCheck (حالت or / and).</summary>
+    /// <summary>تشخیص تکراری روی فیلدهای علامت‌خورده با IsUniqueCheck (حالت or / and) + سراسری.</summary>
     private async Task CheckDuplicatesAsync(
         int moduleId, IReadOnlyList<FieldDef> fields,
         Dictionary<string, string?> data, int? excludeRecordId)
     {
-        var uniqueFields = fields.Where(f => f.IsUniqueCheck).ToList();
-        if (uniqueFields.Count == 0)
-            return;
-
-        var mode = await _db.Modules.AsNoTracking()
+        var module = await _db.Modules.AsNoTracking()
             .Where(m => m.Id == moduleId)
-            .Select(m => m.DuplicateMatchMode)
-            .FirstOrDefaultAsync() ?? "or";
+            .Select(m => new
+            {
+                m.DuplicateCheckEnabled,
+                m.DuplicateMatchMode,
+                m.DuplicateIgnoreEmpty,
+                m.GlobalDuplicateEnabled
+            })
+            .FirstOrDefaultAsync();
+
+        if (module is null)
+            return;
 
         var errors = new Dictionary<string, string>();
 
-        if (string.Equals(mode, "and", StringComparison.OrdinalIgnoreCase))
+        if (module.DuplicateCheckEnabled)
         {
-            var valued = uniqueFields
-                .Select(f => (Field: f, Value: data.TryGetValue(f.Name, out var v) ? v : null))
-                .Where(x => !string.IsNullOrEmpty(x.Value))
-                .ToList();
+            var uniqueFields = fields.Where(f => f.IsUniqueCheck).ToList();
+            var mode = module.DuplicateMatchMode ?? "or";
+            var ignoreEmpty = module.DuplicateIgnoreEmpty;
 
-            // فقط وقتی همه فیلدهای یکتا مقدار دارند، ترکیب را بررسی کن
-            if (valued.Count == uniqueFields.Count && valued.Count > 0)
+            if (uniqueFields.Count > 0)
             {
-                var sb = new System.Text.StringBuilder("""SELECT * FROM "Records" WHERE "ModuleId" = {0}""");
-                var args = new List<object> { moduleId };
-                var i = 1;
-                foreach (var (field, value) in valued)
+                if (string.Equals(mode, "and", StringComparison.OrdinalIgnoreCase))
                 {
-                    sb.Append($" AND \"CustomData\" ->> {{{i}}} = {{{i + 1}}}");
-                    args.Add(field.Name);
-                    args.Add(value!);
-                    i += 2;
+                    var valued = uniqueFields
+                        .Select(f => (Field: f, Value: data.TryGetValue(f.Name, out var v) ? v : null))
+                        .Where(x => !ignoreEmpty || !string.IsNullOrEmpty(x.Value))
+                        .ToList();
+
+                    var shouldCheck = ignoreEmpty
+                        ? valued.Count == uniqueFields.Count && valued.Count > 0
+                        : uniqueFields.Count > 0;
+
+                    if (shouldCheck && (ignoreEmpty ? valued.Count > 0 : true))
+                    {
+                        var pairs = ignoreEmpty
+                            ? valued
+                            : uniqueFields
+                                .Select(f => (Field: f, Value: data.TryGetValue(f.Name, out var v) ? v : null))
+                                .ToList();
+
+                        if (pairs.Count > 0 && (ignoreEmpty || pairs.All(p => !string.IsNullOrEmpty(p.Value))))
+                        {
+                            var sb = new System.Text.StringBuilder("""SELECT * FROM "Records" WHERE "ModuleId" = {0}""");
+                            var args = new List<object> { moduleId };
+                            var i = 1;
+                            foreach (var (field, value) in pairs)
+                            {
+                                if (string.IsNullOrEmpty(value))
+                                {
+                                    sb.Append($" AND (\"CustomData\" ->> {{{i}}} IS NULL OR \"CustomData\" ->> {{{i}}} = '')");
+                                    args.Add(field.Name);
+                                    i += 1;
+                                }
+                                else
+                                {
+                                    sb.Append($" AND \"CustomData\" ->> {{{i}}} = {{{i + 1}}}");
+                                    args.Add(field.Name);
+                                    args.Add(value);
+                                    i += 2;
+                                }
+                            }
+
+                            var duplicate = await _db.Records
+                                .FromSqlRaw(sb.ToString(), args.ToArray())
+                                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
+                                .AnyAsync();
+
+                            if (duplicate)
+                            {
+                                var first = pairs[0].Field;
+                                errors[first.Name] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
+                                errors["_duplicate"] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
+                            }
+                        }
+                    }
                 }
-
-                var duplicate = await _db.Records
-                    .FromSqlRaw(sb.ToString(), args.ToArray())
-                    .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                    .AnyAsync();
-
-                if (duplicate)
+                else
                 {
-                    var first = valued[0].Field;
-                    errors[first.Name] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
-                    errors["_duplicate"] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
+                    foreach (var field in uniqueFields)
+                    {
+                        data.TryGetValue(field.Name, out var value);
+                        if (ignoreEmpty && string.IsNullOrEmpty(value))
+                            continue;
+
+                        bool duplicate;
+                        if (string.IsNullOrEmpty(value))
+                        {
+                            duplicate = await _db.Records
+                                .FromSqlInterpolated($"""
+                                    SELECT * FROM "Records"
+                                    WHERE "ModuleId" = {moduleId}
+                                      AND ("CustomData" ->> {field.Name} IS NULL OR "CustomData" ->> {field.Name} = '')
+                                    """)
+                                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
+                                .AnyAsync();
+                        }
+                        else
+                        {
+                            duplicate = await _db.Records
+                                .FromSqlInterpolated($"""
+                                    SELECT * FROM "Records"
+                                    WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {field.Name} = {value}
+                                    """)
+                                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
+                                .AnyAsync();
+                        }
+
+                        if (duplicate)
+                            errors[field.Name] = $"رکوردی با همین «{field.Label}» از قبل وجود دارد.";
+                    }
                 }
             }
         }
-        else
+
+        if (module.GlobalDuplicateEnabled)
         {
-            foreach (var field in uniqueFields)
+            var globalFields = fields.Where(f => f.IsGlobalUniqueCheck && f.Type == FieldType.Phone).ToList();
+            foreach (var field in globalFields)
             {
-                if (!data.TryGetValue(field.Name, out var value) || value is null)
+                if (!data.TryGetValue(field.Name, out var value) || string.IsNullOrWhiteSpace(value))
                     continue;
 
-                var duplicate = await _db.Records
-                    .FromSqlInterpolated($"""
-                        SELECT * FROM "Records"
-                        WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {field.Name} = {value}
-                        """)
-                    .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                    .AnyAsync();
+                var phoneFields = await _db.Fields.AsNoTracking()
+                    .Where(f => f.Type == FieldType.Phone && (f.IsGlobalUniqueCheck || f.ModuleId == moduleId))
+                    .Select(f => new { f.ModuleId, f.Name })
+                    .ToListAsync();
 
-                if (duplicate)
-                    errors[field.Name] = $"رکوردی با همین «{field.Label}» از قبل وجود دارد.";
+                // همه کلیدهای تلفن در CRM برای این مقدار
+                foreach (var group in phoneFields.GroupBy(f => f.ModuleId))
+                {
+                    foreach (var pf in group)
+                    {
+                        var hit = await _db.Records
+                            .FromSqlInterpolated($"""
+                                SELECT * FROM "Records"
+                                WHERE "ModuleId" = {group.Key} AND "CustomData" ->> {pf.Name} = {value}
+                                """)
+                            .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
+                            .AnyAsync();
+
+                        if (hit)
+                        {
+                            errors[field.Name] = $"شماره «{field.Label}» در سطح CRM تکراری است.";
+                            errors["_duplicate"] = "شماره تماس در سطح کل CRM تکراری است.";
+                            break;
+                        }
+                    }
+                    if (errors.ContainsKey(field.Name))
+                        break;
+                }
             }
         }
 

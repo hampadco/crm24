@@ -1,7 +1,7 @@
 /**
  * Form field/block visibility dependencies.
- * Rules on .crm-dep-target[data-visibility-rule]: {"field":"stage","op":"eq","value":"Closed Won"}
- * Watches inputs named f_{field} (CRM form) or fields[field].
+ * Supports legacy {"field","op","value"} and
+ * {"action":"show","logic":"and","conditions":[{field,op,value},...]}.
  */
 (function () {
   function findInput(fieldName) {
@@ -15,16 +15,60 @@
     var el = findInput(fieldName);
     if (!el) return '';
     if (el.type === 'checkbox') return el.checked ? 'true' : 'false';
+    if (el.multiple) {
+      return Array.prototype.slice
+        .call(el.selectedOptions || [])
+        .map(function (o) {
+          return o.value;
+        })
+        .join(',');
+    }
     return (el.value || '').toString();
   }
 
-  function evalRule(rule, current) {
-    var expected = (rule.value || '').toString();
-    var op = (rule.op || 'eq').toLowerCase();
+  function evalCondition(current, op, expected) {
+    expected = (expected || '').toString();
+    current = (current || '').toString();
+    op = (op || 'eq').toLowerCase();
     if (op === 'eq') return current === expected;
     if (op === 'neq') return current !== expected;
     if (op === 'contains') return current.indexOf(expected) !== -1;
     return true;
+  }
+
+  function normalizeRule(raw) {
+    if (!raw) return null;
+    var rule;
+    try {
+      rule = JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+    if (!rule) return null;
+    if (Array.isArray(rule.conditions) && rule.conditions.length) {
+      return {
+        logic: (rule.logic || 'and').toLowerCase(),
+        conditions: rule.conditions
+      };
+    }
+    if (rule.field) {
+      return {
+        logic: 'and',
+        conditions: [{ field: rule.field, op: rule.op || 'eq', value: rule.value || '' }]
+      };
+    }
+    return null;
+  }
+
+  function evalRule(normalized) {
+    if (!normalized || !normalized.conditions || !normalized.conditions.length) return true;
+    var logic = normalized.logic === 'or' ? 'or' : 'and';
+    var results = normalized.conditions.map(function (c) {
+      if (!c || !c.field) return true;
+      return evalCondition(getValue(c.field), c.op, c.value);
+    });
+    if (logic === 'or') return results.some(Boolean);
+    return results.every(Boolean);
   }
 
   function applyAll() {
@@ -34,19 +78,12 @@
         target.style.display = '';
         return;
       }
-      var rule;
-      try {
-        rule = JSON.parse(raw);
-      } catch {
+      var normalized = normalizeRule(raw);
+      if (!normalized) {
         target.style.display = '';
         return;
       }
-      if (!rule || !rule.field) {
-        target.style.display = '';
-        return;
-      }
-      var current = getValue(rule.field);
-      target.style.display = evalRule(rule, current) ? '' : 'none';
+      target.style.display = evalRule(normalized) ? '' : 'none';
     });
   }
 
