@@ -93,103 +93,148 @@
 
 @if (tab == "relations")
 {
+    string KindFa(RelationKind k) => k switch
+    {
+        RelationKind.OneToOne => "یک به یک",
+        RelationKind.OneToMany => "یک به چند",
+        RelationKind.ManyToOne => "چند به یک",
+        RelationKind.ManyToMany => "چند به چند",
+        _ => k.ToString()
+    };
+
+    RelationKind EffectiveKind(RelationDef r) =>
+        r.IsManyToMany ? RelationKind.ManyToMany : r.Kind;
+
+    var relationSections = new (string Title, List<RelationDef> Items)[]
+    {
+        ("یک به یک و چند به یک", relations.Where(r =>
+        {
+            var k = EffectiveKind(r);
+            return k is RelationKind.OneToOne or RelationKind.ManyToOne;
+        }).ToList()),
+        ("یک به چند", relations.Where(r => EffectiveKind(r) == RelationKind.OneToMany).ToList()),
+        ("چند به چند", relations.Where(r => EffectiveKind(r) == RelationKind.ManyToMany).ToList())
+    };
+
     <div class="crm-studio-panel">
         <div class="crm-studio-panel-header">
-            <h5>ارتباط ماژول‌ها</h5>
+            <div>
+                <h5 class="mb-0">ماژول مرتبط</h5>
+                <p class="text-muted small mb-0 mt-1">روابط @module.PluralLabel با سایر ماژول‌ها</p>
+            </div>
             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRelationModal">
-                <i class="bx bx-plus me-1"></i> رابطه جدید
+                <i class="bx bx-plus me-1"></i> افزودن رابطه
             </button>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>برچسب</th>
-                        <th>ماژول مقابل</th>
-                        <th>چند-به-چند</th>
-                        <th>فیلد لینک</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (relations.Count == 0)
+        <div class="p-3">
+            @foreach (var (sectionTitle, items) in relationSections)
+            {
+                <div class="crm-rel-section mb-4">
+                    <div class="crm-rel-section-title">@sectionTitle</div>
+                    @if (items.Count == 0)
                     {
-                        <tr><td colspan="5" class="text-muted text-center py-4">هنوز رابطه‌ای تعریف نشده است.</td></tr>
+                        <p class="text-muted small mb-0 py-2">هیچ رابطه‌ای تعریف نشده است.</p>
                     }
-                    @foreach (var rel in relations)
+                    else
                     {
-                        var otherId = rel.SourceModuleId == module.Id ? rel.TargetModuleId : rel.SourceModuleId;
-                        var otherLabel = moduleMap.TryGetValue(otherId, out ModuleDef? other)
-                            ? other.PluralLabel
-                            : $"#{otherId}";
-                        <tr>
-                            <td>@rel.Label</td>
-                            <td>@otherLabel</td>
-                            <td>@(rel.IsManyToMany ? "بله" : "—")</td>
-                            <td dir="ltr"><code>@(rel.LinkFieldName ?? "—")</code></td>
-                            <td class="text-end">
-                                <form method="post" action="/App/customize/@module.Name/relations/@rel.Id/delete" class="d-inline"
-                                      onsubmit="return confirm('رابطه حذف شود؟');">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
-                                </form>
-                            </td>
-                        </tr>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>نام زبانه</th>
+                                        <th>ماژول مرتبط</th>
+                                        <th>نوع</th>
+                                        <th>نام فیلد</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var rel in items)
+                                {
+                                    var otherId = rel.SourceModuleId == module.Id ? rel.TargetModuleId : rel.SourceModuleId;
+                                    var otherLabel = moduleMap.TryGetValue(otherId, out ModuleDef? other)
+                                        ? other.PluralLabel
+                                        : $"#{otherId}";
+                                    <tr>
+                                        <td>@rel.Label</td>
+                                        <td>@otherLabel</td>
+                                        <td>@KindFa(EffectiveKind(rel))</td>
+                                        <td>@(rel.RelatedFieldLabel ?? rel.LinkFieldName ?? "—")</td>
+                                        <td class="text-end">
+                                            <form method="post" action="/App/customize/@module.Name/relations/@rel.Id/delete" class="d-inline"
+                                                  onsubmit="return confirm('رابطه حذف شود؟');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-sm btn-label-danger">حذف</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
                     }
-                </tbody>
-            </table>
+                </div>
+            }
         </div>
     </div>
 
     <div class="modal fade" id="addRelationModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <form method="post" action="/App/customize/@module.Name/relations" class="modal-content" id="addRelationForm">
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
-                    <h5 class="modal-title">رابطه جدید</h5>
+                    <h5 class="modal-title">افزودن رابطه</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body row g-3">
                     <div class="col-12">
-                        <label class="form-label">ماژول مقصد</label>
-                        <select name="targetModuleId" id="relTargetModule" class="form-select" required>
-                            <option value="">— انتخاب کنید —</option>
-                            @foreach (var m in allModules.Where(m => m.Id != module.Id))
-                            {
-                                <option value="@m.Id">@m.PluralLabel</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">برچسب</label>
-                        <input type="text" name="label" class="form-control" required placeholder="مثلاً فرصت‌های مرتبط" />
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="isManyToMany" value="true" id="relMany" />
-                            <label class="form-check-label" for="relMany">چند-به-چند</label>
+                        <label class="form-label">نوع رابطه</label>
+                        <div class="crm-rel-kind-pills" role="radiogroup">
+                            <label class="crm-rel-kind-pill">
+                                <input type="radio" name="kind" value="@((int)RelationKind.OneToMany)" checked />
+                                <span>یک به چند</span>
+                            </label>
+                            <label class="crm-rel-kind-pill">
+                                <input type="radio" name="kind" value="@((int)RelationKind.ManyToOne)" />
+                                <span>چند به یک</span>
+                            </label>
+                            <label class="crm-rel-kind-pill">
+                                <input type="radio" name="kind" value="@((int)RelationKind.ManyToMany)" />
+                                <span>چند به چند</span>
+                            </label>
+                            <label class="crm-rel-kind-pill">
+                                <input type="radio" name="kind" value="@((int)RelationKind.OneToOne)" />
+                                <span>یک به یک</span>
+                            </label>
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">فیلد لینک (Lookup)</label>
-                        <select name="linkFieldName" id="relLinkField" class="form-select">
-                            <option value="">— اختیاری —</option>
-                            @foreach (var lf in lookupFields)
+                        <label class="form-label">انتخاب ماژول‌های مرتبط <span class="text-danger">*</span></label>
+                        <select name="targetModuleId" id="relTargetModule" class="form-select" required>
+                            <option value="">انتخاب</option>
+                            @foreach (var m in allModules.Where(m => m.Id != module.Id))
                             {
-                                var ownerLabel = moduleMap.TryGetValue(lf.ModuleId, out ModuleDef? owner)
-                                    ? owner.PluralLabel
-                                    : $"#{lf.ModuleId}";
-                                <option value="@lf.Name" data-module-id="@lf.ModuleId">
-                                    @lf.Label (@lf.Name) — @ownerLabel
-                                </option>
+                                <option value="@m.Id"
+                                        data-singular="@m.SingularLabel"
+                                        data-plural="@m.PluralLabel">@m.PluralLabel</option>
                             }
                         </select>
-                        <small class="text-muted">Lookup روی مقصد یا مبدأ که برای لیست مرتبط استفاده می‌شود.</small>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">نام زبانه در رکورد @module.SingularLabel <span class="text-danger">*</span></label>
+                        <input type="text" name="label" id="relTabLabel" class="form-control" required
+                               placeholder="مثلاً فرصت‌های فروش" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">نام فیلد @module.PluralLabel در رکورد مرتبط <span class="text-danger">*</span></label>
+                        <input type="text" name="relatedFieldLabel" id="relFieldLabel" class="form-control" required
+                               value="@module.SingularLabel" />
+                        <small class="text-muted">روی ماژول مقابل به‌عنوان فیلد Lookup ساخته می‌شود (به‌جز چند‌به‌چند).</small>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
-                    <button type="submit" class="btn btn-primary">افزودن</button>
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">لغو</button>
+                    <button type="submit" class="btn btn-primary">ذخیره</button>
                 </div>
             </form>
         </div>
@@ -1435,6 +1480,18 @@ else if (tab == "layout")
                         document.getElementById('addDepField').value,
                         document.getElementById('addDepOp').value,
                         document.getElementById('addDepValue').value);
+                });
+            }
+
+            /* Relation modal: autofill tab label from related module plural */
+            const relTarget = document.getElementById('relTargetModule');
+            const relTabLabel = document.getElementById('relTabLabel');
+            if (relTarget && relTabLabel) {
+                relTarget.addEventListener('change', function () {
+                    const opt = relTarget.options[relTarget.selectedIndex];
+                    if (!opt || !opt.value) return;
+                    if (!relTabLabel.value.trim())
+                        relTabLabel.value = opt.getAttribute('data-plural') || opt.textContent.trim();
                 });
             }
 

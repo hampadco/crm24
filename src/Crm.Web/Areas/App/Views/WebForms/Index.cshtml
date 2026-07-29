@@ -1,50 +1,69 @@
+@using System.Net
 @using Crm.Core.Entities
+@using Crm.Web.Areas.App.Models
 @model List<WebForm>
+@{
+    var rows = Model.Select(form =>
+    {
+        var publicUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/f/{form.PublicKey}";
+        var encUrl = WebUtility.HtmlEncode(publicUrl);
+        var iframe = WebUtility.HtmlEncode($"<iframe src=\"{publicUrl}\" width=\"100%\" height=\"520\" frameborder=\"0\"></iframe>");
+        var linkHtml =
+            $"<div class=\"d-flex align-items-center gap-1\">" +
+            $"<a href=\"{encUrl}\" target=\"_blank\" class=\"text-truncate\" style=\"max-width:220px\" dir=\"ltr\">{encUrl}</a>" +
+            $"<button type=\"button\" class=\"crm-dt-action\" title=\"کپی کد iFrame\" onclick=\"navigator.clipboard.writeText('{iframe.Replace("'", "\\'")}')\">" +
+            "<i class=\"bx bx-code-alt\"></i></button></div>";
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-layout text-primary me-1"></i> وب‌فرم‌ها</h4>
-    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> وب‌فرم جدید</a>
-</div>
+        return new CrmTableRow
+        {
+            Id = form.Id.ToString(),
+            EditUrl = $"/App/webforms/{form.Id}/edit",
+            DeleteUrl = $"/App/webforms/{form.Id}/delete",
+            DeleteConfirm = "حذف شود؟",
+            Cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["name"] = CrmTableHtml.Strong(form.Name),
+                ["module"] = CrmTableHtml.Muted(form.Module.PluralLabel),
+                ["submissions"] = CrmTableHtml.Enc(form.SubmissionCount.ToString()),
+                ["status"] = CrmTableHtml.Badge(
+                    form.IsActive ? "فعال" : "غیرفعال",
+                    form.IsActive ? "bg-label-success" : "bg-label-secondary"),
+                ["link"] = linkHtml
+            }
+        };
+    }).ToList();
 
-<partial name="_Alerts" />
+    var table = new CrmTableModel
+    {
+        ListPath = "/App/webforms",
+        ShowSearchBox = false,
+        EmptyMessage = "وب‌فرمی ساخته نشده است.",
+        Columns =
+        [
+            new CrmTableColumn { Key = "name", Label = "نام" },
+            new CrmTableColumn { Key = "module", Label = "ماژول" },
+            new CrmTableColumn { Key = "submissions", Label = "ارسال‌ها" },
+            new CrmTableColumn { Key = "status", Label = "وضعیت" },
+            new CrmTableColumn { Key = "link", Label = "لینک عمومی" }
+        ],
+        Rows = rows
+    };
+}
 
-<div class="card">
-    <div class="table-responsive text-nowrap">
-        <table class="table table-hover">
-            <thead><tr><th>نام</th><th>ماژول</th><th>ارسال‌ها</th><th>وضعیت</th><th>لینک عمومی</th><th></th></tr></thead>
-            <tbody class="table-border-bottom-0">
-                @if (Model.Count == 0)
-                {
-                    <tr><td colspan="6" class="text-center text-muted py-5">وب‌فرمی ساخته نشده است.</td></tr>
-                }
-                @foreach (var form in Model)
-                {
-                    var publicUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/f/{form.PublicKey}";
-                    <tr>
-                        <td><strong>@form.Name</strong></td>
-                        <td class="text-muted">@form.Module.PluralLabel</td>
-                        <td>@form.SubmissionCount</td>
-                        <td><span class="badge @(form.IsActive ? "bg-label-success" : "bg-label-secondary")">@(form.IsActive ? "فعال" : "غیرفعال")</span></td>
-                        <td>
-                            <div class="d-flex align-items-center gap-1">
-                                <a href="@publicUrl" target="_blank" class="text-truncate" style="max-width:220px" dir="ltr">@publicUrl</a>
-                                <button type="button" class="btn btn-sm btn-text-secondary" title="کپی کد iFrame"
-                                        onclick="navigator.clipboard.writeText('<iframe src=&quot;@publicUrl&quot; width=&quot;100%&quot; height=&quot;520&quot; frameborder=&quot;0&quot;></iframe>')">
-                                    <i class="bx bx-code-alt"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td class="text-end">
-                            <a asp-action="Edit" asp-route-id="@form.Id" class="btn btn-sm btn-outline-primary"><i class="bx bx-edit"></i></a>
-                            <form asp-action="Delete" asp-route-id="@form.Id" method="post" class="d-inline" data-confirm="حذف شود؟">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bx bx-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+}
+
+<div class="crm-list-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0"><i class="bx bx-layout text-primary me-1"></i> وب‌فرم‌ها</h4>
+        <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> وب‌فرم جدید</a>
     </div>
-    <partial name="_AppPagination" />
+
+    <partial name="_Alerts" />
+    <partial name="_CrmTable" model="table" />
 </div>
+
+@section Scripts {
+    <script src="~/js/crm-datatable.js" asp-append-version="true"></script>
+}

@@ -1,58 +1,73 @@
 @using Crm.Core.Entities
+@using Crm.Web.Areas.App.Models
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
 @model List<PortalUser>
 @{
     ViewData["PanelTitle"] = "پشتیبانی";
     Dictionary<int, string> contacts = ViewBag.Contacts;
+    var af = Antiforgery.GetAndStoreTokens(Context);
+    var afInput = $"<input type=\"hidden\" name=\"{af.FormFieldName}\" value=\"{af.RequestToken}\" />";
+
+    var rows = Model.Select(user =>
+    {
+        var contactTitle = user.ContactRecordId is int cid && contacts.TryGetValue(cid, out var title) ? title : "—";
+        var extra =
+            $"<form action=\"/App/portal-users/{user.Id}/toggle\" method=\"post\" class=\"d-inline\">{afInput}" +
+            "<button type=\"submit\" class=\"crm-dt-action\" title=\"فعال/غیرفعال\"><i class=\"bx bx-power-off\"></i></button></form>";
+
+        return new CrmTableRow
+        {
+            Id = user.Id.ToString(),
+            EditUrl = $"/App/portal-users/{user.Id}/edit",
+            ExtraActionsHtml = extra,
+            Cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["name"] = CrmTableHtml.Strong(user.FullName),
+                ["email"] = $"<span dir=\"ltr\">{CrmTableHtml.Enc(user.Email)}</span>",
+                ["contact"] = CrmTableHtml.Text(contactTitle),
+                ["status"] = CrmTableHtml.Badge(
+                    user.IsActive ? "فعال" : "غیرفعال",
+                    user.IsActive ? "bg-label-success" : "bg-label-secondary")
+            }
+        };
+    }).ToList();
+
+    var table = new CrmTableModel
+    {
+        ListPath = "/App/portal-users",
+        ShowSearchBox = false,
+        EmptyMessage = "کاربر پورتالی ساخته نشده است.",
+        Columns =
+        [
+            new CrmTableColumn { Key = "name", Label = "نام" },
+            new CrmTableColumn { Key = "email", Label = "ایمیل" },
+            new CrmTableColumn { Key = "contact", Label = "مخاطب مرتبط" },
+            new CrmTableColumn { Key = "status", Label = "وضعیت" }
+        ],
+        Rows = rows
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-user-circle text-primary me-1"></i> کاربران پورتال مشتریان</h4>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#portalUserModal">
-        <i class="bx bx-plus me-1"></i> کاربر جدید
-    </button>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
-
-<div class="alert alert-info small mb-3">
-    مشتریان از <a href="/Portal/Account/Login" target="_blank"><strong>/Portal/Account/Login</strong></a> وارد می‌شوند — نه از /App/Account/Login.
-</div>
-
-<div class="card">
-    <div class="table-responsive text-nowrap">
-        <table class="table table-hover">
-            <thead><tr><th>نام</th><th>ایمیل</th><th>مخاطب مرتبط</th><th>وضعیت</th><th class="text-end">عملیات</th></tr></thead>
-            <tbody class="table-border-bottom-0">
-                @if (Model.Count == 0)
-                {
-                    <tr><td colspan="5" class="text-center text-muted py-5">کاربر پورتالی ساخته نشده است.</td></tr>
-                }
-                @foreach (var user in Model)
-                {
-                    <tr>
-                        <td><strong>@user.FullName</strong></td>
-                        <td dir="ltr">@user.Email</td>
-                        <td>@(user.ContactRecordId is int cid && contacts.TryGetValue(cid, out var title) ? title : "—")</td>
-                        <td>
-                            <span class="badge @(user.IsActive ? "bg-label-success" : "bg-label-secondary")">
-                                @(user.IsActive ? "فعال" : "غیرفعال")
-                            </span>
-                        </td>
-                        <td class="text-end">
-                            <a href="/App/portal-users/@user.Id/edit" class="btn btn-sm btn-outline-primary">ویرایش</a>
-                            <form action="/App/portal-users/@user.Id/toggle" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm btn-icon btn-text-warning" title="فعال/غیرفعال">
-                                    <i class="bx bx-power-off"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+<div class="crm-list-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0"><i class="bx bx-user-circle text-primary me-1"></i> کاربران پورتال مشتریان</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#portalUserModal">
+            <i class="bx bx-plus me-1"></i> کاربر جدید
+        </button>
     </div>
-    <partial name="_AppPagination" />
+
+    <partial name="_Alerts" />
+
+    <div class="alert alert-info small mb-3">
+        مشتریان از <a href="/Portal/Account/Login" target="_blank"><strong>/Portal/Account/Login</strong></a> وارد می‌شوند — نه از /App/Account/Login.
+    </div>
+
+    <partial name="_CrmTable" model="table" />
 </div>
 
 <div class="modal fade" id="portalUserModal" tabindex="-1">
@@ -95,3 +110,7 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/crm-datatable.js" asp-append-version="true"></script>
+}

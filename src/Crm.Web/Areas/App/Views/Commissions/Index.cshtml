@@ -1,146 +1,131 @@
 @using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Areas.App.Models
 @using Crm.Web.Services
 @model CommissionsIndexViewModel
 @{
     ViewData["PanelTitle"] = "مشارکت در فروش";
+    ViewBag.Page = Model.Page;
+    ViewBag.TotalPages = Model.TotalPages;
+    ViewBag.TotalCount = Model.TotalCount;
+    ViewBag.PageSize = Model.PageSize;
+    ViewBag.PagingRoutes = new Dictionary<string, string?> { ["q"] = Model.Search };
+
     var rowNumber = (Model.Page - 1) * Model.PageSize;
+    var rows = Model.Rules.Select(rule =>
+    {
+        rowNumber++;
+        return new CrmTableRow
+        {
+            Id = rule.Id.ToString(),
+            EditUrl = $"/App/commissions/{rule.Id}/edit",
+            Cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["#"] = $"<span class=\"text-muted\">{rowNumber.ToFa()}</span>",
+                ["name"] = CrmTableHtml.Strong(rule.Name),
+                ["scope"] = CrmTableHtml.Text(rule.Product?.Name ?? "کل فاکتور"),
+                ["percent"] = rule.Percent > 0
+                    ? $"<span dir=\"ltr\">{CrmTableHtml.Enc(rule.Percent.ToString("0.#") + "%")}</span>"
+                    : "—",
+                ["fixed"] = rule.FixedAmount > 0
+                    ? CrmTableHtml.Money(rule.FixedAmount)
+                    : "—",
+                ["min"] = rule.MinInvoiceAmount > 0
+                    ? CrmTableHtml.Money(rule.MinInvoiceAmount)
+                    : "—",
+                ["status"] = CrmTableHtml.Badge(
+                    rule.IsActive ? "فعال" : "غیرفعال",
+                    rule.IsActive ? "bg-label-success" : "bg-label-secondary")
+            }
+        };
+    }).ToList();
+
+    var table = new CrmTableModel
+    {
+        ListPath = "/App/commissions",
+        Search = Model.Search,
+        SearchPlaceholder = "جستجوی قانون یا محصول...",
+        ShowColumnFilters = true,
+        ShowSearchBox = false,
+        EmptyMessage = "قانونی تعریف نشده است.",
+        EmptyFilteredMessage = "نتیجه‌ای برای این جستجو یافت نشد.",
+        Columns =
+        [
+            new CrmTableColumn { Key = "#", Label = "#", FilterKind = CrmTableFilterKind.None },
+            new CrmTableColumn { Key = "name", Label = "نام قانون" },
+            new CrmTableColumn { Key = "scope", Label = "دامنه" },
+            new CrmTableColumn { Key = "percent", Label = "درصد" },
+            new CrmTableColumn { Key = "fixed", Label = "مبلغ ثابت" },
+            new CrmTableColumn { Key = "min", Label = "حداقل فاکتور" },
+            new CrmTableColumn { Key = "status", Label = "وضعیت", FilterKind = CrmTableFilterKind.Select, SelectOptions = [("true", "فعال"), ("false", "غیرفعال")] }
+        ],
+        Rows = rows
+    };
+
+    var reportRow = 0;
+    var reportRows = Model.Report.Select(row =>
+    {
+        reportRow++;
+        return new CrmTableRow
+        {
+            Id = row.UserId.ToString(),
+            Cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["#"] = $"<span class=\"text-muted\">{reportRow.ToFa()}</span>",
+                ["user"] = CrmTableHtml.Text(row.UserName),
+                ["deals"] = CrmTableHtml.Enc(row.DealCount.ToFa()),
+                ["total"] = $"<strong>{CrmTableHtml.Enc(row.Total.ToString("N0"))}</strong> <small class=\"text-muted\">تومان</small>"
+            }
+        };
+    }).ToList();
+
+    var reportTable = new CrmTableModel
+    {
+        ListPath = "/App/commissions",
+        ShowSearchBox = false,
+        ShowFilterBar = false,
+        ShowFooter = false,
+        ShowColumnFilters = false,
+        SelectionEnabled = false,
+        EmptyMessage = "هنوز پورسانتی محاسبه نشده است.",
+        Columns =
+        [
+            new CrmTableColumn { Key = "#", Label = "#" },
+            new CrmTableColumn { Key = "user", Label = "کارشناس" },
+            new CrmTableColumn { Key = "deals", Label = "معامله" },
+            new CrmTableColumn { Key = "total", Label = "جمع پورسانت" }
+        ],
+        Rows = reportRows
+    };
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <h4 class="mb-0">
-        <i class="bx bx-gift text-primary me-1"></i>
-        مشارکت در فروش (پورسانت)
-        <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount.ToFa()</span>
-    </h4>
-    <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> قانون جدید</a>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
-
-<div class="row g-4">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header pb-0">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                    <h5 class="mb-0">قوانین پورسانت</h5>
-                    <form method="get" class="d-flex gap-2">
-                        <div class="input-group input-group-merge" style="min-width:220px">
-                            <span class="input-group-text"><i class="bx bx-search"></i></span>
-                            <input type="text" name="q" value="@Model.Search" class="form-control" placeholder="جستجوی قانون یا محصول..." />
-                        </div>
-                        <button type="submit" class="btn btn-outline-primary">جستجو</button>
-                    </form>
-                </div>
-            </div>
-            <div class="table-responsive text-nowrap">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width:3rem">#</th>
-                            <th>نام قانون</th>
-                            <th>دامنه</th>
-                            <th>درصد</th>
-                            <th>مبلغ ثابت</th>
-                            <th>حداقل فاکتور</th>
-                            <th>وضعیت</th>
-                            <th class="text-end">عملیات</th>
-                        </tr>
-                    </thead>
-                    <tbody class="table-border-bottom-0">
-                        @if (Model.Rules.Count == 0)
-                        {
-                            <tr>
-                                <td colspan="8" class="text-center text-muted py-5">
-                                    @(string.IsNullOrWhiteSpace(Model.Search) ? "قانونی تعریف نشده است." : "نتیجه‌ای برای این جستجو یافت نشد.")
-                                </td>
-                            </tr>
-                        }
-                        @foreach (var rule in Model.Rules)
-                        {
-                            rowNumber++;
-                            <tr>
-                                <td class="text-muted">@rowNumber.ToFa()</td>
-                                <td><strong>@rule.Name</strong></td>
-                                <td>@(rule.Product?.Name ?? "کل فاکتور")</td>
-                                <td dir="ltr">@(rule.Percent > 0 ? rule.Percent.ToString("0.#") + "%" : "—")</td>
-                                <td>@(rule.FixedAmount > 0 ? rule.FixedAmount.ToString("N0") + " تومان" : "—")</td>
-                                <td>@(rule.MinInvoiceAmount > 0 ? rule.MinInvoiceAmount.ToString("N0") + " تومان" : "—")</td>
-                                <td>
-                                    <span class="badge @(rule.IsActive ? "bg-label-success" : "bg-label-secondary")">
-                                        @(rule.IsActive ? "فعال" : "غیرفعال")
-                                    </span>
-                                </td>
-                                <td class="text-end">
-                                    <a asp-action="Edit" asp-route-id="@rule.Id"
-                                       class="btn btn-sm btn-icon btn-text-secondary" title="ویرایش">
-                                        <i class="bx bx-edit"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            @if (Model.TotalPages > 1)
-            {
-                <div class="card-footer">
-                    <nav>
-                        <ul class="pagination pagination-sm mb-0 justify-content-center flex-wrap">
-                            @for (var p = 1; p <= Model.TotalPages; p++)
-                            {
-                                <li class="page-item @(p == Model.Page ? "active" : "")">
-                                    <a class="page-link"
-                                       asp-action="Index"
-                                       asp-route-q="@Model.Search"
-                                       asp-route-page="@p">@p.ToFa()</a>
-                                </li>
-                            }
-                        </ul>
-                    </nav>
-                    <p class="text-muted small text-center mb-0 mt-2">
-                        نمایش @(((Model.Page - 1) * Model.PageSize + 1).ToFa())
-                        تا @Math.Min(Model.Page * Model.PageSize, Model.TotalCount).ToFa()
-                        از @Model.TotalCount.ToFa() قانون
-                    </p>
-                </div>
-            }
-        </div>
+<div class="crm-list-page">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <h4 class="mb-0">
+            <i class="bx bx-gift text-primary me-1"></i>
+            مشارکت در فروش (پورسانت)
+            <span class="badge bg-label-secondary rounded-pill align-middle">@Model.TotalCount.ToFa()</span>
+        </h4>
+        <a asp-action="Create" class="btn btn-primary"><i class="bx bx-plus me-1"></i> قانون جدید</a>
     </div>
 
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header"><h5 class="mb-0">گزارش کارشناسان</h5></div>
-            <div class="table-responsive text-nowrap">
-                <table class="table mb-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>کارشناس</th>
-                            <th>معامله</th>
-                            <th>جمع پورسانت</th>
-                        </tr>
-                    </thead>
-                    <tbody class="table-border-bottom-0">
-                        @if (Model.Report.Count == 0)
-                        {
-                            <tr><td colspan="4" class="text-center text-muted py-4">هنوز پورسانتی محاسبه نشده است.</td></tr>
-                        }
-                        @{
-                            var reportRow = 0;
-                        }
-                        @foreach (var row in Model.Report)
-                        {
-                            reportRow++;
-                            <tr>
-                                <td class="text-muted">@reportRow.ToFa()</td>
-                                <td>@row.UserName</td>
-                                <td>@row.DealCount.ToFa()</td>
-                                <td><strong>@row.Total.ToString("N0")</strong> <small class="text-muted">تومان</small></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+    <partial name="_Alerts" />
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <h5 class="mb-3">قوانین پورسانت</h5>
+            <partial name="_CrmTable" model="table" />
+        </div>
+        <div class="col-lg-4">
+            <h5 class="mb-3">گزارش کارشناسان</h5>
+            <partial name="_CrmTable" model="reportTable" />
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/crm-datatable.js" asp-append-version="true"></script>
+}

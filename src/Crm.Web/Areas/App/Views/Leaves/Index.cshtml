@@ -1,87 +1,91 @@
 @using Crm.Core.Entities
 @using Crm.Web.Areas.App.Controllers
+@using Crm.Web.Areas.App.Models
 @using Crm.Web.Services
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
 @model List<LeaveRequest>
 @{
     ViewData["PanelTitle"] = "منابع انسانی";
     Dictionary<int, string> users = ViewBag.Users;
     bool isAdmin = ViewBag.IsAdmin;
+    var af = Antiforgery.GetAndStoreTokens(Context);
+    var afInput = $"<input type=\"hidden\" name=\"{af.FormFieldName}\" value=\"{af.RequestToken}\" />";
+
+    var columns = new List<CrmTableColumn>();
+    if (isAdmin)
+        columns.Add(new CrmTableColumn { Key = "user", Label = "پرسنل" });
+    columns.AddRange(
+    [
+        new CrmTableColumn { Key = "type", Label = "نوع" },
+        new CrmTableColumn { Key = "from", Label = "از" },
+        new CrmTableColumn { Key = "to", Label = "تا" },
+        new CrmTableColumn { Key = "reason", Label = "دلیل" },
+        new CrmTableColumn { Key = "status", Label = "وضعیت" }
+    ]);
+
+    var rows = Model.Select(request =>
+    {
+        var cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (isAdmin)
+            cells["user"] = CrmTableHtml.Text(users.GetValueOrDefault(request.UserId, "—"));
+        cells["type"] = CrmTableHtml.Enc(LeavesController.TypeLabel(request.Type));
+        cells["from"] = CrmTableHtml.Enc(PersianDateHelper.ToJalaliDate(request.FromUtc));
+        cells["to"] = CrmTableHtml.Enc(PersianDateHelper.ToJalaliDate(request.ToUtc));
+        cells["reason"] = CrmTableHtml.Text(request.Reason);
+        cells["status"] = CrmTableHtml.Badge(
+            LeavesController.StatusLabel(request.Status),
+            request.Status switch
+            {
+                LeaveStatus.Approved => "bg-label-success",
+                LeaveStatus.Rejected => "bg-label-danger",
+                _ => "bg-label-warning"
+            });
+
+        string? extra = null;
+        if (isAdmin && request.Status == LeaveStatus.Pending)
+        {
+            extra =
+                $"<form action=\"/App/leaves/{request.Id}/review\" method=\"post\" class=\"d-inline\">{afInput}" +
+                "<input type=\"hidden\" name=\"approve\" value=\"true\" />" +
+                "<button type=\"submit\" class=\"crm-dt-action\" title=\"تأیید\"><i class=\"bx bx-check\"></i></button></form>" +
+                $"<form action=\"/App/leaves/{request.Id}/review\" method=\"post\" class=\"d-inline\">{afInput}" +
+                "<input type=\"hidden\" name=\"approve\" value=\"false\" />" +
+                "<button type=\"submit\" class=\"crm-dt-action crm-dt-action--danger\" title=\"رد\"><i class=\"bx bx-x\"></i></button></form>";
+        }
+
+        return new CrmTableRow
+        {
+            Id = request.Id.ToString(),
+            ExtraActionsHtml = extra,
+            Cells = cells
+        };
+    }).ToList();
+
+    var table = new CrmTableModel
+    {
+        ListPath = "/App/leaves",
+        ShowSearchBox = false,
+        EmptyMessage = "درخواستی ثبت نشده است.",
+        Columns = columns,
+        Rows = rows
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-calendar-minus text-primary me-1"></i> مرخصی و مأموریت</h4>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#leaveModal">
-        <i class="bx bx-plus me-1"></i> درخواست جدید
-    </button>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
-
-<div class="card">
-    <div class="table-responsive text-nowrap">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    @if (isAdmin)
-                    {
-                        <th>پرسنل</th>
-                    }
-                    <th>نوع</th><th>از</th><th>تا</th><th>دلیل</th><th>وضعیت</th>
-                    @if (isAdmin)
-                    {
-                        <th class="text-end">بررسی</th>
-                    }
-                </tr>
-            </thead>
-            <tbody class="table-border-bottom-0">
-                @if (Model.Count == 0)
-                {
-                    <tr><td colspan="7" class="text-center text-muted py-5">درخواستی ثبت نشده است.</td></tr>
-                }
-                @foreach (var request in Model)
-                {
-                    <tr>
-                        @if (isAdmin)
-                        {
-                            <td>@users.GetValueOrDefault(request.UserId, "—")</td>
-                        }
-                        <td>@LeavesController.TypeLabel(request.Type)</td>
-                        <td>@PersianDateHelper.ToJalaliDate(request.FromUtc)</td>
-                        <td>@PersianDateHelper.ToJalaliDate(request.ToUtc)</td>
-                        <td>@(request.Reason ?? "—")</td>
-                        <td>
-                            <span class="badge @(request.Status switch { LeaveStatus.Approved => "bg-label-success", LeaveStatus.Rejected => "bg-label-danger", _ => "bg-label-warning" })">
-                                @LeavesController.StatusLabel(request.Status)
-                            </span>
-                        </td>
-                        @if (isAdmin)
-                        {
-                            <td class="text-end">
-                                @if (request.Status == LeaveStatus.Pending)
-                                {
-                                    <form action="/App/leaves/@request.Id/review" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="approve" value="true" />
-                                        <button type="submit" class="btn btn-sm btn-icon btn-text-success" title="تأیید">
-                                            <i class="bx bx-check"></i>
-                                        </button>
-                                    </form>
-                                    <form action="/App/leaves/@request.Id/review" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="approve" value="false" />
-                                        <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="رد">
-                                            <i class="bx bx-x"></i>
-                                        </button>
-                                    </form>
-                                }
-                            </td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
+<div class="crm-list-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0"><i class="bx bx-calendar-minus text-primary me-1"></i> مرخصی و مأموریت</h4>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#leaveModal">
+            <i class="bx bx-plus me-1"></i> درخواست جدید
+        </button>
     </div>
-    <partial name="_AppPagination" />
+
+    <partial name="_Alerts" />
+    <partial name="_CrmTable" model="table" />
 </div>
 
 <div class="modal fade" id="leaveModal" tabindex="-1">
@@ -122,3 +126,7 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/js/crm-datatable.js" asp-append-version="true"></script>
+}

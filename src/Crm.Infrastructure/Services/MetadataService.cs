@@ -391,43 +391,137 @@ public class MetadataService
         int sourceModuleId,
         int targetModuleId,
         string label,
-        bool isManyToMany,
+        RelationKind kind,
+        string? relatedFieldLabel = null,
         string? linkFieldName = null)
     {
-        var sourceOk = await _db.Modules.AnyAsync(m => m.Id == sourceModuleId);
-        var targetOk = await _db.Modules.AnyAsync(m => m.Id == targetModuleId);
-        if (!sourceOk || !targetOk)
-            throw new InvalidOperationException("ماژول مبدأ یا مقصد یافت نشد.");
+        var source = await _db.Modules.FirstOrDefaultAsync(m => m.Id == sourceModuleId)
+            ?? throw new InvalidOperationException("ماژول مبدأ یافت نشد.");
+        var target = await _db.Modules.FirstOrDefaultAsync(m => m.Id == targetModuleId)
+            ?? throw new InvalidOperationException("ماژول مقصد یافت نشد.");
 
         if (sourceModuleId == targetModuleId)
             throw new InvalidOperationException("مبدأ و مقصد نمی‌توانند یک ماژول باشند.");
 
         if (string.IsNullOrWhiteSpace(label))
-            throw new InvalidOperationException("برچسب رابطه الزامی است.");
+            throw new InvalidOperationException("نام زبانه الزامی است.");
 
-        var link = string.IsNullOrWhiteSpace(linkFieldName) ? null : linkFieldName.Trim();
-        if (link is not null)
+        var tabLabel = label.Trim();
+        var fieldLabel = string.IsNullOrWhiteSpace(relatedFieldLabel)
+            ? source.SingularLabel
+            : relatedFieldLabel.Trim();
+
+        // سمتی که Lookup روی آن قرار می‌گیرد (سمت «چند» یا ManyToOne روی مبدأ)
+        int lookupModuleId;
+        int lookupTargetModuleId;
+        switch (kind)
         {
-            var linkOk = await _db.Fields.AnyAsync(f =>
-                f.Type == FieldType.Lookup
-                && f.Name == link
-                && (f.ModuleId == targetModuleId || f.ModuleId == sourceModuleId));
-            if (!linkOk)
-                throw new InvalidOperationException("فیلد لینک Lookup معتبر نیست.");
+            case RelationKind.OneToMany:
+                // Source یک → Target چند : Lookup روی Target به Source
+                lookupModuleId = targetModuleId;
+                lookupTargetModuleId = sourceModuleId;
+                break;
+            case RelationKind.ManyToOne:
+            case RelationKind.OneToOne:
+                // Source چند → Target یک : Lookup روی Source به Target
+                lookupModuleId = sourceModuleId;
+                lookupTargetModuleId = targetModuleId;
+                break;
+            case RelationKind.ManyToMany:
+                lookupModuleId = 0;
+                lookupTargetModuleId = 0;
+                break;
+            default:
+                throw new InvalidOperationException("نوع رابطه نامعتبر است.");
+        }
+
+        string? link = string.IsNullOrWhiteSpace(linkFieldName) ? null : NormalizeSystemName(linkFieldName);
+        if (kind != RelationKind.ManyToMany)
+        {
+            var lookupTargetName = await _db.Modules.Where(m => m.Id == lookupTargetModuleId)
+                .Select(m => m.Name).FirstAsync();
+
+            if (link is null)
+            {
+                // نام سیستمی از ماژول مقصد Lookup
+                link = NormalizeSystemName(lookupTargetName);
+                if (string.IsNullOrWhiteSpace(link))
+                    link = "related_" + Guid.NewGuid().ToString("N")[..6];
+            }
+
+            var existing = await _db.Fields.FirstOrDefaultAsync(f =>
+                f.ModuleId == lookupModuleId && f.Name == link);
+
+            if (existing is null)
+            {
+                var maxSort = await _db.Fields.Where(f => f.ModuleId == lookupModuleId)
+                    .MaxAsync(f => (int?)f.SortOrder) ?? 0;
+                var blockId = await _db.FieldBlocks
+                    .Where(b => b.ModuleId == lookupModuleId)
+                    .OrderBy(b => b.SortOrder)
+                    .Select(b => (int?)b.Id)
+                    .FirstOrDefaultAsync();
+
+                _db.Fields.Add(new FieldDef
+                {
+                    ModuleId = lookupModuleId,
+                    BlockId = blockId,
+                    Name = link,
+                    Label = fieldLabel,
+                    Type = FieldType.Lookup,
+                    LookupModule = lookupTargetName,
+                    IsCustom = true,
+                    ShowInList = true,
+                    IsVisible = true,
+                    SortOrder = maxSort + 1
+                });
+                await _db.SaveChangesAsync();
+                InvalidateFieldCache(lookupModuleId);
+            }
+            else if (existing.Type != FieldType.Lookup)
+            {
+                throw new InvalidOperationException($"فیلدی با نام «{link}» از قبل وجود دارد و Lookup نیست.");
+            }
+            else
+            {
+                // هم‌راستا کردن LookupModule در صورت خالی بودن
+                if (string.IsNullOrWhiteSpace(existing.LookupModule))
+                {
+                    existing.LookupModule = lookupTargetName;
+                    await _db.SaveChangesAsync();
+                    InvalidateFieldCache(lookupModuleId);
+                }
+                link = existing.Name;
+            }
         }
 
         var relation = new RelationDef
         {
             SourceModuleId = sourceModuleId,
             TargetModuleId = targetModuleId,
-            Label = label.Trim(),
-            IsManyToMany = isManyToMany,
-            LinkFieldName = link
+            Label = tabLabel,
+            RelatedFieldLabel = fieldLabel,
+            Kind = kind,
+            IsManyToMany = kind == RelationKind.ManyToMany,
+            LinkFieldName = kind == RelationKind.ManyToMany ? null : link
         };
         _db.Relations.Add(relation);
         await _db.SaveChangesAsync();
         return relation;
     }
+
+    /// <summary>سازگاری با فراخوانی‌های قدیمی (checkbox چند-به-چند).</summary>
+    public Task<RelationDef> CreateRelationAsync(
+        int sourceModuleId,
+        int targetModuleId,
+        string label,
+        bool isManyToMany,
+        string? linkFieldName = null) =>
+        CreateRelationAsync(
+            sourceModuleId, targetModuleId, label,
+            isManyToMany ? RelationKind.ManyToMany : RelationKind.OneToMany,
+            relatedFieldLabel: null,
+            linkFieldName: linkFieldName);
 
     public async Task DeleteRelationAsync(int id)
     {

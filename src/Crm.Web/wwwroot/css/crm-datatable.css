@@ -193,9 +193,25 @@
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 
-.crm-dt-filter-shell:focus-within {
-  border-color: var(--crm-dt-accent);
-  box-shadow: 0 0 0 2px var(--crm-dt-accent-soft);
+.crm-dt-filter-shell.is-labelonly {
+  padding-inline: 0.55rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  background: #fff;
+}
+
+.crm-dt-filter-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--crm-dt-muted);
+  white-space: nowrap;
+}
+
+.crm-dt-sort.is-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
 }
 
 .crm-dt-filter-shell.is-novalue {
@@ -480,6 +496,80 @@
     overflow-x: clip;
 }
 
+.crm-dt-search-box {
+  flex: 1 1 14rem;
+  min-width: 10rem;
+  max-width: 22rem;
+}
+
+.crm-dt-filter-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 1 auto;
+}
+
+.crm-dt-filter-extra .form-select {
+  min-width: 9rem;
+  max-width: 14rem;
+  border-color: var(--crm-dt-input-border);
+}
+
+.crm-dt-search-box .form-control {
+  border-color: var(--crm-dt-input-border);
+}
+
+.crm-dt--nested {
+  border: none;
+  border-radius: 0;
+}
+
+.crm-dt--nested .crm-dt-table-wrap {
+  border-radius: 0;
+}
+
+.crm-dt-simple-label {
+  font-weight: 600;
+  color: var(--crm-dt-text);
+}
+
+.crm-dt-simple-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.crm-dt-simple-sort:hover {
+  color: var(--crm-dt-accent);
+}
+
+.crm-dt-simple-sort i {
+  font-size: 0.95rem;
+  color: var(--crm-dt-muted);
+}
+
+.crm-dt-title-link {
+  color: var(--crm-dt-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crm-dt-title-link:hover {
+  color: var(--crm-dt-accent);
+}
+
+.crm-dt-soft-link {
+  color: var(--crm-dt-accent);
+  text-decoration: none;
+}
+
+.crm-dt-soft-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 768px) {
   .crm-dt-table thead th {
     min-width: 7.25rem;
@@ -488,5 +578,10 @@
   .crm-dt-search-btn span,
   .crm-dt-clear-btn span {
     display: none;
+  }
+
+  .crm-dt-search-box {
+    max-width: none;
+    flex-basis: 100%;
   }
 }

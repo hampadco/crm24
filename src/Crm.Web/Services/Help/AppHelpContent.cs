@@ -12,6 +12,7 @@ public static partial class AppHelpContent
         .Concat(BuildSalesTopics())
         .Concat(BuildServiceTopics())
         .Concat(BuildAutomationTopics())
+        .Concat(BuildCustomizeTopics())
         .ToList());
 
     public static HelpTopic? Find(string slug) =>

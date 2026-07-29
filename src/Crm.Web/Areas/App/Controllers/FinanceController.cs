@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
+using Crm.Web.Areas.App.Models;
 using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
@@ -67,24 +68,125 @@ public class FinanceController : AppControllerBase
     }
 
     [HttpGet("/App/finance/{kindSlug:regex(^quotes|orders|invoices$)}")]
-    public async Task<IActionResult> Index(string kindSlug, string? q, int page = 1)
+    public async Task<IActionResult> Index(string kindSlug, string? q, string? sort, string? dir, int page = 1)
     {
         var kind = KindSlugs[kindSlug];
+        var filters = CrmTableQuery.ParseFilters(Request.Query, ["number", "customer", "date", "total", "status"]);
         var query = _db.SalesDocuments.AsNoTracking().Where(d => d.Kind == kind);
+
         if (!string.IsNullOrWhiteSpace(q))
             query = query.Where(d => d.CustomerName.Contains(q));
 
-        var (docs, total, p, pageSize) = await AppPaging.ToPageAsync(query.OrderByDescending(d => d.Id), page);
+        foreach (var (field, (op, value)) in filters)
+        {
+            query = field.ToLowerInvariant() switch
+            {
+                "number" => ApplyNumberFilter(query, op, value),
+                "customer" => ApplyCustomerFilter(query, op, value),
+                "status" => ApplyStatusFilter(query, op, value),
+                "total" => ApplyTotalFilter(query, op, value),
+                _ => query
+            };
+        }
+
+        var sortField = string.IsNullOrWhiteSpace(sort) ? "number" : sort;
+        var sortAsc = string.Equals(dir, "asc", StringComparison.OrdinalIgnoreCase);
+        query = (sortField.ToLowerInvariant(), sortAsc) switch
+        {
+            ("customer", true) => query.OrderBy(d => d.CustomerName),
+            ("customer", false) => query.OrderByDescending(d => d.CustomerName),
+            ("date", true) => query.OrderBy(d => d.IssueDateUtc),
+            ("date", false) => query.OrderByDescending(d => d.IssueDateUtc),
+            ("total", true) => query.OrderBy(d => d.GrandTotal),
+            ("total", false) => query.OrderByDescending(d => d.GrandTotal),
+            ("status", true) => query.OrderBy(d => d.Status),
+            ("status", false) => query.OrderByDescending(d => d.Status),
+            ("number", true) => query.OrderBy(d => d.Number),
+            _ => query.OrderByDescending(d => d.Id)
+        };
+
+        var (docs, total, p, pageSize) = await AppPaging.ToPageAsync(query, page);
         ViewData["Title"] = $"{KindLabel(kind)}ها";
         ViewBag.Kind = kind;
         ViewBag.KindSlug = kindSlug;
         ViewBag.Query = q;
-        AppPaging.SetViewBag(ViewBag, total, p, pageSize, new Dictionary<string, string?>
-        {
-            ["kindSlug"] = kindSlug,
-            ["q"] = q
-        });
+        ViewBag.SortField = sortField;
+        ViewBag.SortDir = sortAsc ? "asc" : "desc";
+        ViewBag.ColumnFilters = filters;
+        AppPaging.SetViewBag(ViewBag, total, p, pageSize,
+            CrmTableQuery.PagingRoutes(filters, q, sortField, sortAsc ? "asc" : "desc",
+                [new("kindSlug", kindSlug)]));
         return View(docs);
+    }
+
+    private static IQueryable<SalesDocument> ApplyNumberFilter(
+        IQueryable<SalesDocument> query, string op, string? value)
+    {
+        if (string.Equals(op, "isempty", StringComparison.OrdinalIgnoreCase))
+            return query.Where(d => false);
+        if (string.Equals(op, "isnotempty", StringComparison.OrdinalIgnoreCase))
+            return query;
+
+        if (!int.TryParse(value, out var num))
+            return query.Where(d => d.Number.ToString().Contains(value!));
+
+        return op.ToLowerInvariant() switch
+        {
+            "equals" => query.Where(d => d.Number == num),
+            "notequals" => query.Where(d => d.Number != num),
+            "startswith" => query.Where(d => d.Number.ToString().StartsWith(value!)),
+            "endswith" => query.Where(d => d.Number.ToString().EndsWith(value!)),
+            _ => query.Where(d => d.Number.ToString().Contains(value!))
+        };
+    }
+
+    private static IQueryable<SalesDocument> ApplyCustomerFilter(
+        IQueryable<SalesDocument> query, string op, string? value)
+    {
+        var v = value ?? "";
+        return op.ToLowerInvariant() switch
+        {
+            "equals" => query.Where(d => d.CustomerName == v),
+            "notequals" => query.Where(d => d.CustomerName != v),
+            "startswith" => query.Where(d => d.CustomerName.StartsWith(v)),
+            "endswith" => query.Where(d => d.CustomerName.EndsWith(v)),
+            "isempty" => query.Where(d => d.CustomerName == null || d.CustomerName == ""),
+            "isnotempty" => query.Where(d => d.CustomerName != null && d.CustomerName != ""),
+            _ => query.Where(d => d.CustomerName.Contains(v))
+        };
+    }
+
+    private static IQueryable<SalesDocument> ApplyStatusFilter(
+        IQueryable<SalesDocument> query, string op, string? value)
+    {
+        if (string.Equals(op, "isempty", StringComparison.OrdinalIgnoreCase))
+            return query.Where(d => false);
+        if (string.Equals(op, "isnotempty", StringComparison.OrdinalIgnoreCase))
+            return query;
+        if (!Enum.TryParse<SalesDocumentStatus>(value, true, out var st))
+            return query;
+
+        return string.Equals(op, "notequals", StringComparison.OrdinalIgnoreCase)
+            ? query.Where(d => d.Status != st)
+            : query.Where(d => d.Status == st);
+    }
+
+    private static IQueryable<SalesDocument> ApplyTotalFilter(
+        IQueryable<SalesDocument> query, string op, string? value)
+    {
+        if (string.Equals(op, "isempty", StringComparison.OrdinalIgnoreCase))
+            return query.Where(d => false);
+        if (string.Equals(op, "isnotempty", StringComparison.OrdinalIgnoreCase))
+            return query;
+        if (!decimal.TryParse(value, out var amount))
+            return query;
+
+        return op.ToLowerInvariant() switch
+        {
+            "equals" => query.Where(d => d.GrandTotal == amount),
+            "notequals" => query.Where(d => d.GrandTotal != amount),
+            _ => query.Where(d => d.GrandTotal == amount)
+        };
     }
 
     [HttpGet("/App/finance/{kindSlug:regex(^quotes|orders|invoices$)}/create")]

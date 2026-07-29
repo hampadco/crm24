@@ -1,52 +1,63 @@
-@model Crm.Web.Areas.App.Models.RecycleBinViewModel
+@using Crm.Web.Areas.App.Models
+@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Antiforgery
+@model RecycleBinViewModel
 @{
     ViewData["PanelTitle"] = "سطل بازیابی";
+    var af = Antiforgery.GetAndStoreTokens(Context);
+    var afInput = $"<input type=\"hidden\" name=\"{af.FormFieldName}\" value=\"{af.RequestToken}\" />";
+    var rowNumber = 0;
+
+    var rows = Model.Records.Select(record =>
+    {
+        rowNumber++;
+        var deleted = record.DeletedAtUtc is DateTime d
+            ? Crm.Web.Services.PersianDateHelper.ToJalaliDateTime(d)
+            : "—";
+        return new CrmTableRow
+        {
+            Id = record.Id.ToString(),
+            ExtraActionsHtml =
+                $"<form action=\"/App/recycle-bin/{record.Id}/restore\" method=\"post\" class=\"d-inline\">{afInput}" +
+                "<button type=\"submit\" class=\"btn btn-sm btn-outline-success\"><i class=\"bx bx-undo me-1\"></i> بازیابی</button></form>",
+            Cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["#"] = $"<span class=\"text-muted\">{rowNumber}</span>",
+                ["title"] = CrmTableHtml.Text(record.Title),
+                ["module"] = CrmTableHtml.Text(record.Module.PluralLabel),
+                ["deleted"] = $"<span dir=\"ltr\">{CrmTableHtml.Enc(deleted)}</span>"
+            }
+        };
+    }).ToList();
+
+    var table = new CrmTableModel
+    {
+        ListPath = "/App/recycle-bin",
+        ShowSearchBox = false,
+        ShowFooter = false,
+        EmptyMessage = "سطل بازیابی خالی است.",
+        Columns =
+        [
+            new CrmTableColumn { Key = "#", Label = "#" },
+            new CrmTableColumn { Key = "title", Label = "عنوان" },
+            new CrmTableColumn { Key = "module", Label = "ماژول" },
+            new CrmTableColumn { Key = "deleted", Label = "تاریخ حذف" }
+        ],
+        Rows = rows
+    };
 }
 
-<h4 class="mb-4"><i class="bx bx-recycle text-primary me-1"></i> سطل بازیابی</h4>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
+<div class="crm-list-page">
+    <h4 class="mb-4"><i class="bx bx-recycle text-primary me-1"></i> سطل بازیابی</h4>
 
-<div class="card">
-    <div class="table-responsive text-nowrap">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>عنوان</th>
-                    <th>ماژول</th>
-                    <th>تاریخ حذف</th>
-                    <th class="text-end">عملیات</th>
-                </tr>
-            </thead>
-            <tbody class="table-border-bottom-0">
-                @if (Model.Records.Count == 0)
-                {
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-5">سطل بازیابی خالی است.</td>
-                    </tr>
-                }
-                @{
-                    var rowNumber = 0;
-                }
-                @foreach (var record in Model.Records)
-                {
-                    rowNumber++;
-                    <tr>
-                        <td class="text-muted">@rowNumber</td>
-                        <td>@record.Title</td>
-                        <td>@record.Module.PluralLabel</td>
-                        <td dir="ltr">@(record.DeletedAtUtc is DateTime deleted ? Crm.Web.Services.PersianDateHelper.ToJalaliDateTime(deleted) : "—")</td>
-                        <td class="text-end">
-                            <form asp-action="Restore" asp-route-id="@record.Id" method="post" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-success">
-                                    <i class="bx bx-undo me-1"></i> بازیابی
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+    <partial name="_Alerts" />
+    <partial name="_CrmTable" model="table" />
 </div>
+
+@section Scripts {
+    <script src="~/js/crm-datatable.js" asp-append-version="true"></script>
+}

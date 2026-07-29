@@ -1,0 +1,191 @@
+/* منوی بالای دسته‌بندی‌شده App — بدون سایدبار */
+
+html.crm-app-topnav.layout-menu-fixed .layout-menu,
+html.crm-app-topnav .layout-menu.menu-vertical {
+  display: none !important;
+}
+
+html.crm-app-topnav.layout-menu-fixed:not(.layout-menu-collapsed) .layout-wrapper.layout-content-navbar .layout-page,
+html.crm-app-topnav.layout-menu-fixed .layout-wrapper.layout-content-navbar .layout-page {
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+  width: 100% !important;
+}
+
+html.crm-app-topnav.layout-menu-fixed.layout-navbar-fixed:not(.layout-menu-collapsed) .layout-wrapper.layout-content-navbar .layout-navbar,
+html.crm-app-topnav.layout-menu-fixed.layout-navbar-fixed .layout-wrapper.layout-content-navbar .layout-navbar {
+  right: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+}
+
+html.crm-app-topnav .layout-menu-toggle.d-xl-none {
+  display: none !important;
+}
+
+html.crm-app-topnav #layout-navbar {
+  z-index: 1100;
+}
+
+.crm-topnav-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.crm-topnav-toggle:hover,
+.crm-topnav-toggle.is-open {
+  background: rgba(47, 111, 237, 0.08);
+  border-color: rgba(47, 111, 237, 0.35);
+  color: #2f6fed;
+}
+
+.crm-topnav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 700;
+  margin-inline-start: 0.75rem;
+}
+
+.crm-topnav-brand i {
+  color: #2f6fed;
+  font-size: 1.35rem;
+}
+
+.crm-topnav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1090;
+  animation: crmTopnavFadeIn 0.18s ease;
+}
+
+.crm-topnav-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1095;
+  max-height: min(78vh, 640px);
+  overflow: auto;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
+  animation: crmTopnavSlideDown 0.2s ease;
+  padding-top: 3.75rem; /* زیر navbar */
+}
+
+.crm-topnav-panel-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.crm-topnav-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1.25rem 1rem;
+}
+
+.crm-topnav-col-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #64748b;
+  margin: 0 0 0.55rem;
+  text-transform: none;
+}
+
+.crm-topnav-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.crm-topnav-links a {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.4rem;
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.12s, color 0.12s;
+}
+
+.crm-topnav-links a i {
+  font-size: 1.05rem;
+  color: #64748b;
+  width: 1.15rem;
+  text-align: center;
+}
+
+.crm-topnav-links a:hover {
+  background: #f1f5f9;
+  color: #2f6fed;
+}
+
+.crm-topnav-links a:hover i,
+.crm-topnav-links a.is-active i {
+  color: #2f6fed;
+}
+
+.crm-topnav-links a.is-active {
+  background: rgba(47, 111, 237, 0.1);
+  color: #2f6fed;
+  font-weight: 700;
+}
+
+body.crm-topnav-open {
+  overflow: hidden;
+}
+
+@keyframes crmTopnavFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes crmTopnavSlideDown {
+  from { transform: translateY(-12px); opacity: 0.85; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 1199.98px) {
+  .crm-topnav-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .crm-topnav-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .crm-topnav-panel {
+    max-height: 85vh;
+    padding-top: 3.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .crm-topnav-grid {
+    grid-template-columns: 1fr;
+  }
+}

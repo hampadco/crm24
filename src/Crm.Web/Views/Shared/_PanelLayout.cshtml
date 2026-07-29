@@ -1,9 +1,10 @@
 @{
     var panelArea = ViewContext.RouteData.Values["area"]?.ToString();
     var useModernPanelSkin = panelArea is "Admin" or "App";
+    var useAppTopNav = panelArea == "App";
 }
 <!DOCTYPE html>
-<html lang="fa" class="light-style layout-navbar-fixed layout-menu-fixed" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="vertical-menu-template">
+<html lang="fa" class="light-style layout-navbar-fixed layout-menu-fixed@(useAppTopNav ? " crm-app-topnav" : "")" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="@(useAppTopNav ? "horizontal-menu-template" : "vertical-menu-template")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,6 +23,10 @@
     @if (useModernPanelSkin)
     {
         <link rel="stylesheet" href="~/css/panel-theme.css" asp-append-version="true" />
+    }
+    @if (useAppTopNav)
+    {
+        <link rel="stylesheet" href="~/css/crm-app-topnav.css" asp-append-version="true" />
     }
 
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
@@ -51,11 +56,30 @@
             <div class="layout-page">
                 <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
                     <div class="container-fluid">
-                        <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
-                            <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
-                                <i class="bx bx-menu bx-sm"></i>
-                            </a>
-                        </div>
+                        @if (useAppTopNav)
+                        {
+                            <div class="d-flex align-items-center me-auto">
+                                <button type="button" id="crmTopnavToggle" class="crm-topnav-toggle" aria-expanded="false" aria-controls="crm-topnav-panel">
+                                    <i class="bx bx-menu"></i>
+                                    <span>منو</span>
+                                </button>
+                                <a href="/App/dashboard" class="crm-topnav-brand">
+                                    <i class="bx bxs-analyse"></i>
+                                    <span>BamaCRM</span>
+                                </a>
+                                <a href="/App/dashboard" class="btn btn-sm btn-text-secondary d-none d-md-inline-flex ms-2">
+                                    <i class="bx bx-home-circle me-1"></i> داشبورد
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+                                <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+                                    <i class="bx bx-menu bx-sm"></i>
+                                </a>
+                            </div>
+                        }
 
                         <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
                             <ul class="navbar-nav flex-row align-items-center ms-auto">
@@ -192,6 +216,10 @@
     <script src="~/panel-assets/vendor/libs/i18n/i18n.js"></script>
     <script src="~/panel-assets/vendor/js/menu.js"></script>
     <script src="~/panel-assets/js/main.js"></script>
+    @if (useAppTopNav)
+    {
+        <script src="~/js/crm-app-topnav.js" asp-append-version="true"></script>
+    }
     <script src="~/panel-assets/vendor/libs/jdate/jdate.js"></script>
     <script src="~/panel-assets/vendor/libs/flatpickr/flatpickr-jdate.js"></script>
     <script src="~/panel-assets/vendor/libs/flatpickr/l10n/fa-jdate.js"></script>

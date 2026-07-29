@@ -1,0 +1,325 @@
+@model Crm.Web.Areas.App.Models.CrmTableModel
+@{
+    var colCount = Model.Columns.Count + (Model.SelectionEnabled ? 1 : 0) + 1; // + actions
+    const string filterFormId = "crmDtFilterForm";
+    var hasActiveFilters = Model.Filters.Count > 0 || !string.IsNullOrWhiteSpace(Model.Search);
+    var showFilterBar = Model.ShowFilterBar && (
+        Model.ShowSearchBox
+        || Model.ShowColumnFilters
+        || Model.ShowColumnManager
+        || !string.IsNullOrWhiteSpace(Model.FilterExtraHtml)
+        || hasActiveFilters);
+
+    string SortIcon(string field)
+    {
+        if (!string.Equals(Model.SortField, field, StringComparison.OrdinalIgnoreCase))
+            return "bx-sort-alt-2";
+        return string.Equals(Model.SortDir, "asc", StringComparison.OrdinalIgnoreCase)
+            ? "bx-sort-up"
+            : "bx-sort-down";
+    }
+}
+
+<div class="crm-dt" data-crm-datatable
+     data-module="@(Model.FormRouteValues.GetValueOrDefault("moduleName") ?? "list")"
+     data-can-delete="@Model.CanDelete.ToString().ToLowerInvariant()"
+     data-selection="@Model.SelectionEnabled.ToString().ToLowerInvariant()">
+
+    @if (Model.SelectionEnabled)
+    {
+        <div class="crm-dt-selectbar" data-crm-dt-selectbar hidden>
+            <div class="crm-dt-selectbar-inner">
+                <span class="crm-dt-selectbar-count">
+                    <strong data-count>0</strong> مورد انتخاب شده
+                </span>
+                <div class="crm-dt-selectbar-actions">
+                    @if (Model.CanDelete && !string.IsNullOrWhiteSpace(Model.BulkDeleteUrl))
+                    {
+                        <form id="crmDtBulkDeleteForm" class="crm-dt-bulk-form" method="post"
+                              action="@Model.BulkDeleteUrl"
+                              data-confirm="@Model.BulkDeleteConfirm">
+                            @Html.AntiForgeryToken()
+                            <div data-bulk-ids></div>
+                            <button type="submit" class="btn btn-sm btn-danger">
+                                <i class="bx bx-trash me-1"></i> حذف انتخاب‌شده‌ها
+                            </button>
+                        </form>
+                    }
+                    <button type="button" class="btn btn-sm btn-light" data-crm-dt-clear-selection>
+                        لغو انتخاب
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <form id="@filterFormId" method="get" action="@Model.ListPath" class="crm-dt-filter-form">
+        @foreach (var kv in Model.FormRouteValues)
+        {
+            <input type="hidden" name="@kv.Key" value="@kv.Value" />
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.SortField))
+        {
+            <input type="hidden" name="sort" value="@Model.SortField" />
+            <input type="hidden" name="dir" value="@Model.SortDir" />
+        }
+    </form>
+
+    @if (showFilterBar)
+    {
+    <div class="crm-dt-filterbar">
+        @if (Model.ShowSearchBox)
+        {
+            <div class="crm-dt-search-box">
+                <input form="@filterFormId" type="search" name="q" value="@Model.Search"
+                       class="form-control form-control-sm" placeholder="@Model.SearchPlaceholder"
+                       autocomplete="off" />
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.FilterExtraHtml))
+        {
+            <div class="crm-dt-filter-extra">
+                @Html.Raw(Model.FilterExtraHtml)
+            </div>
+        }
+        @if (Model.ShowColumnFilters || Model.ShowSearchBox || !string.IsNullOrWhiteSpace(Model.FilterExtraHtml) || hasActiveFilters)
+        {
+            <button type="submit" form="@filterFormId" class="crm-dt-search-btn" title="اعمال فیلترها">
+                <i class="bx bx-search"></i>
+                <span>جستجو</span>
+            </button>
+        }
+        @if (Model.ShowColumnManager)
+        {
+            <button type="button" class="crm-dt-gear-btn" title="مدیریت ستون‌ها"
+                    data-bs-toggle="modal" data-bs-target="#@(Model.ColumnManagerModalId)">
+                <i class="bx bx-cog"></i>
+            </button>
+        }
+        @if (hasActiveFilters && !string.IsNullOrWhiteSpace(Model.ListPath))
+        {
+            var clearHref = Model.ListPath;
+            if (Model.FormRouteValues.Count > 0)
+            {
+                clearHref += "?" + string.Join("&", Model.FormRouteValues.Select(kv =>
+                    $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+            }
+            <a href="@clearHref" class="crm-dt-clear-btn" title="پاک کردن فیلترها">
+                <i class="bx bx-x"></i>
+                <span>پاک کردن</span>
+            </a>
+        }
+    </div>
+    }
+
+    <div class="crm-dt-table-wrap">
+        <table class="crm-dt-table">
+            <thead>
+                <tr>
+                    @if (Model.SelectionEnabled)
+                    {
+                        <th class="crm-dt-check">
+                            <input type="checkbox" class="form-check-input crm-dt-check-all" title="انتخاب همه" aria-label="انتخاب همه" />
+                        </th>
+                    }
+
+                    @foreach (var col in Model.Columns)
+                    {
+                        var active = string.Equals(Model.SortField, col.Key, StringComparison.OrdinalIgnoreCase);
+                        var sortRoutes = Model.SortRouteValues(col.Key);
+                        var defaultOp = col.FilterKind == CrmTableFilterKind.Select ? "equals" : "contains";
+                        var op = Model.FilterOp(col.Key, defaultOp);
+                        var val = Model.FilterValue(col.Key) ?? "";
+                        var isPick = col.FilterKind == CrmTableFilterKind.Select;
+                        var ops = isPick ? CrmTableModel.SelectFilterOps : CrmTableModel.TextFilterOps;
+                        var needsValue = CrmTableModel.OpNeedsValue(op);
+                        var opLabel = ops.FirstOrDefault(o => o.Op == op).Label ?? op;
+                        var sortHref = Model.ListPath + "?" + string.Join("&", sortRoutes.Select(kv =>
+                            $"{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}"));
+
+                        <th class="@col.CssClass">
+                            @if (Model.ShowColumnFilters && col.FilterKind != CrmTableFilterKind.None)
+                            {
+                                <div class="crm-dt-colhead" data-field="@col.Key">
+                                    <input type="hidden" form="@filterFormId" name="op_@col.Key" value="@op"
+                                           class="crm-dt-op-hidden" data-field="@col.Key" />
+
+                                    <div class="crm-dt-filter-shell @(isPick ? "is-select" : "is-text") @(needsValue ? null : "is-novalue")">
+                                        @if (isPick)
+                                        {
+                                            <select form="@filterFormId"
+                                                    name="cf_@col.Key"
+                                                    class="crm-dt-filter-select"
+                                                    data-field="@col.Key"
+                                                    data-placeholder="@col.Label"
+                                                    aria-label="@col.Label"
+                                                    @(needsValue ? null : "disabled")>
+                                                <option value=""></option>
+                                                @foreach (var opt in col.SelectOptions)
+                                                {
+                                                    if (val == opt.Value)
+                                                    {
+                                                        <option value="@opt.Value" selected>@opt.Label</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@opt.Value">@opt.Label</option>
+                                                    }
+                                                }
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <input form="@filterFormId"
+                                                   type="text"
+                                                   name="cf_@col.Key"
+                                                   value="@val"
+                                                   class="crm-dt-filter-input"
+                                                   placeholder="@col.Label"
+                                                   autocomplete="off"
+                                                   aria-label="@col.Label"
+                                                   @(needsValue ? null : "disabled") />
+                                        }
+
+                                        <div class="crm-dt-filter-actions">
+                                            @if (col.Sortable)
+                                            {
+                                                <a class="crm-dt-sort @(active ? "is-active" : null)"
+                                                   href="@sortHref"
+                                                   title="مرتب‌سازی @col.Label">
+                                                    <i class="bx @SortIcon(col.Key)"></i>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="crm-dt-sort is-disabled" aria-hidden="true">
+                                                    <i class="bx bx-sort-alt-2"></i>
+                                                </span>
+                                            }
+                                            <button type="button"
+                                                    class="crm-dt-op-btn"
+                                                    data-crm-op-trigger
+                                                    data-field="@col.Key"
+                                                    data-op="@op"
+                                                    data-ops='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(ops.Select(o => new { op = o.Op, label = o.Label })))'
+                                                    title="@opLabel"
+                                                    aria-haspopup="listbox"
+                                                    aria-expanded="false">
+                                                <i class="bx bx-slider-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else if (Model.ShowColumnFilters)
+                            {
+                                @* ستون بدون فیلتر — فقط برچسب داخل شل هم‌ارتفاع با بقیه *@
+                                <div class="crm-dt-colhead" data-field="@col.Key">
+                                    <div class="crm-dt-filter-shell is-labelonly">
+                                        <span class="crm-dt-filter-label">@col.Label</span>
+                                        @if (col.Sortable)
+                                        {
+                                            <div class="crm-dt-filter-actions">
+                                                <a class="crm-dt-sort @(active ? "is-active" : null)"
+                                                   href="@sortHref"
+                                                   title="مرتب‌سازی @col.Label">
+                                                    <i class="bx @SortIcon(col.Key)"></i>
+                                                </a>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="crm-dt-colhead crm-dt-colhead--simple">
+                                    @if (col.Sortable)
+                                    {
+                                        <a class="crm-dt-simple-sort @(active ? "is-active" : null)" href="@sortHref">
+                                            <span>@col.Label</span>
+                                            <i class="bx @SortIcon(col.Key)"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="crm-dt-simple-label">@col.Label</span>
+                                    }
+                                </div>
+                            }
+                        </th>
+                    }
+
+                    <th class="crm-dt-actions-head"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Rows.Count == 0)
+                {
+                    <tr>
+                        <td colspan="@colCount" class="crm-dt-empty">
+                            @(hasActiveFilters ? Model.EmptyFilteredMessage : Model.EmptyMessage)
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var row in Model.Rows)
+                    {
+                        <tr data-record-id="@row.Id">
+                            @if (Model.SelectionEnabled)
+                            {
+                                <td class="crm-dt-check">
+                                    <input type="checkbox" class="form-check-input crm-dt-row-check" value="@row.Id" aria-label="انتخاب ردیف" />
+                                </td>
+                            }
+                            @foreach (var col in Model.Columns)
+                            {
+                                var cell = row.Cells.GetValueOrDefault(col.Key) ?? "—";
+                                <td class="@col.CssClass">
+                                    @Html.Raw(cell)
+                                </td>
+                            }
+                            <td class="crm-dt-actions">
+                                <div class="crm-dt-action-btns">
+                                    @if (!string.IsNullOrWhiteSpace(row.ExtraActionsHtml))
+                                    {
+                                        @Html.Raw(row.ExtraActionsHtml)
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(row.DetailUrl))
+                                    {
+                                        <a href="@row.DetailUrl" class="crm-dt-action" title="جزئیات">
+                                            <i class="bx bx-show"></i>
+                                        </a>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(row.EditUrl))
+                                    {
+                                        <a href="@row.EditUrl" class="crm-dt-action" title="ویرایش">
+                                            <i class="bx bx-edit"></i>
+                                        </a>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(row.DeleteUrl))
+                                    {
+                                        <form action="@row.DeleteUrl" method="post" class="d-inline"
+                                              data-confirm="@(row.DeleteConfirm ?? "حذف شود؟")">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="crm-dt-action crm-dt-action--danger" title="حذف">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.ShowFooter)
+    {
+    <div class="crm-dt-footer">
+        <partial name="_AppPagination" />
+    </div>
+    }
+</div>

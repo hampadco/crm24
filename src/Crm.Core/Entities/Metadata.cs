@@ -110,13 +110,26 @@ public class PicklistValue : TenantEntity
     public bool IsActive { get; set; } = true;
 }
 
-/// <summary>رابطه بین دو ماژول (یک-به-چند / چند-به-چند).</summary>
+/// <summary>نوع cardinality رابطه بین دو ماژول.</summary>
+public enum RelationKind
+{
+    OneToOne = 0,
+    OneToMany = 1,
+    ManyToOne = 2,
+    ManyToMany = 3
+}
+
+/// <summary>رابطه بین دو ماژول (یک-به-یک / یک-به-چند / چند-به-یک / چند-به-چند).</summary>
 public class RelationDef : TenantEntity
 {
     public int SourceModuleId { get; set; }
     public int TargetModuleId { get; set; }
+    /// <summary>نام زبانه در رکورد ماژول مبدأ.</summary>
     public string Label { get; set; } = string.Empty;
+    /// <summary>نام فیلد Lookup در رکورد مقابل (برچسب نمایشی).</summary>
+    public string? RelatedFieldLabel { get; set; }
+    public RelationKind Kind { get; set; } = RelationKind.OneToMany;
     public bool IsManyToMany { get; set; }
-    /// <summary>نام فیلد Lookup روی ماژول مقصد که به مبدأ اشاره می‌کند (برای لیست مرتبط).</summary>
+    /// <summary>نام فیلد Lookup روی سمت «چند» که به طرف مقابل اشاره می‌کند.</summary>
     public string? LinkFieldName { get; set; }
 }

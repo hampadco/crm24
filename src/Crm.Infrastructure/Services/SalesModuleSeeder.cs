@@ -120,6 +120,8 @@ public class SalesModuleSeeder
                     picklist: [P("answered", "پاسخ داد", "#39da8a"), P("noanswer", "پاسخ نداد", "#fdac41"), P("busy", "مشغول", "#ff5b5c"), P("followup", "نیاز به پیگیری", "#03c3ec")]),
                 F("description", "توضیحات", FieldType.MultilineText, showInList: false)
             ]);
+
+        await EnsureDemoLayoutsAndRelationsAsync(tenantId);
     }
 
     /// <summary>برای Tenant های موجود که همه ماژول‌های فروش را ندارند (ارتقا).</summary>
@@ -127,13 +129,18 @@ public class SalesModuleSeeder
     {
         var cacheKey = $"sales-modules-ok:{tenantId}";
         if (_cache.TryGetValue(cacheKey, out bool ok) && ok)
+        {
+            // حتی اگر ماژول‌ها کامل‌اند، بلاک/رابطه دمو را یک‌بار اطمینان بده
+            await EnsureDemoLayoutsAndRelationsAsync(tenantId);
             return;
+        }
 
         var hasAll = await _db.Modules.CountAsync(m =>
             m.TenantId == tenantId &&
             new[] { "leads", "organizations", "contacts", "opportunities", "tasks", "events", "calls" }.Contains(m.Name)) == 7;
         if (hasAll)
         {
+            await EnsureDemoLayoutsAndRelationsAsync(tenantId);
             _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
             return;
         }
@@ -143,6 +150,143 @@ public class SalesModuleSeeder
         await SeedAsync(tenantId, adminProfile, userProfile);
         _cache.Remove($"modules:{tenantId}");
         _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
+    }
+
+    /// <summary>
+    /// بلاک‌های چندتایی منطقی + RelationDefهای نمونه روی Lookupهای موجود (idempotent).
+    /// </summary>
+    private async Task EnsureDemoLayoutsAndRelationsAsync(int tenantId)
+    {
+        var modules = await _db.Modules.Where(m => m.TenantId == tenantId).ToListAsync();
+        int? IdOf(string name) => modules.FirstOrDefault(m => m.Name == name)?.Id;
+
+        var leadsId = IdOf("leads");
+        var orgsId = IdOf("organizations");
+        var contactsId = IdOf("contacts");
+        var oppsId = IdOf("opportunities");
+        var callsId = IdOf("calls");
+
+        if (leadsId is int lid)
+        {
+            await EnsureBlockAsync(tenantId, lid, "contact", "اطلاعات تماس", 2, ["phone", "email", "doNotMessage"]);
+            await EnsureBlockAsync(tenantId, lid, "source_status", "منبع و وضعیت", 3, ["status", "source"]);
+        }
+
+        if (orgsId is int oid)
+        {
+            await EnsureBlockAsync(tenantId, oid, "identity", "شناسه و تماس", 2, ["phone", "website", "economicCode", "nationalId"]);
+            await EnsureBlockAsync(tenantId, oid, "address", "آدرس", 3, ["city", "address"]);
+        }
+
+        if (contactsId is int cid)
+        {
+            await EnsureBlockAsync(tenantId, cid, "contact", "اطلاعات تماس", 2, ["mobile", "phone", "email"]);
+            await EnsureBlockAsync(tenantId, cid, "org", "وابستگی سازمانی", 3, ["organization", "address"]);
+        }
+
+        if (oppsId is int pid)
+        {
+            await EnsureBlockAsync(tenantId, pid, "money", "مبلغ و مرحله", 2, ["amount", "probability", "stage", "expectedCloseDate"]);
+            await EnsureBlockAsync(tenantId, pid, "parties", "طرف‌های معامله", 3, ["contact", "organization"]);
+        }
+
+        // روابط نمونه
+        if (orgsId is int orgId && contactsId is int contactId)
+            await EnsureRelationAsync(tenantId, orgId, contactId, "مخاطبین", "سازمان", "organization", RelationKind.OneToMany);
+        if (orgsId is int orgId2 && oppsId is int oppId)
+            await EnsureRelationAsync(tenantId, orgId2, oppId, "فرصت‌های فروش", "سازمان", "organization", RelationKind.OneToMany);
+        if (contactsId is int contactId2 && oppsId is int oppId2)
+            await EnsureRelationAsync(tenantId, contactId2, oppId2, "فرصت‌های فروش", "مخاطب", "contact", RelationKind.OneToMany);
+        if (contactsId is int contactId3 && callsId is int callId)
+            await EnsureRelationAsync(tenantId, contactId3, callId, "تماس‌ها", "مخاطب", "contact", RelationKind.OneToMany);
+
+        // کش متادیتا را خالی کن تا بلاک/رابطه جدید دیده شود
+        _cache.Remove($"modules:{tenantId}");
+        foreach (var m in modules)
+            _cache.Remove($"fields:{tenantId}:{m.Id}");
+    }
+
+    private async Task EnsureBlockAsync(
+        int tenantId, int moduleId, string name, string label, int sortOrder, string[] fieldNames)
+    {
+        var block = await _db.FieldBlocks.FirstOrDefaultAsync(b =>
+            b.TenantId == tenantId && b.ModuleId == moduleId && b.Name == name);
+
+        if (block is null)
+        {
+            block = new FieldBlock
+            {
+                TenantId = tenantId,
+                ModuleId = moduleId,
+                Name = name,
+                Label = label,
+                SortOrder = sortOrder
+            };
+            _db.FieldBlocks.Add(block);
+            await _db.SaveChangesAsync();
+        }
+
+        var fields = await _db.Fields
+            .Where(f => f.TenantId == tenantId && f.ModuleId == moduleId && fieldNames.Contains(f.Name))
+            .ToListAsync();
+
+        var order = 0;
+        var changed = false;
+        foreach (var fname in fieldNames)
+        {
+            var field = fields.FirstOrDefault(f => f.Name == fname);
+            if (field is null) continue;
+            order++;
+            if (field.BlockId != block.Id || field.SortOrder != order)
+            {
+                field.BlockId = block.Id;
+                field.SortOrder = order;
+                changed = true;
+            }
+        }
+
+        if (changed)
+            await _db.SaveChangesAsync();
+    }
+
+    private async Task EnsureRelationAsync(
+        int tenantId,
+        int sourceModuleId,
+        int targetModuleId,
+        string tabLabel,
+        string relatedFieldLabel,
+        string linkFieldName,
+        RelationKind kind)
+    {
+        var exists = await _db.Relations.AnyAsync(r =>
+            r.TenantId == tenantId
+            && r.SourceModuleId == sourceModuleId
+            && r.TargetModuleId == targetModuleId
+            && r.LinkFieldName == linkFieldName);
+        if (exists)
+            return;
+
+        // اطمینان از وجود Lookup
+        var lookupOk = await _db.Fields.AnyAsync(f =>
+            f.TenantId == tenantId
+            && f.ModuleId == targetModuleId
+            && f.Name == linkFieldName
+            && f.Type == FieldType.Lookup);
+        if (!lookupOk)
+            return;
+
+        _db.Relations.Add(new RelationDef
+        {
+            TenantId = tenantId,
+            SourceModuleId = sourceModuleId,
+            TargetModuleId = targetModuleId,
+            Label = tabLabel,
+            RelatedFieldLabel = relatedFieldLabel,
+            Kind = kind,
+            IsManyToMany = kind == RelationKind.ManyToMany,
+            LinkFieldName = linkFieldName
+        });
+        await _db.SaveChangesAsync();
     }
 
     private async Task EnsureModuleAsync(

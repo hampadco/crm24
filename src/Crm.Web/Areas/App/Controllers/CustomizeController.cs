@@ -324,8 +324,10 @@ public class CustomizeController : AppControllerBase
         string moduleName,
         int targetModuleId,
         string label,
-        bool isManyToMany,
-        string? linkFieldName)
+        RelationKind kind,
+        string? relatedFieldLabel = null,
+        string? linkFieldName = null,
+        bool isManyToMany = false)
     {
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
@@ -336,8 +338,12 @@ public class CustomizeController : AppControllerBase
 
         try
         {
+            // سازگاری اگر فقط checkbox قدیمی ارسال شود
+            if (isManyToMany && kind == RelationKind.OneToMany)
+                kind = RelationKind.ManyToMany;
+
             await _metadata.CreateRelationAsync(
-                module.Id, targetModuleId, label, isManyToMany, linkFieldName);
+                module.Id, targetModuleId, label, kind, relatedFieldLabel, linkFieldName);
             TempData["Success"] = "رابطه افزوده شد.";
         }
         catch (InvalidOperationException ex)

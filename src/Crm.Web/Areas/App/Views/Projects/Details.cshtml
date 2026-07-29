@@ -23,6 +23,10 @@
     </div>
 </div>
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+}
+
 <partial name="_Alerts" />
 
 <div class="row g-4">
@@ -76,32 +80,42 @@
     <div class="col-lg-8">
         <div class="card mb-4">
             <div class="card-header"><h5 class="mb-0">وظایف</h5></div>
-            <div class="table-responsive text-nowrap">
-                <table class="table table-sm">
-                    <thead><tr><th>وظیفه</th><th>فاز</th><th>مسئول</th><th>بازه</th><th style="min-width:140px">پیشرفت</th></tr></thead>
-                    <tbody>
-                        @foreach (var task in Model.Tasks)
-                        {
+            <div class="crm-dt crm-dt--nested">
+                <div class="crm-dt-table-wrap">
+                    <table class="crm-dt-table">
+                        <thead>
                             <tr>
-                                <td>@task.Name</td>
-                                <td class="text-muted">@(Model.Phases.FirstOrDefault(f => f.Id == task.PhaseId)?.Name ?? "—")</td>
-                                <td class="text-muted">@(task.AssignedUserId is int uid && users.TryGetValue(uid, out var u) ? u : "—")</td>
-                                <td class="text-muted small">@PersianDateHelper.ToJalaliDate(task.StartUtc) تا @PersianDateHelper.ToJalaliDate(task.EndUtc)</td>
-                                <td>
-                                    <form asp-action="SetTaskProgress" asp-route-taskId="@task.Id" method="post" class="d-flex align-items-center gap-1">
-                                        @Html.AntiForgeryToken()
-                                        <input type="number" name="percent" value="@task.ProgressPercent" min="0" max="100" class="form-control form-control-sm" style="width:70px" />
-                                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bx bx-check"></i></button>
-                                    </form>
-                                </td>
+                                <th><span class="crm-dt-simple-label">وظیفه</span></th>
+                                <th><span class="crm-dt-simple-label">فاز</span></th>
+                                <th><span class="crm-dt-simple-label">مسئول</span></th>
+                                <th><span class="crm-dt-simple-label">بازه</span></th>
+                                <th style="min-width:140px"><span class="crm-dt-simple-label">پیشرفت</span></th>
                             </tr>
-                        }
-                        @if (Model.Tasks.Count == 0)
-                        {
-                            <tr><td colspan="5" class="text-center text-muted py-3">وظیفه‌ای ثبت نشده است.</td></tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var task in Model.Tasks)
+                            {
+                                <tr>
+                                    <td>@task.Name</td>
+                                    <td class="text-muted">@(Model.Phases.FirstOrDefault(f => f.Id == task.PhaseId)?.Name ?? "—")</td>
+                                    <td class="text-muted">@(task.AssignedUserId is int uid && users.TryGetValue(uid, out var u) ? u : "—")</td>
+                                    <td class="text-muted small">@PersianDateHelper.ToJalaliDate(task.StartUtc) تا @PersianDateHelper.ToJalaliDate(task.EndUtc)</td>
+                                    <td>
+                                        <form asp-action="SetTaskProgress" asp-route-taskId="@task.Id" method="post" class="d-flex align-items-center gap-1">
+                                            @Html.AntiForgeryToken()
+                                            <input type="number" name="percent" value="@task.ProgressPercent" min="0" max="100" class="form-control form-control-sm" style="width:70px" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="bx bx-check"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                            @if (Model.Tasks.Count == 0)
+                            {
+                                <tr><td colspan="5" class="crm-dt-empty">وظیفه‌ای ثبت نشده است.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="card-body border-top">
                 <form asp-action="AddTask" asp-route-id="@Model.Id" method="post" class="row g-2 align-items-end">

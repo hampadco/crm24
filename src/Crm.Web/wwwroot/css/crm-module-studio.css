@@ -741,8 +741,50 @@ html[dir="rtl"] .crm-studio-module-card:hover .chevron {
   font-size: 0.875rem;
 }
 
-.crm-validation-rule-row .rule-select {
-  min-width: 12rem;
+.crm-rel-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--studio-text);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--studio-border-soft);
+}
+
+.crm-rel-kind-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.crm-rel-kind-pill {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin: 0;
+}
+
+.crm-rel-kind-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.crm-rel-kind-pill span {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--studio-border);
+  background: #fff;
+  font-size: 0.8125rem;
+  color: var(--studio-muted);
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.crm-rel-kind-pill input:checked + span {
+  background: var(--studio-accent-soft);
+  border-color: var(--studio-accent-mid);
+  color: var(--studio-accent);
+  font-weight: 700;
 }
 
 .crm-validation-rules:empty::before {
