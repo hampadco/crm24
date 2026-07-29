@@ -69,9 +69,10 @@
             <i class="bx bx-search"></i>
             <span>جستجو</span>
         </button>
-        <a href="/App/customize/@Model.Module.Name" class="crm-dt-gear-btn" title="سفارشی‌سازی">
+        <button type="button" class="crm-dt-gear-btn" title="مدیریت ستون‌ها"
+                data-bs-toggle="modal" data-bs-target="#columnManagerModal">
             <i class="bx bx-cog"></i>
-        </a>
+        </button>
         @if (hasActiveFilters)
         {
             <a href="/App/m/@Model.Module.Name" class="crm-dt-clear-btn" title="پاک کردن فیلترها">

@@ -49,6 +49,15 @@ public class RecordListViewModel
     public bool CanEdit { get; set; }
     public bool CanDelete { get; set; }
 
+    /// <summary>همه فیلدهای قابل‌نمایش برای مودال مدیریت ستون‌ها.</summary>
+    public IReadOnlyList<FieldDef> AllFields { get; set; } = [];
+
+    /// <summary>بلاک‌های ماژول برای گروه‌بندی فیلدهای موجود.</summary>
+    public IReadOnlyList<FieldBlock> Blocks { get; set; } = [];
+
+    /// <summary>شناسه ستون‌های انتخاب‌شده به ترتیب.</summary>
+    public IReadOnlyList<int> SelectedColumnIds { get; set; } = [];
+
     /// <summary>fieldName → (recordId → title) برای نمایش فیلدهای Lookup در لیست.</summary>
     public Dictionary<string, Dictionary<string, string>> LookupTitles { get; set; } = new();
 

@@ -8,7 +8,12 @@
 {
     var readOnly = access == FieldAccess.ReadOnly;
     var name = $"f_{field.Name}";
-    var value = Model.Values.GetValueOrDefault(field.Name) ?? field.DefaultValue;
+    var rawDefault = field.DefaultValue;
+    if (rawDefault == "__TODAY__" && string.IsNullOrEmpty(Model.Values.GetValueOrDefault(field.Name)))
+    {
+        rawDefault = DateTime.Today.ToString("yyyy-MM-dd");
+    }
+    var value = Model.Values.GetValueOrDefault(field.Name) ?? rawDefault;
     var hasError = Model.Errors.TryGetValue(field.Name, out var error);
     var inputClass = $"form-control{(hasError ? " is-invalid" : "")}";
     var colClass = field.Type == FieldType.MultilineText ? "col-12" : "col-md-6";
@@ -72,7 +77,18 @@
             case FieldType.Number:
             case FieldType.Decimal:
             case FieldType.Currency:
-                <input type="text" inputmode="numeric" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" maxlength="@(field.MaxLength)" />
+            case FieldType.Percent:
+                <div class="input-group">
+                    <input type="text" inputmode="decimal" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" maxlength="@(field.MaxLength)" />
+                    @if (field.Type == FieldType.Percent)
+                    {
+                        <span class="input-group-text">٪</span>
+                    }
+                    else if (field.Type == FieldType.Currency)
+                    {
+                        <span class="input-group-text">﷼</span>
+                    }
+                </div>
                 break;
 
             case FieldType.Date:

@@ -5,6 +5,7 @@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/crm-column-manager.css" asp-append-version="true" />
 }
 
 <div class="crm-list-page">
@@ -64,6 +65,7 @@
 
     <partial name="_Alerts" />
     <partial name="_CrmDataTable" model="Model" />
+    <partial name="_ColumnManagerModal" model="Model" />
 </div>
 
 <div class="modal fade" id="importModal" tabindex="-1">
@@ -89,5 +91,7 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="~/js/crm-datatable.js" asp-append-version="true"></script>
+    <script src="~/js/crm-column-manager.js" asp-append-version="true"></script>
 }

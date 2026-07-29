@@ -122,6 +122,7 @@
   border: 1px solid var(--crm-dt-border);
   background: #fff;
   font-size: 0.75rem;
+  cursor: pointer;
 }
 
 .crm-dt-gear-btn:hover,

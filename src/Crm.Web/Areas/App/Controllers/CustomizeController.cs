@@ -39,16 +39,23 @@ public class CustomizeController : AppControllerBase
         if (module is null)
             return NotFound();
 
+        var activeTab = string.IsNullOrWhiteSpace(tab) ? "layout" : tab.Trim().ToLowerInvariant();
+        if (activeTab is "fields" or "layout" or "paging")
+            activeTab = "layout";
+
+        // فیلدهای بدون بلاک را به بلاک پیش‌فرض منتقل کن (یک‌بار روی باز شدن استودیو)
+        if (activeTab == "layout")
+            await _metadata.EnsureUngroupedFieldsInDefaultBlockAsync(module.Id);
+
         var blocks = await _metadata.GetBlocksAsync(module.Id);
         var fields = await _metadata.GetFieldsAsync(module.Id);
-        var activeTab = string.IsNullOrWhiteSpace(tab) ? "layout" : tab.Trim().ToLowerInvariant();
 
         ViewBag.Module = module;
         ViewBag.Blocks = blocks;
         ViewBag.Fields = fields;
         ViewBag.Tab = activeTab;
 
-        if (activeTab is "relations" or "duplicates" or "layout")
+        if (activeTab is "relations" or "duplicates" or "layout" or "dependencies")
         {
             var allModules = await _metadata.GetActiveModulesAsync();
             ViewBag.AllModules = allModules;
@@ -66,7 +73,7 @@ public class CustomizeController : AppControllerBase
             }
         }
 
-        ViewData["Title"] = $"سفارشی‌سازی — {module.PluralLabel}";
+        ViewData["Title"] = $"صفحه‌بندی ماژول {module.PluralLabel}";
         return View();
     }
 
@@ -136,7 +143,18 @@ public class CustomizeController : AppControllerBase
         FieldType type,
         bool isRequired,
         bool showInList,
-        int? blockId)
+        int? blockId,
+        int? maxLength,
+        bool isVisible = true,
+        bool isUniqueCheck = false,
+        string? defaultValue = null,
+        string? visibilityRuleJson = null,
+        int? integerDigits = null,
+        int? decimalDigits = null,
+        string? formulaExpression = null,
+        string? validationRulesJson = null,
+        string? picklistOptions = null,
+        bool defaultToday = false)
     {
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
@@ -147,11 +165,33 @@ public class CustomizeController : AppControllerBase
 
         try
         {
+            if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(label))
+                name = "f_" + Guid.NewGuid().ToString("N")[..8];
+
+            if (defaultToday && type is FieldType.Date or FieldType.DateTime)
+                defaultValue = "__TODAY__";
+
+            // برای عدد صحیح/ارز حداکثر رقم را در MaxLength نگه می‌داریم اگر جداگانه نیامده
+            if (maxLength is null && integerDigits is int digits && type is FieldType.Number or FieldType.Currency)
+                maxLength = digits;
+
+            var options = ParsePicklistOptions(picklistOptions);
+
             await _metadata.CreateFieldAsync(
                 module.Id, name, label, type,
                 isRequired: isRequired,
                 showInList: showInList,
-                blockId: blockId);
+                blockId: blockId,
+                maxLength: maxLength,
+                isVisible: isVisible,
+                isUniqueCheck: isUniqueCheck,
+                defaultValue: defaultValue,
+                visibilityRuleJson: visibilityRuleJson,
+                integerDigits: integerDigits,
+                decimalDigits: decimalDigits,
+                formulaExpression: formulaExpression,
+                validationRulesJson: validationRulesJson,
+                picklistOptions: options);
             TempData["Success"] = "فیلد سفارشی افزوده شد.";
         }
         catch (InvalidOperationException ex)
@@ -176,7 +216,13 @@ public class CustomizeController : AppControllerBase
         bool isVisible,
         bool isUniqueCheck,
         string? defaultValue,
-        string? visibilityRuleJson)
+        string? visibilityRuleJson,
+        int? integerDigits = null,
+        int? decimalDigits = null,
+        string? formulaExpression = null,
+        string? validationRulesJson = null,
+        string? picklistOptions = null,
+        bool defaultToday = false)
     {
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
@@ -187,9 +233,15 @@ public class CustomizeController : AppControllerBase
 
         try
         {
+            if (defaultToday)
+                defaultValue = "__TODAY__";
+
+            var options = picklistOptions is null ? null : ParsePicklistOptions(picklistOptions);
+
             await _metadata.UpdateFieldAsync(
                 id, label, isRequired, showInList, sortOrder, blockId,
-                maxLength, isVisible, isUniqueCheck, defaultValue, visibilityRuleJson);
+                maxLength, isVisible, isUniqueCheck, defaultValue, visibilityRuleJson,
+                integerDigits, decimalDigits, formulaExpression, validationRulesJson, options);
             TempData["Success"] = "فیلد به‌روز شد.";
         }
         catch (InvalidOperationException ex)
@@ -197,7 +249,28 @@ public class CustomizeController : AppControllerBase
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToAction(nameof(Studio), new { moduleName, tab = "fields" });
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "layout" });
+    }
+
+    private static List<(string Value, string Label)> ParsePicklistOptions(string? raw)
+    {
+        var list = new List<(string Value, string Label)>();
+        if (string.IsNullOrWhiteSpace(raw))
+            return list;
+
+        foreach (var line in raw.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+            // پشتیبانی از "value|label" یا فقط label
+            var parts = line.Split('|', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length == 2)
+                list.Add((parts[0], parts[1]));
+            else
+                list.Add((parts[0], parts[0]));
+        }
+
+        return list;
     }
 
     [HttpPost("/App/customize/{moduleName}/layout")]

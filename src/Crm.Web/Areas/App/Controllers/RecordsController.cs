@@ -18,6 +18,7 @@ public class RecordsController : AppControllerBase
     private readonly DynamicRecordService _records;
     private readonly RecordAccessService _access;
     private readonly RecordImportExportService _importExport;
+    private readonly ListColumnService _listColumns;
     private readonly CrmDbContext _db;
 
     public RecordsController(
@@ -25,12 +26,14 @@ public class RecordsController : AppControllerBase
         DynamicRecordService records,
         RecordAccessService access,
         RecordImportExportService importExport,
+        ListColumnService listColumns,
         CrmDbContext db)
     {
         _metadata = metadata;
         _records = records;
         _access = access;
         _importExport = importExport;
+        _listColumns = listColumns;
         _db = db;
     }
 
@@ -46,7 +49,9 @@ public class RecordsController : AppControllerBase
             return Forbid("Identity.Application");
 
         var fields = await _metadata.GetFieldsAsync(module.Id);
-        var listFields = fields.Where(f => f.ShowInList).ToList();
+        var allVisible = fields.Where(f => f.IsVisible).ToList();
+        var listFields = (await _listColumns.GetListFieldsAsync(module.Id)).ToList();
+        var blocks = await _metadata.GetBlocksAsync(module.Id);
         var filters = ParseColumnFilters(Request.Query, listFields);
 
         const int pageSize = 20;
@@ -67,6 +72,9 @@ public class RecordsController : AppControllerBase
         {
             Module = module,
             Fields = listFields,
+            AllFields = allVisible,
+            Blocks = blocks,
+            SelectedColumnIds = listFields.Select(f => f.Id).ToList(),
             Records = items,
             RecordData = recordData,
             Search = q,
@@ -95,6 +103,30 @@ public class RecordsController : AppControllerBase
         ViewBag.PagingRoutes = pagingRoutes;
 
         return View(model);
+    }
+
+    [HttpPost("/App/m/{moduleName}/columns")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveColumns(string moduleName, [FromForm] int[]? fieldIds)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        try
+        {
+            await _listColumns.SaveListColumnsAsync(module.Id, fieldIds ?? []);
+            TempData["Success"] = "ستون‌های لیست ذخیره شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Index), new { moduleName });
     }
 
     private static List<ColumnFilter> ParseColumnFilters(

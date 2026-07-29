@@ -4,7 +4,7 @@
     var blocks = (IReadOnlyList<FieldBlock>)ViewBag.Blocks;
     var fields = (IReadOnlyList<FieldDef>)ViewBag.Fields;
     var tab = (string)ViewBag.Tab;
-    ViewData["PanelTitle"] = $"سفارشی‌سازی — {module.PluralLabel}";
+    ViewData["PanelTitle"] = $"صفحه‌بندی ماژول {module.PluralLabel}";
 
     var allModules = ViewBag.AllModules as IReadOnlyList<ModuleDef> ?? Array.Empty<ModuleDef>();
     var relations = ViewBag.Relations as IReadOnlyList<RelationDef> ?? Array.Empty<RelationDef>();
@@ -22,101 +22,80 @@
 
     var lookupFields = ViewBag.LookupFields as IReadOnlyList<FieldDef>
         ?? fields.Where(f => f.Type == FieldType.Lookup).ToList();
+
+    string FieldTypeFa(FieldType t) => t switch
+    {
+        FieldType.Text => "متن ساده",
+        FieldType.MultilineText => "متن چندخطی",
+        FieldType.Number => "عدد صحیح",
+        FieldType.Decimal => "عدد اعشار",
+        FieldType.Currency => "واحد پولی",
+        FieldType.Date => "تاریخ",
+        FieldType.DateTime => "تاریخ و زمان",
+        FieldType.Checkbox => "چک‌باکس",
+        FieldType.Picklist => "فیلد انتخابی",
+        FieldType.MultiPicklist => "فهرست چندانتخابی",
+        FieldType.Email => "ایمیل",
+        FieldType.Phone => "تلفن",
+        FieldType.Url => "پیوند",
+        FieldType.Lookup => "ارجاع",
+        FieldType.Percent => "درصد",
+        _ => t.ToString()
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <div>
-        <h4 class="mb-1">
-            <i class="bx @module.Icon text-primary me-1"></i>
-            سفارشی‌سازی — @module.PluralLabel
-        </h4>
-        <small class="text-muted" dir="ltr">@module.Name</small>
-    </div>
-    <a href="/App/customize" class="btn btn-outline-secondary">
-        <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
-    </a>
-</div>
-
-<partial name="_Alerts" />
-
-<ul class="nav nav-tabs mb-3" role="tablist">
-    <li class="nav-item">
-        <a class="nav-link @(tab == "layout" ? "active" : "")" href="/App/customize/@module.Name?tab=layout">چیدمان</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(tab == "fields" ? "active" : "")" href="/App/customize/@module.Name?tab=fields">فیلدها</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(tab == "relations" ? "active" : "")" href="/App/customize/@module.Name?tab=relations">روابط</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @(tab == "duplicates" ? "active" : "")" href="/App/customize/@module.Name?tab=duplicates">تکراری‌ها</a>
-    </li>
-</ul>
-
-@if (tab == "fields")
-{
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">لیست فیلدها</h5>
-            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
-                <i class="bx bx-plus me-1"></i> فیلد جدید
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>برچسب</th>
-                        <th>نام سیستمی</th>
-                        <th>نوع</th>
-                        <th>الزامی</th>
-                        <th>لیست</th>
-                        <th>قابل‌مشاهده</th>
-                        <th>سفارشی</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var field in fields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id))
-                    {
-                        <tr>
-                            <td>@field.Label</td>
-                            <td dir="ltr"><code>@field.Name</code></td>
-                            <td>@field.Type</td>
-                            <td>@(field.IsRequired ? "بله" : "—")</td>
-                            <td>@(field.ShowInList ? "بله" : "—")</td>
-                            <td>@(field.IsVisible ? "بله" : "خیر")</td>
-                            <td>@(field.IsCustom ? "بله" : "سیستمی")</td>
-                            <td class="text-end">
-                                <button type="button" class="btn btn-sm btn-label-primary"
-                                        data-bs-toggle="modal" data-bs-target="#editFieldModal"
-                                        data-id="@field.Id"
-                                        data-label="@field.Label"
-                                        data-required="@field.IsRequired.ToString().ToLowerInvariant()"
-                                        data-showinlist="@field.ShowInList.ToString().ToLowerInvariant()"
-                                        data-sort="@field.SortOrder"
-                                        data-blockid="@(field.BlockId?.ToString() ?? "")"
-                                        data-maxlength="@(field.MaxLength?.ToString() ?? "")"
-                                        data-visible="@field.IsVisible.ToString().ToLowerInvariant()"
-                                        data-unique="@field.IsUniqueCheck.ToString().ToLowerInvariant()"
-                                        data-default="@(field.DefaultValue ?? "")"
-                                        data-rule="@(field.VisibilityRuleJson ?? "")">
-                                    ویرایش
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-module-studio.css" asp-append-version="true" />
 }
-else if (tab == "relations")
+
+<div class="crm-studio">
+    <nav class="crm-studio-breadcrumb" aria-label="مسیر">
+        <span>تنظیمات</span>
+        <span class="sep">›</span>
+        <a href="/App/customize">مدیریت ماژول</a>
+        <span class="sep">›</span>
+        <span class="current">ویرایش صفحه‌بندی</span>
+    </nav>
+
+    <div class="crm-studio-header">
+        <div class="crm-studio-header-title">
+            <span class="crm-studio-header-icon"><i class="bx @module.Icon"></i></span>
+            <div>
+                <h1>صفحه‌بندی ماژول @module.PluralLabel</h1>
+                <p class="subtitle">چیدمان بلاک‌ها و فیلدهای ماژول را مدیریت کنید · <span dir="ltr">@module.Name</span></p>
+            </div>
+        </div>
+        @if (tab == "layout")
+        {
+            <div class="crm-studio-actions">
+                <button type="button" class="btn btn-studio-outline" data-bs-toggle="modal" data-bs-target="#addBlockModal">
+                    <i class="bx bx-plus me-1"></i> افزودن بلاک
+                </button>
+                <form method="post" action="/App/customize/@module.Name/layout" id="saveLayoutForm" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="layoutJson" id="layoutJson" />
+                    <button type="submit" class="btn btn-studio-primary" id="btnSaveLayout">
+                        <i class="bx bx-save me-1"></i> تغییر چیدمان
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+
+    <partial name="_Alerts" />
+
+    <div class="crm-studio-tablist" role="tablist">
+        <a class="crm-studio-tab @(tab == "layout" ? "active" : "")" href="/App/customize/@module.Name?tab=layout" role="tab">صفحه‌بندی ماژول</a>
+        <a class="crm-studio-tab @(tab == "relations" ? "active" : "")" href="/App/customize/@module.Name?tab=relations" role="tab">ارتباط ماژول‌ها</a>
+        <a class="crm-studio-tab @(tab == "duplicates" ? "active" : "")" href="/App/customize/@module.Name?tab=duplicates" role="tab">مدیریت تکرار رکوردها</a>
+        <a class="crm-studio-tab @(tab == "dependencies" ? "active" : "")" href="/App/customize/@module.Name?tab=dependencies" role="tab">بلاک / فیلدهای وابسته</a>
+    </div>
+
+@if (tab == "relations")
 {
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">روابط ماژول</h5>
+    <div class="crm-studio-panel">
+        <div class="crm-studio-panel-header">
+            <h5>ارتباط ماژول‌ها</h5>
             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRelationModal">
                 <i class="bx bx-plus me-1"></i> رابطه جدید
             </button>
@@ -219,11 +198,11 @@ else if (tab == "relations")
 else if (tab == "duplicates")
 {
     var mode = string.IsNullOrWhiteSpace(module.DuplicateMatchMode) ? "or" : module.DuplicateMatchMode.ToLowerInvariant();
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0">تنظیمات تشخیص تکراری</h5>
+    <div class="crm-studio-panel">
+        <div class="crm-studio-panel-header">
+            <h5>مدیریت تکرار رکوردها</h5>
         </div>
-        <div class="card-body">
+        <div class="crm-studio-panel-body">
             <p class="text-muted small mb-4">
                 فیلدهای علامت‌خورده به‌عنوان معیار یکتایی در ایجاد/ویرایش رکورد بررسی می‌شوند.
                 در حالت <strong>OR</strong> هر فیلد جداگانه تطبیق داده می‌شود؛ در حالت <strong>AND</strong>
@@ -264,101 +243,293 @@ else if (tab == "duplicates")
         </div>
     </div>
 }
-else
+else if (tab == "dependencies")
 {
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addBlockModal">
-                <i class="bx bx-plus me-1"></i> بلاک جدید
-            </button>
-            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
-                <i class="bx bx-plus me-1"></i> فیلد جدید
-            </button>
+    var depFields = fields.Where(f => !string.IsNullOrWhiteSpace(f.VisibilityRuleJson)).OrderBy(f => f.SortOrder).ToList();
+    var depBlocks = blocks.Where(b => !string.IsNullOrWhiteSpace(b.VisibilityRuleJson)).OrderBy(b => b.SortOrder).ToList();
+    <div class="crm-studio-panel">
+        <div class="crm-studio-panel-header">
+            <h5>بلاک / فیلدهای وابسته</h5>
         </div>
-        <form method="post" action="/App/customize/@module.Name/layout" id="saveLayoutForm">
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="layoutJson" id="layoutJson" />
-            <button type="submit" class="btn btn-primary" id="btnSaveLayout">
-                <i class="bx bx-save me-1"></i> ذخیره چیدمان
-            </button>
-        </form>
+        <div class="crm-studio-panel-body">
+            <p class="text-muted small mb-4">
+                وابستگی‌ها مشخص می‌کنند یک فیلد یا بلاک فقط وقتی نمایش داده شود که شرط روی فیلد دیگری برقرار باشد.
+                برای تنظیم، از «ویرایش گروه» روی بلاک یا مداد فیلد در تب صفحه‌بندی استفاده کنید.
+            </p>
+            <h6 class="mb-2">فیلدهای وابسته (@depFields.Count)</h6>
+            @if (depFields.Count == 0)
+            {
+                <p class="text-muted small">هنوز فیلد وابسته‌ای تعریف نشده است.</p>
+            }
+            else
+            {
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm">
+                        <thead><tr><th>فیلد</th><th>شرط</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var field in depFields)
+                        {
+                            <tr>
+                                <td>@field.Label</td>
+                                <td dir="ltr"><code class="small">@field.VisibilityRuleJson</code></td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-label-primary"
+                                            data-bs-toggle="modal" data-bs-target="#editFieldModal"
+                                            data-id="@field.Id"
+                                            data-label="@field.Label"
+                                            data-required="@field.IsRequired.ToString().ToLowerInvariant()"
+                                            data-showinlist="@field.ShowInList.ToString().ToLowerInvariant()"
+                                            data-sort="@field.SortOrder"
+                                            data-blockid="@(field.BlockId?.ToString() ?? "")"
+                                            data-maxlength="@(field.MaxLength?.ToString() ?? "")"
+                                            data-visible="@field.IsVisible.ToString().ToLowerInvariant()"
+                                            data-unique="@field.IsUniqueCheck.ToString().ToLowerInvariant()"
+                                            data-default="@(field.DefaultValue ?? "")"
+                                            data-rule="@(field.VisibilityRuleJson ?? "")"
+                                            data-type="@((int)field.Type)"
+                                            data-integerdigits="@(field.IntegerDigits?.ToString() ?? "")"
+                                            data-decimaldigits="@(field.DecimalDigits?.ToString() ?? "")"
+                                            data-formula="@(field.FormulaExpression ?? "")"
+                                            data-validation="@(field.ValidationRulesJson ?? "")"
+                                            data-picklist="@(field.Type is FieldType.Picklist or FieldType.MultiPicklist ? string.Join("\n", field.PicklistValues.OrderBy(p => p.SortOrder).Select(p => p.Label)) : "")">ویرایش</button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <h6 class="mb-2">بلاک‌های وابسته (@depBlocks.Count)</h6>
+            @if (depBlocks.Count == 0)
+            {
+                <p class="text-muted small mb-0">هنوز بلاک وابسته‌ای تعریف نشده است.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>بلاک</th><th>شرط</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var block in depBlocks)
+                        {
+                            <tr>
+                                <td>@block.Label</td>
+                                <td dir="ltr"><code class="small">@block.VisibilityRuleJson</code></td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-label-primary"
+                                            data-bs-toggle="modal" data-bs-target="#editBlockRuleModal"
+                                            data-id="@block.Id"
+                                            data-label="@block.Label"
+                                            data-sort="@block.SortOrder"
+                                            data-collapsed="@block.IsCollapsed.ToString().ToLowerInvariant()"
+                                            data-rule="@(block.VisibilityRuleJson ?? "")">ویرایش</button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
     </div>
-
+}
+else if (tab == "layout")
+{
     <div id="studio-layout" class="studio-layout">
         @foreach (var block in blocks.OrderBy(b => b.SortOrder).ThenBy(b => b.Id))
         {
             var blockFields = fieldsByBlock.GetValueOrDefault(block.Id) ?? new List<FieldDef>();
-            <div class="card mb-3 studio-block" data-block-id="@block.Id">
-                <div class="card-header d-flex justify-content-between align-items-center studio-block-handle flex-wrap gap-2">
-                    <strong>@block.Label</strong>
-                    <div class="d-flex gap-1">
-                        <button type="button" class="btn btn-sm btn-label-secondary"
+            var hiddenCount = blockFields.Count(f => !f.IsVisible);
+            var collapseId = $"block-body-{block.Id}";
+            var isCollapsed = block.IsCollapsed;
+            <div class="studio-block @(isCollapsed ? "is-collapsed" : "")" data-block-id="@block.Id">
+                <div class="studio-block-header studio-block-handle">
+                    <div class="studio-block-title">
+                        <i class="bx bx-grid-vertical"></i>
+                        <strong>@block.Label</strong>
+                        @if (hiddenCount > 0)
+                        {
+                            <span class="hint">(@hiddenCount پنهان)</span>
+                        }
+                    </div>
+                    <div class="studio-block-actions">
+                        <button type="button" class="studio-action studio-toggle-collapse"
+                                data-bs-toggle="collapse" data-bs-target="#@collapseId"
+                                aria-expanded="@(!isCollapsed)" aria-controls="@collapseId"
+                                title="بستن/بازکردن">
+                            <i class="bx bx-chevron-up studio-collapse-icon"></i>
+                            <span class="studio-collapse-label">@(isCollapsed ? "باز شدن" : "بسته شدن")</span>
+                        </button>
+                        @if (hiddenCount > 0)
+                        {
+                            <button type="button" class="studio-action studio-toggle-hidden" title="نمایش فیلدهای پنهان">
+                                <i class="bx bx-hide"></i>
+                                <span>نمایش فیلدهای پنهان</span>
+                            </button>
+                        }
+                        <button type="button" class="studio-action"
                                 data-bs-toggle="modal" data-bs-target="#editBlockRuleModal"
                                 data-id="@block.Id"
                                 data-label="@block.Label"
                                 data-sort="@block.SortOrder"
                                 data-collapsed="@block.IsCollapsed.ToString().ToLowerInvariant()"
-                                data-rule="@(block.VisibilityRuleJson ?? "")">
-                            شرط نمایش
+                                data-rule="@(block.VisibilityRuleJson ?? "")"
+                                title="ویرایش گروه">
+                            <i class="bx bx-edit-alt"></i>
+                            <span>ویرایش گروه</span>
                         </button>
-                        <form method="post" action="/App/customize/@module.Name/blocks/@block.Id/delete" class="m-0"
+                        <form method="post" action="/App/customize/@module.Name/blocks/@block.Id/delete" class="m-0 d-inline"
                               onsubmit="return confirm('بلاک حذف شود؟ فیلدها بدون گروه می‌مانند.');">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-label-danger">حذف بلاک</button>
+                            <button type="submit" class="studio-action studio-action--danger" title="حذف">
+                                <i class="bx bx-trash"></i>
+                                <span>حذف</span>
+                            </button>
                         </form>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="studio-fields row g-2" data-block-id="@block.Id">
+                <div id="@collapseId" class="studio-block-body collapse @(isCollapsed ? "" : "show")">
+                    <div class="studio-fields" data-block-id="@block.Id"
+                         data-empty-msg="هنوز فیلدی در این بلاک نیست — فیلدها را بکشید یا اضافه کنید.">
+                        @if (blockFields.Count == 0)
+                        {
+                            <div class="studio-fields-empty">هنوز فیلدی در این بلاک نیست — فیلدها را بکشید یا اضافه کنید.</div>
+                        }
                         @foreach (var field in blockFields)
                         {
-                            <div class="col-md-6 studio-field" data-field-id="@field.Id">
-                                <div class="border rounded p-2 bg-label-secondary d-flex align-items-center gap-2">
-                                    <i class="bx bx-move text-muted"></i>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-medium">@field.Label</div>
-                                        <small class="text-muted" dir="ltr">@field.Name · @field.Type</small>
+                            <div class="studio-field @(field.IsVisible ? "" : "studio-field--hidden")" data-field-id="@field.Id">
+                                <div class="studio-field-card">
+                                    <i class="bx bx-move studio-field-handle" title="جابه‌جایی"></i>
+                                    <div class="studio-field-meta">
+                                        <div class="studio-field-label">@field.Label</div>
+                                        <div class="studio-field-type">@FieldTypeFa(field.Type)</div>
                                     </div>
-                                    @if (field.IsRequired)
-                                    {
-                                        <span class="badge bg-label-danger">الزامی</span>
-                                    }
+                                    <div class="studio-field-badges">
+                                        @if (field.IsRequired)
+                                        {
+                                            <span class="studio-badge-required">اجباری</span>
+                                        }
+                                        @if (!field.IsVisible)
+                                        {
+                                            <span class="studio-badge-hidden">پنهان</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="studio-field-edit"
+                                            data-bs-toggle="modal" data-bs-target="#editFieldModal"
+                                            data-id="@field.Id"
+                                            data-label="@field.Label"
+                                            data-required="@field.IsRequired.ToString().ToLowerInvariant()"
+                                            data-showinlist="@field.ShowInList.ToString().ToLowerInvariant()"
+                                            data-sort="@field.SortOrder"
+                                            data-blockid="@(field.BlockId?.ToString() ?? "")"
+                                            data-maxlength="@(field.MaxLength?.ToString() ?? "")"
+                                            data-visible="@field.IsVisible.ToString().ToLowerInvariant()"
+                                            data-unique="@field.IsUniqueCheck.ToString().ToLowerInvariant()"
+                                            data-default="@(field.DefaultValue ?? "")"
+                                            data-rule="@(field.VisibilityRuleJson ?? "")"
+                                            data-type="@((int)field.Type)"
+                                            data-integerdigits="@(field.IntegerDigits?.ToString() ?? "")"
+                                            data-decimaldigits="@(field.DecimalDigits?.ToString() ?? "")"
+                                            data-formula="@(field.FormulaExpression ?? "")"
+                                            data-validation="@(field.ValidationRulesJson ?? "")"
+                                            data-picklist="@(field.Type is FieldType.Picklist or FieldType.MultiPicklist ? string.Join("\n", field.PicklistValues.OrderBy(p => p.SortOrder).Select(p => p.Label)) : "")"
+                                            title="ویرایش">
+                                        <i class="bx bx-pencil"></i>
+                                    </button>
                                 </div>
                             </div>
                         }
                     </div>
+                    <button type="button" class="studio-add-field-dashed studio-add-field-to-block"
+                            data-bs-toggle="modal" data-bs-target="#addFieldModal"
+                            data-block-id="@block.Id">
+                        <i class="bx bx-plus"></i> افزودن فیلد سفارشی
+                    </button>
                 </div>
             </div>
         }
 
-        <div class="card mb-3 studio-block" data-block-id="">
-            <div class="card-header">
-                <strong>بدون بلاک</strong>
-                <small class="text-muted ms-2">فیلدهایی که هنوز گروه نشده‌اند</small>
-            </div>
-            <div class="card-body">
-                <div class="studio-fields row g-2" data-block-id="">
-                    @foreach (var field in ungrouped)
-                    {
-                        <div class="col-md-6 studio-field" data-field-id="@field.Id">
-                            <div class="border rounded p-2 bg-label-secondary d-flex align-items-center gap-2">
-                                <i class="bx bx-move text-muted"></i>
-                                <div class="flex-grow-1">
-                                    <div class="fw-medium">@field.Label</div>
-                                    <small class="text-muted" dir="ltr">@field.Name · @field.Type</small>
+        @if (ungrouped.Count > 0)
+        {
+            <div class="studio-block is-ungrouped" data-block-id="">
+                <div class="studio-block-header">
+                    <div class="studio-block-title">
+                        <i class="bx bx-grid-vertical"></i>
+                        <strong>بدون بلاک</strong>
+                        <span class="hint">فیلدهایی که هنوز گروه نشده‌اند</span>
+                    </div>
+                    <div class="studio-block-actions">
+                        @{
+                            var ungroupedHidden = ungrouped.Count(f => !f.IsVisible);
+                        }
+                        @if (ungroupedHidden > 0)
+                        {
+                            <button type="button" class="studio-action studio-toggle-hidden" title="نمایش فیلدهای پنهان">
+                                <i class="bx bx-hide"></i>
+                                <span>نمایش فیلدهای پنهان</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+                <div class="studio-block-body">
+                    <div class="studio-fields" data-block-id=""
+                         data-empty-msg="همه فیلدها داخل بلاک‌ها هستند.">
+                        @foreach (var field in ungrouped)
+                        {
+                            <div class="studio-field @(field.IsVisible ? "" : "studio-field--hidden")" data-field-id="@field.Id">
+                                <div class="studio-field-card">
+                                    <i class="bx bx-move studio-field-handle" title="جابه‌جایی"></i>
+                                    <div class="studio-field-meta">
+                                        <div class="studio-field-label">@field.Label</div>
+                                        <div class="studio-field-type">@FieldTypeFa(field.Type)</div>
+                                    </div>
+                                    <div class="studio-field-badges">
+                                        @if (field.IsRequired)
+                                        {
+                                            <span class="studio-badge-required">اجباری</span>
+                                        }
+                                        @if (!field.IsVisible)
+                                        {
+                                            <span class="studio-badge-hidden">پنهان</span>
+                                        }
+                                    </div>
+                                    <button type="button" class="studio-field-edit"
+                                            data-bs-toggle="modal" data-bs-target="#editFieldModal"
+                                            data-id="@field.Id"
+                                            data-label="@field.Label"
+                                            data-required="@field.IsRequired.ToString().ToLowerInvariant()"
+                                            data-showinlist="@field.ShowInList.ToString().ToLowerInvariant()"
+                                            data-sort="@field.SortOrder"
+                                            data-blockid=""
+                                            data-maxlength="@(field.MaxLength?.ToString() ?? "")"
+                                            data-visible="@field.IsVisible.ToString().ToLowerInvariant()"
+                                            data-unique="@field.IsUniqueCheck.ToString().ToLowerInvariant()"
+                                            data-default="@(field.DefaultValue ?? "")"
+                                            data-rule="@(field.VisibilityRuleJson ?? "")"
+                                            data-type="@((int)field.Type)"
+                                            data-integerdigits="@(field.IntegerDigits?.ToString() ?? "")"
+                                            data-decimaldigits="@(field.DecimalDigits?.ToString() ?? "")"
+                                            data-formula="@(field.FormulaExpression ?? "")"
+                                            data-validation="@(field.ValidationRulesJson ?? "")"
+                                            data-picklist="@(field.Type is FieldType.Picklist or FieldType.MultiPicklist ? string.Join("\n", field.PicklistValues.OrderBy(p => p.SortOrder).Select(p => p.Label)) : "")"
+                                            title="ویرایش">
+                                        <i class="bx bx-pencil"></i>
+                                    </button>
                                 </div>
-                                @if (field.IsRequired)
-                                {
-                                    <span class="badge bg-label-danger">الزامی</span>
-                                }
                             </div>
-                        </div>
-                    }
+                        }
+                    </div>
+                    <button type="button" class="studio-add-field-dashed studio-add-field-to-block"
+                            data-bs-toggle="modal" data-bs-target="#addFieldModal"
+                            data-block-id="">
+                        <i class="bx bx-plus"></i> افزودن فیلد سفارشی
+                    </button>
                 </div>
             </div>
-        </div>
+        }
     </div>
 }
+</div>
 
 @* Modal: add block *@
 <div class="modal fade" id="addBlockModal" tabindex="-1" aria-hidden="true">
@@ -366,7 +537,7 @@ else
         <form method="post" action="/App/customize/@module.Name/blocks" class="modal-content">
             @Html.AntiForgeryToken()
             <div class="modal-header">
-                <h5 class="modal-title">بلاک جدید</h5>
+                <h5 class="modal-title">افزودن بلاک</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
@@ -391,7 +562,7 @@ else
             <input type="hidden" name="isCollapsed" id="blockRuleCollapsed" value="false" />
             <input type="hidden" name="visibilityRuleJson" id="blockRuleJson" />
             <div class="modal-header">
-                <h5 class="modal-title">شرط نمایش بلاک</h5>
+                <h5 class="modal-title">ویرایش گروه</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body row g-3">
@@ -426,60 +597,244 @@ else
     </div>
 </div>
 
-@* Modal: add field *@
+@* Modal: add field (type-aware wizard) *@
 <div class="modal fade" id="addFieldModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <form method="post" action="/App/customize/@module.Name/fields" class="modal-content">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <form method="post" action="/App/customize/@module.Name/fields" class="modal-content crm-field-wizard" id="addFieldForm">
             @Html.AntiForgeryToken()
-            <div class="modal-header">
-                <h5 class="modal-title">فیلد سفارشی جدید</h5>
+            <input type="hidden" name="blockId" id="addFieldBlockId" value="" />
+            <input type="hidden" name="visibilityRuleJson" id="addRuleJson" value="" />
+            <input type="hidden" name="validationRulesJson" id="addValidationJson" value="" />
+            <input type="hidden" name="name" id="addFieldName" value="" />
+            <input type="hidden" name="picklistOptions" id="addPicklistOptions" value="" />
+            <input type="hidden" name="defaultValue" id="addDefaultValueHidden" value="" />
+            <input type="hidden" name="integerDigits" id="addIntegerDigitsHidden" value="" />
+            <input type="hidden" name="maxLength" id="addMaxLengthHidden" value="" />
+
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title">افزودن فیلد</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">نام سیستمی</label>
-                    <input type="text" name="name" class="form-control" dir="ltr" required pattern="[a-z][a-z0-9_]*" placeholder="custom_field" />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">برچسب</label>
-                    <input type="text" name="label" class="form-control" required />
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">نوع</label>
-                    <select name="type" class="form-select">
-                        @foreach (FieldType ft in Enum.GetValues(typeof(FieldType)))
-                        {
-                            if (ft == FieldType.Lookup || ft == FieldType.MultiPicklist) { continue; }
-                            <option value="@((int)ft)">@ft</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">بلاک</label>
-                    <select name="blockId" class="form-select">
-                        <option value="">— بدون بلاک —</option>
-                        @foreach (var block in blocks)
-                        {
-                            <option value="@block.Id">@block.Label</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-check mt-4">
-                        <input class="form-check-input" type="checkbox" name="isRequired" value="true" id="addIsRequired" />
-                        <label class="form-check-label" for="addIsRequired">الزامی</label>
+
+            <div class="crm-field-wizard-steps" id="addFieldSteps">
+                <button type="button" class="crm-field-wizard-step is-active" data-step-key="info"><span>1</span> اطلاعات فیلد</button>
+                <button type="button" class="crm-field-wizard-step" data-step-key="props"><span>2</span> ویژگی‌های فیلد</button>
+                <button type="button" class="crm-field-wizard-step" data-step-key="validation"><span>3</span> اعتبارسنجی فیلد</button>
+                <button type="button" class="crm-field-wizard-step" data-step-key="formula"><span>4</span> فرمول</button>
+            </div>
+
+            <div class="modal-body">
+                @* —— Step: info —— *@
+                <div class="crm-field-wizard-pane is-active" data-pane-key="info">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">نوع فیلد <span class="text-danger">*</span></label>
+                            <select name="type" id="addFieldType" class="form-select" required>
+                                @foreach (FieldType ft in Enum.GetValues(typeof(FieldType)))
+                                {
+                                    if (ft is FieldType.Lookup or FieldType.MultiPicklist) { continue; }
+                                    <option value="@((int)ft)">@FieldTypeFa(ft)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">برچسب فیلد <span class="text-danger">*</span></label>
+                            <input type="text" name="label" id="addFieldLabel" class="form-control" required placeholder="مثلاً کد ملی" />
+                        </div>
+
+                        @* text-like *@
+                        <div class="col-md-6" data-for-types="0,1,10,11,12">
+                            <label class="form-label">مقدار پیش‌فرض</label>
+                            <input type="text" id="addDefaultValue" class="form-control" data-default-sync="1" />
+                        </div>
+                        <div class="col-md-6" data-for-types="0,1,10,11,12">
+                            <label class="form-label">حداکثر کاراکتر مجاز</label>
+                            <input type="number" id="addMaxLength" class="form-control" min="1" max="4000" placeholder="مثلاً ۲۵۵" data-maxlength-sync="1" />
+                        </div>
+
+                        @* number *@
+                        <div class="col-md-6" data-for-types="2">
+                            <label class="form-label">مقدار پیش‌فرض</label>
+                            <input type="text" id="addDefaultNumber" class="form-control" dir="ltr" data-default-sync="1" />
+                        </div>
+                        <div class="col-md-6" data-for-types="2">
+                            <label class="form-label">حداکثر رقم مجاز <span class="text-danger">*</span></label>
+                            <input type="number" id="addMaxDigits" class="form-control" min="1" max="18" placeholder="مثلاً ۱۰" data-integer-digits="1" />
+                        </div>
+
+                        @* decimal *@
+                        <div class="col-md-6" data-for-types="3">
+                            <label class="form-label">مقدار پیش‌فرض</label>
+                            <input type="text" id="addDefaultDecimal" class="form-control" dir="ltr" data-default-sync="1" />
+                        </div>
+                        <div class="col-md-6" data-for-types="3">
+                            <label class="form-label">تعداد ارقام صحیح <span class="text-danger">*</span></label>
+                            <input type="number" id="addIntegerDigitsDec" class="form-control" min="1" max="18" placeholder="مثلاً ۱۰" data-integer-digits="1" />
+                        </div>
+                        <div class="col-md-6" data-for-types="3">
+                            <label class="form-label">تعداد ارقام اعشاری <span class="text-danger">*</span></label>
+                            <input type="number" name="decimalDigits" id="addDecimalDigits" class="form-control" min="0" max="10" placeholder="مثلاً ۲" />
+                        </div>
+                        <div class="col-12" data-for-types="3">
+                            <p class="text-muted small mb-0">مجموع تعداد ارقام اعشاری و صحیح نباید بیشتر از ۱۸ باشد.</p>
+                        </div>
+
+                        @* currency *@
+                        <div class="col-md-6" data-for-types="4">
+                            <label class="form-label">مقدار پیش‌فرض (﷼)</label>
+                            <input type="text" id="addDefaultCurrency" class="form-control" dir="ltr" data-default-sync="1" />
+                        </div>
+                        <div class="col-md-6" data-for-types="4">
+                            <label class="form-label">حداکثر رقم مجاز <span class="text-danger">*</span></label>
+                            <input type="number" id="addCurrencyDigits" class="form-control" min="1" max="18" placeholder="مثلاً ۱۲" data-integer-digits="1" />
+                        </div>
+
+                        @* percent — no default needed *@
+                        <div class="col-12" data-for-types="14">
+                            <p class="text-muted small mb-0">مقدار درصد به‌صورت عددی ذخیره می‌شود (مثلاً ۲۵ برای ۲۵٪).</p>
+                        </div>
+
+                        @* date *@
+                        <div class="col-md-6" data-for-types="5,6">
+                            <label class="form-label">مقدار پیش‌فرض</label>
+                            <input type="text" id="addDefaultDate" class="form-control" dir="ltr" data-default-sync="1" placeholder="اختیاری" />
+                        </div>
+                        <div class="col-md-6" data-for-types="5,6">
+                            <div class="form-check mt-4">
+                                <input type="hidden" name="defaultToday" value="false" />
+                                <input class="form-check-input" type="checkbox" name="defaultToday" value="true" id="addDefaultToday" />
+                                <label class="form-check-label" for="addDefaultToday">مقدار پیش‌فرض فیلد، تاریخ روز باشد</label>
+                            </div>
+                        </div>
+
+                        @* checkbox *@
+                        <div class="col-md-6" data-for-types="7">
+                            <label class="form-label">مقدار پیش‌فرض</label>
+                            <select id="addDefaultCheckbox" class="form-select" data-default-sync="1">
+                                <option value="false">خیر</option>
+                                <option value="true">بله</option>
+                            </select>
+                        </div>
+
+                        @* picklist options *@
+                        <div class="col-12" data-for-types="8">
+                            <label class="form-label">انتخاب مقادیر قابل انتخاب <span class="text-danger">*</span></label>
+                            <div id="addPicklistRows" class="crm-picklist-editor mb-2"></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addPicklistRowBtn">
+                                <i class="bx bx-plus"></i> افزودن گزینه
+                            </button>
+                        </div>
+                        <div class="col-md-6" data-for-types="8">
+                            <label class="form-label">مقدار پیش‌فرض</label>
+                            <select id="addPicklistDefault" class="form-select" data-default-sync="1">
+                                <option value="">— بدون پیش‌فرض —</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="hidden" name="isVisible" value="false" />
+                                <input class="form-check-input" type="checkbox" name="isVisible" value="true" id="addIsVisible" checked />
+                                <label class="form-check-label" for="addIsVisible">نمایش فیلد</label>
+                            </div>
+                            <p class="text-muted small mb-0 mt-1">احتیاط: اگر این فیلد در همگام‌سازی یا جریان کاری استفاده شود، پس از مخفی کردن دیگر به‌روزرسانی نمی‌شود.</p>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="form-check mt-4">
-                        <input class="form-check-input" type="checkbox" name="showInList" value="true" id="addShowInList" checked />
-                        <label class="form-check-label" for="addShowInList">نمایش در لیست</label>
+
+                @* —— Step: props —— *@
+                <div class="crm-field-wizard-pane" data-pane-key="props">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="hidden" name="isRequired" value="false" />
+                                <input class="form-check-input" type="checkbox" name="isRequired" value="true" id="addIsRequired" />
+                                <label class="form-check-label" for="addIsRequired">اجباری</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="hidden" name="showInList" value="false" />
+                                <input class="form-check-input" type="checkbox" name="showInList" value="true" id="addShowInList" checked />
+                                <label class="form-check-label" for="addShowInList">افزودن سریع / نمایش در لیست</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="hidden" name="isUniqueCheck" value="false" />
+                                <input class="form-check-input" type="checkbox" name="isUniqueCheck" value="true" id="addIsUnique" />
+                                <label class="form-check-label" for="addIsUnique">فیلد کلیدی (یکتا)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* —— Step: validation —— *@
+                <div class="crm-field-wizard-pane" data-pane-key="validation">
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="addValidationRuleBtn">
+                            <i class="bx bx-plus"></i> افزودن قانون جدید
+                        </button>
+                    </div>
+                    <div id="addValidationRulesList" class="crm-validation-rules"></div>
+                    <p class="text-muted small mt-3 mb-0">قوانین بر اساس نوع فیلد تغییر می‌کنند و هنگام ذخیره رکورد اعمال می‌شوند.</p>
+                    <script type="application/json" id="studio-date-fields-json">
+                        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            fields.Where(f => f.Type is FieldType.Date or FieldType.DateTime)
+                                .Select(f => new { name = f.Name, label = f.Label })
+                                .ToList()))
+                    </script>
+                </div>
+
+                @* —— Step: formula —— *@
+                <div class="crm-field-wizard-pane" data-pane-key="formula">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="addFormulaEnabled" />
+                                <label class="form-check-label" for="addFormulaEnabled">محاسبه مقدار فیلد با فرمول</label>
+                            </div>
+                            <textarea name="formulaExpression" id="addFormulaExpression" class="form-control" rows="4" dir="ltr" placeholder="مثلاً {price} * {qty}" disabled></textarea>
+                            <p class="text-warning small mt-2 mb-0">
+                                احتیاط: فیلدهایی که برای آن‌ها فرمول تعریف شده یا در فرمول فیلد دیگری استفاده شده‌اند، به‌عنوان فیلد سرفصل یا کلیدی توصیه نمی‌شوند.
+                                موتور محاسبه در این نسخه ذخیره می‌شود و بعداً اجرا خواهد شد.
+                            </p>
+                        </div>
+                        <div class="col-12 border-top pt-3">
+                            <label class="form-label">شرط نمایش (وابستگی)</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <select id="addDepField" class="form-select">
+                                        <option value="">— بدون شرط —</option>
+                                        @foreach (var cf in controllingFields)
+                                        {
+                                            <option value="@cf.Name">@cf.Label</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <select id="addDepOp" class="form-select">
+                                        <option value="eq">برابر</option>
+                                        <option value="neq">نابرابر</option>
+                                        <option value="contains">شامل</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <input type="text" id="addDepValue" class="form-control" placeholder="مقدار" dir="ltr" />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
-                <button type="submit" class="btn btn-primary">افزودن</button>
+
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" id="addFieldPrev" hidden>قبلی</button>
+                <div class="d-flex gap-2 ms-auto">
+                    <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="button" class="btn btn-primary" id="addFieldNext">بعدی</button>
+                    <button type="submit" class="btn btn-primary" id="addFieldSubmit" hidden>ذخیره</button>
+                </div>
             </div>
         </form>
     </div>
@@ -522,6 +877,23 @@ else
                     <label class="form-label">مقدار پیش‌فرض</label>
                     <input type="text" name="defaultValue" id="editDefault" class="form-control" />
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">ارقام صحیح</label>
+                    <input type="number" name="integerDigits" id="editIntegerDigits" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ارقام اعشار</label>
+                    <input type="number" name="decimalDigits" id="editDecimalDigits" class="form-control" />
+                </div>
+                <div class="col-12" id="editPicklistWrap" style="display:none">
+                    <label class="form-label">گزینه‌های انتخابی (هر خط یک گزینه)</label>
+                    <textarea name="picklistOptions" id="editPicklistOptions" class="form-control" rows="4" placeholder="گزینه ۱&#10;گزینه ۲"></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">فرمول</label>
+                    <textarea name="formulaExpression" id="editFormula" class="form-control" rows="2" dir="ltr"></textarea>
+                </div>
+                <input type="hidden" name="validationRulesJson" id="editValidationJson" value="" />
                 <div class="col-12">
                     <label class="form-label">شرط نمایش</label>
                     <div class="row g-2">
@@ -604,13 +976,35 @@ else
                 }
             }
 
+            function syncFieldsEmptyState(container) {
+                if (!container) return;
+                const hasFields = !!container.querySelector('.studio-field');
+                let empty = container.querySelector('.studio-fields-empty');
+                if (hasFields) {
+                    if (empty) empty.remove();
+                    return;
+                }
+                if (!empty) {
+                    empty = document.createElement('div');
+                    empty.className = 'studio-fields-empty';
+                    empty.textContent = container.getAttribute('data-empty-msg')
+                        || 'هنوز فیلدی در این بلاک نیست — فیلدها را بکشید یا اضافه کنید.';
+                    container.appendChild(empty);
+                }
+            }
+
             const containers = document.querySelectorAll('.studio-fields');
             containers.forEach(function (el) {
                 new Sortable(el, {
                     group: 'studio-fields',
                     animation: 150,
                     draggable: '.studio-field',
-                    handle: '.studio-field'
+                    handle: '.studio-field-handle',
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onAdd: function (evt) { syncFieldsEmptyState(evt.to); syncFieldsEmptyState(evt.from); },
+                    onRemove: function (evt) { syncFieldsEmptyState(evt.from); syncFieldsEmptyState(evt.to); },
+                    onUpdate: function (evt) { syncFieldsEmptyState(evt.from); }
                 });
             });
 
@@ -643,6 +1037,19 @@ else
                     document.getElementById('editMaxLength').value = btn.getAttribute('data-maxlength') || '';
                     document.getElementById('editBlockId').value = btn.getAttribute('data-blockid') || '';
                     document.getElementById('editDefault').value = btn.getAttribute('data-default') || '';
+                    document.getElementById('editIntegerDigits').value = btn.getAttribute('data-integerdigits') || '';
+                    document.getElementById('editDecimalDigits').value = btn.getAttribute('data-decimaldigits') || '';
+                    document.getElementById('editFormula').value = btn.getAttribute('data-formula') || '';
+                    document.getElementById('editValidationJson').value = btn.getAttribute('data-validation') || '';
+                    const type = btn.getAttribute('data-type') || '';
+                    const pickWrap = document.getElementById('editPicklistWrap');
+                    const pickTa = document.getElementById('editPicklistOptions');
+                    if (pickWrap && pickTa) {
+                        const isPick = type === '8' || type === '9';
+                        pickWrap.style.display = isPick ? '' : 'none';
+                        pickTa.value = isPick ? (btn.getAttribute('data-picklist') || '') : '';
+                        pickTa.disabled = !isPick;
+                    }
                     document.getElementById('editRequired').checked = btn.getAttribute('data-required') === 'true';
                     document.getElementById('editShowInList').checked = btn.getAttribute('data-showinlist') === 'true';
                     document.getElementById('editVisible').checked = btn.getAttribute('data-visible') === 'true';
@@ -686,6 +1093,382 @@ else
                         document.getElementById('blockDepValue').value);
                 });
             }
+
+            /* Preselect block + type-aware wizard for add field */
+            const addFieldModal = document.getElementById('addFieldModal');
+            if (addFieldModal) {
+                const form = document.getElementById('addFieldForm');
+                const prevBtn = document.getElementById('addFieldPrev');
+                const nextBtn = document.getElementById('addFieldNext');
+                const submitBtn = document.getElementById('addFieldSubmit');
+                let activeSteps = ['info', 'props', 'validation', 'formula'];
+                let stepIndex = 0;
+                let dateFieldsForRules = [];
+                try {
+                    const dfEl = document.getElementById('studio-date-fields-json');
+                    if (dfEl) dateFieldsForRules = JSON.parse(dfEl.textContent || '[]');
+                } catch (e) { dateFieldsForRules = []; }
+
+                /* type -> step keys (competitor-like) */
+                function stepsForType(type) {
+                    const t = String(type);
+                    if (t === '8') return ['info', 'props']; /* picklist */
+                    if (t === '7') return ['info', 'props']; /* checkbox */
+                    if (t === '3' || t === '4' || t === '14') return ['info', 'props', 'formula']; /* decimal/currency/percent */
+                    return ['info', 'props', 'validation', 'formula'];
+                }
+
+                function validationCatalog(type) {
+                    const t = String(type);
+                    /* Date / DateTime */
+                    if (t === '5' || t === '6') {
+                        return [
+                            { rule: 'beforeToday', label: 'قبل از امروز', needs: null },
+                            { rule: 'beforeOrOnToday', label: 'قبل از یا مساوی امروز', needs: null },
+                            { rule: 'afterToday', label: 'بعد از امروز', needs: null },
+                            { rule: 'afterOrOnToday', label: 'بعد از یا مساوی امروز', needs: null },
+                            { rule: 'beforeField', label: 'قبل از فیلد', needs: 'field' },
+                            { rule: 'afterField', label: 'بعد از فیلد', needs: 'field' },
+                            { rule: 'afterNDays', label: 'بعد از n روز آینده', needs: 'number' }
+                        ];
+                    }
+                    /* Number (integer) */
+                    if (t === '2') {
+                        return [
+                            { rule: 'min', label: 'حداقل', needs: 'number' },
+                            { rule: 'max', label: 'حداکثر', needs: 'number' }
+                        ];
+                    }
+                    /* Text-like (Text, Multiline, Email, Phone, Url) */
+                    return [
+                        { rule: 'englishOnly', label: 'فقط حروف انگلیسی', needs: null },
+                        { rule: 'persianOnly', label: 'فقط حروف فارسی', needs: null },
+                        { rule: 'minLength', label: 'حداقل تعداد کاراکتر', needs: 'number' },
+                        { rule: 'maxLength', label: 'حداکثر تعداد کاراکتر', needs: 'number' },
+                        { rule: 'nationalId', label: 'کد ملی', needs: null },
+                        { rule: 'contains', label: 'شامل شده باشد با', needs: 'text' },
+                        { rule: 'digitsOnly', label: 'فقط اعداد صحیح', needs: null }
+                    ];
+                }
+
+                function slugifyLabel(label) {
+                    const base = (label || '').trim().toLowerCase()
+                        .replace(/[^a-z0-9\u0600-\u06FF]+/gi, '_')
+                        .replace(/^_+|_+$/g, '');
+                    const ascii = base.replace(/[^\x00-\x7F]/g, '');
+                    if (ascii && /^[a-z]/.test(ascii)) return ascii.substring(0, 40);
+                    return 'f_' + Date.now().toString(36).slice(-6);
+                }
+
+                function syncTypePanels() {
+                    const type = document.getElementById('addFieldType')?.value || '0';
+                    addFieldModal.querySelectorAll('[data-for-types]').forEach(function (el) {
+                        const list = (el.getAttribute('data-for-types') || '').split(',');
+                        el.style.display = list.indexOf(String(type)) >= 0 ? '' : 'none';
+                    });
+                    activeSteps = stepsForType(type);
+                    if (stepIndex >= activeSteps.length) stepIndex = 0;
+                    /* قوانین را با تغییر نوع پاک کن تا با کاتالوگ جدید هم‌خوان باشد */
+                    const list = document.getElementById('addValidationRulesList');
+                    if (list) list.innerHTML = '';
+                    goStep(stepIndex);
+                }
+
+                function goStep(index) {
+                    stepIndex = Math.max(0, Math.min(activeSteps.length - 1, index));
+                    const key = activeSteps[stepIndex];
+                    addFieldModal.querySelectorAll('.crm-field-wizard-step').forEach(function (el) {
+                        const k = el.getAttribute('data-step-key');
+                        const i = activeSteps.indexOf(k);
+                        el.style.display = i >= 0 ? '' : 'none';
+                        el.classList.toggle('is-active', k === key);
+                        el.classList.toggle('is-done', i >= 0 && i < stepIndex);
+                        const num = el.querySelector('span');
+                        if (num && i >= 0) num.textContent = String(i + 1);
+                    });
+                    addFieldModal.querySelectorAll('.crm-field-wizard-pane').forEach(function (el) {
+                        el.classList.toggle('is-active', el.getAttribute('data-pane-key') === key);
+                    });
+                    prevBtn.hidden = stepIndex === 0;
+                    nextBtn.hidden = stepIndex === activeSteps.length - 1;
+                    submitBtn.hidden = stepIndex !== activeSteps.length - 1;
+                }
+
+                function addPicklistRow(label) {
+                    const wrap = document.getElementById('addPicklistRows');
+                    if (!wrap) return;
+                    const row = document.createElement('div');
+                    row.className = 'crm-picklist-row input-group mb-2';
+                    row.innerHTML =
+                        '<input type="text" class="form-control pick-label" placeholder="برچسب گزینه" value="' + (label || '').replace(/"/g, '&quot;') + '" />' +
+                        '<button type="button" class="btn btn-outline-danger pick-remove" title="حذف"><i class="bx bx-trash"></i></button>';
+                    wrap.appendChild(row);
+                    row.querySelector('.pick-label').addEventListener('input', refreshPicklistDefault);
+                    row.querySelector('.pick-remove').addEventListener('click', function () {
+                        row.remove();
+                        refreshPicklistDefault();
+                    });
+                    refreshPicklistDefault();
+                }
+
+                function refreshPicklistDefault() {
+                    const sel = document.getElementById('addPicklistDefault');
+                    if (!sel) return;
+                    const prev = sel.value;
+                    const labels = Array.from(document.querySelectorAll('#addPicklistRows .pick-label'))
+                        .map(function (i) { return i.value.trim(); })
+                        .filter(Boolean);
+                    sel.innerHTML = '<option value="">— بدون پیش‌فرض —</option>';
+                    labels.forEach(function (l) {
+                        const opt = document.createElement('option');
+                        opt.value = l;
+                        opt.textContent = l;
+                        sel.appendChild(opt);
+                    });
+                    if (prev && labels.indexOf(prev) >= 0) sel.value = prev;
+                }
+
+                function syncRuleValueUi(row) {
+                    const rule = row.querySelector('.rule-select')?.value || '';
+                    const type = document.getElementById('addFieldType')?.value || '0';
+                    const cat = validationCatalog(type).find(function (c) { return c.rule === rule; });
+                    const needs = cat ? cat.needs : null;
+                    const valueWrap = row.querySelector('.rule-value-wrap');
+                    const fieldWrap = row.querySelector('.rule-field-wrap');
+                    if (valueWrap) valueWrap.style.display = (needs === 'number' || needs === 'text') ? '' : 'none';
+                    if (fieldWrap) fieldWrap.style.display = needs === 'field' ? '' : 'none';
+                    const input = row.querySelector('.rule-value');
+                    if (input) {
+                        input.placeholder = needs === 'number' ? 'مقدار' : (needs === 'text' ? 'متن' : '');
+                        input.dir = needs === 'text' ? 'rtl' : 'ltr';
+                    }
+                }
+
+                function addValidationRuleRow() {
+                    const list = document.getElementById('addValidationRulesList');
+                    if (!list) return;
+                    const type = document.getElementById('addFieldType')?.value || '0';
+                    const catalog = validationCatalog(type);
+                    const row = document.createElement('div');
+                    row.className = 'crm-validation-rule-row d-flex gap-2 align-items-center mb-2 flex-wrap';
+
+                    let opts = '<option value="">انتخاب قانون</option>';
+                    catalog.forEach(function (c) {
+                        opts += '<option value="' + c.rule + '">' + c.label + '</option>';
+                    });
+
+                    let fieldOpts = '<option value="">انتخاب فیلد</option>';
+                    dateFieldsForRules.forEach(function (f) {
+                        fieldOpts += '<option value="' + f.name + '">' + f.label + '</option>';
+                    });
+
+                    row.innerHTML =
+                        '<select class="form-select rule-select" style="max-width:16rem">' + opts + '</select>' +
+                        '<div class="rule-value-wrap" style="display:none">' +
+                        '<input type="text" class="form-control rule-value" style="max-width:10rem" placeholder="مقدار" dir="ltr" />' +
+                        '</div>' +
+                        '<div class="rule-field-wrap" style="display:none">' +
+                        '<select class="form-select rule-field" style="max-width:14rem">' + fieldOpts + '</select>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-link text-danger p-1 rule-remove" title="حذف"><i class="bx bx-trash" style="font-size:1.25rem"></i></button>';
+
+                    list.appendChild(row);
+                    row.querySelector('.rule-select').addEventListener('change', function () { syncRuleValueUi(row); });
+                    row.querySelector('.rule-remove').addEventListener('click', function () { row.remove(); });
+                }
+
+                function collectValidationRules() {
+                    const rows = document.querySelectorAll('#addValidationRulesList .crm-validation-rule-row');
+                    const result = [];
+                    rows.forEach(function (row) {
+                        const rule = row.querySelector('.rule-select')?.value;
+                        if (!rule) return;
+                        const type = document.getElementById('addFieldType')?.value || '0';
+                        const cat = validationCatalog(type).find(function (c) { return c.rule === rule; });
+                        const needs = cat ? cat.needs : null;
+                        let value = '';
+                        if (needs === 'field')
+                            value = row.querySelector('.rule-field')?.value || '';
+                        else if (needs === 'number' || needs === 'text')
+                            value = (row.querySelector('.rule-value')?.value || '').trim();
+                        if (needs && !value) return;
+                        result.push({ rule: rule, value: value || null });
+                    });
+                    return result;
+                }
+
+                function collectVisibleDefault() {
+                    const type = document.getElementById('addFieldType')?.value || '0';
+                    let val = '';
+                    addFieldModal.querySelectorAll('[data-default-sync]').forEach(function (el) {
+                        const wrap = el.closest('[data-for-types]');
+                        if (!wrap || wrap.style.display === 'none') return;
+                        if (el.tagName === 'SELECT' || el.tagName === 'INPUT')
+                            val = el.value || '';
+                    });
+                    if (type === '5' || type === '6') {
+                        if (document.getElementById('addDefaultToday')?.checked)
+                            val = '__TODAY__';
+                    }
+                    return val;
+                }
+
+                function collectIntegerDigits() {
+                    let val = '';
+                    addFieldModal.querySelectorAll('[data-integer-digits]').forEach(function (el) {
+                        const wrap = el.closest('[data-for-types]');
+                        if (!wrap || wrap.style.display === 'none') return;
+                        val = el.value || '';
+                    });
+                    return val;
+                }
+
+                function collectMaxLength() {
+                    const el = document.getElementById('addMaxLength');
+                    const wrap = el?.closest('[data-for-types]');
+                    if (!wrap || wrap.style.display === 'none') return '';
+                    return el.value || '';
+                }
+
+                function collectPicklistOptions() {
+                    return Array.from(document.querySelectorAll('#addPicklistRows .pick-label'))
+                        .map(function (i) { return i.value.trim(); })
+                        .filter(Boolean)
+                        .join('\n');
+                }
+
+                addFieldModal.addEventListener('show.bs.modal', function (event) {
+                    const btn = event.relatedTarget;
+                    const blockInput = document.getElementById('addFieldBlockId');
+                    if (blockInput && btn && btn.classList.contains('studio-add-field-to-block')) {
+                        blockInput.value = btn.getAttribute('data-block-id') || '';
+                    }
+                    const vList = document.getElementById('addValidationRulesList');
+                    if (vList) vList.innerHTML = '';
+                    const rows = document.getElementById('addPicklistRows');
+                    if (rows) rows.innerHTML = '';
+                    addPicklistRow('');
+                    addPicklistRow('');
+                    const formulaCb = document.getElementById('addFormulaEnabled');
+                    const formulaTa = document.getElementById('addFormulaExpression');
+                    if (formulaCb) formulaCb.checked = false;
+                    if (formulaTa) { formulaTa.value = ''; formulaTa.disabled = true; }
+                    stepIndex = 0;
+                    syncTypePanels();
+                });
+
+                document.getElementById('addFieldType')?.addEventListener('change', function () {
+                    stepIndex = 0;
+                    syncTypePanels();
+                });
+                document.getElementById('addPicklistRowBtn')?.addEventListener('click', function () { addPicklistRow(''); });
+                document.getElementById('addFormulaEnabled')?.addEventListener('change', function () {
+                    const ta = document.getElementById('addFormulaExpression');
+                    if (ta) ta.disabled = !this.checked;
+                    if (!this.checked && ta) ta.value = '';
+                });
+                document.getElementById('addValidationRuleBtn')?.addEventListener('click', function () {
+                    addValidationRuleRow();
+                });
+
+                prevBtn?.addEventListener('click', function () { goStep(stepIndex - 1); });
+                nextBtn?.addEventListener('click', function () {
+                    const label = document.getElementById('addFieldLabel');
+                    if (activeSteps[stepIndex] === 'info') {
+                        if (label && !label.value.trim()) {
+                            label.focus();
+                            label.reportValidity();
+                            return;
+                        }
+                        const type = document.getElementById('addFieldType')?.value;
+                        if (type === '8' && !collectPicklistOptions()) {
+                            alert('حداقل یک گزینه برای فیلد انتخابی وارد کنید.');
+                            return;
+                        }
+                        if (type === '2' && !collectIntegerDigits()) {
+                            document.getElementById('addMaxDigits')?.focus();
+                            return;
+                        }
+                        if (type === '3') {
+                            if (!document.getElementById('addIntegerDigitsDec')?.value || !document.getElementById('addDecimalDigits')?.value) {
+                                document.getElementById('addIntegerDigitsDec')?.focus();
+                                return;
+                            }
+                        }
+                        if (type === '4' && !collectIntegerDigits()) {
+                            document.getElementById('addCurrencyDigits')?.focus();
+                            return;
+                        }
+                    }
+                    goStep(stepIndex + 1);
+                });
+
+                addFieldModal.querySelectorAll('.crm-field-wizard-step').forEach(function (el) {
+                    el.addEventListener('click', function () {
+                        const k = el.getAttribute('data-step-key');
+                        const i = activeSteps.indexOf(k);
+                        if (i >= 0) goStep(i);
+                    });
+                });
+
+                form?.addEventListener('submit', function () {
+                    const label = document.getElementById('addFieldLabel')?.value || '';
+                    document.getElementById('addFieldName').value = slugifyLabel(label);
+                    document.getElementById('addDefaultValueHidden').value = collectVisibleDefault();
+                    document.getElementById('addIntegerDigitsHidden').value = collectIntegerDigits();
+                    document.getElementById('addMaxLengthHidden').value = collectMaxLength();
+                    document.getElementById('addPicklistOptions').value = collectPicklistOptions();
+                    const rules = collectValidationRules();
+                    document.getElementById('addValidationJson').value = rules.length
+                        ? JSON.stringify(rules) : '';
+                    const dd = document.getElementById('addDecimalDigits');
+                    if (dd) {
+                        const wrap = dd.closest('[data-for-types]');
+                        dd.disabled = !!(wrap && wrap.style.display === 'none');
+                    }
+                    const formulaOn = document.getElementById('addFormulaEnabled')?.checked;
+                    if (!formulaOn) {
+                        const ta = document.getElementById('addFormulaExpression');
+                        if (ta) ta.value = '';
+                    }
+                    document.getElementById('addRuleJson').value = buildRule(
+                        document.getElementById('addDepField').value,
+                        document.getElementById('addDepOp').value,
+                        document.getElementById('addDepValue').value);
+                });
+            }
+
+            /* Toggle hidden fields per block */
+            document.querySelectorAll('.studio-toggle-hidden').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const block = btn.closest('.studio-block');
+                    if (!block) return;
+                    const showing = block.classList.toggle('show-hidden');
+                    btn.classList.toggle('is-active', showing);
+                    const label = btn.querySelector('span');
+                    const icon = btn.querySelector('i');
+                    if (label) label.textContent = showing ? 'مخفی‌کردن فیلدهای پنهان' : 'نمایش فیلدهای پنهان';
+                    if (icon) {
+                        icon.classList.toggle('bx-hide', !showing);
+                        icon.classList.toggle('bx-show', showing);
+                    }
+                });
+            });
+
+            /* Sync collapse label / class with Bootstrap collapse */
+            document.querySelectorAll('.studio-block').forEach(function (block) {
+                const body = block.querySelector('.studio-block-body.collapse');
+                const label = block.querySelector('.studio-collapse-label');
+                if (!body) return;
+                body.addEventListener('shown.bs.collapse', function () {
+                    block.classList.remove('is-collapsed');
+                    if (label) label.textContent = 'بسته شدن';
+                });
+                body.addEventListener('hidden.bs.collapse', function () {
+                    block.classList.add('is-collapsed');
+                    if (label) label.textContent = 'باز شدن';
+                });
+            });
         })();
     </script>
 }

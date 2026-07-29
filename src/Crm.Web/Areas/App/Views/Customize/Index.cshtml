@@ -1,33 +1,45 @@
 @using Crm.Core.Entities
 @model IReadOnlyList<ModuleDef>
 @{
-    ViewData["PanelTitle"] = "سفارشی‌سازی ماژول";
+    ViewData["PanelTitle"] = "مدیریت ماژول";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="mb-1"><i class="bx bx-customize text-primary me-1"></i> سفارشی‌سازی ماژول</h4>
-        <p class="text-muted mb-0">چیدمان فیلدها، بلاک‌ها و فیلدهای سفارشی هر ماژول را مدیریت کنید.</p>
-    </div>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-module-studio.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
+<div class="crm-studio">
+    <nav class="crm-studio-breadcrumb" aria-label="مسیر">
+        <span>تنظیمات</span>
+        <span class="sep">›</span>
+        <span class="current">مدیریت ماژول</span>
+    </nav>
 
-<div class="row g-3">
-    @foreach (var module in Model)
-    {
-        <div class="col-md-4 col-lg-3">
-            <a href="/App/customize/@module.Name" class="card h-100 text-decoration-none">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <span class="avatar avatar-md bg-label-primary rounded">
-                        <i class="bx @module.Icon fs-4"></i>
-                    </span>
-                    <div>
-                        <h6 class="mb-0 text-body">@module.PluralLabel</h6>
-                        <small class="text-muted" dir="ltr">@module.Name</small>
-                    </div>
-                </div>
-            </a>
+    <div class="crm-studio-header">
+        <div class="crm-studio-header-title">
+            <span class="crm-studio-header-icon"><i class="bx bx-customize"></i></span>
+            <div>
+                <h1>مدیریت ماژول</h1>
+                <p class="subtitle">چیدمان فیلدها، بلاک‌ها و فیلدهای سفارشی هر ماژول را مدیریت کنید.</p>
+            </div>
         </div>
-    }
+    </div>
+
+    <partial name="_Alerts" />
+
+    <div class="crm-studio-picker-grid">
+        @foreach (var module in Model)
+        {
+            <a href="/App/customize/@module.Name" class="crm-studio-module-card">
+                <span class="crm-studio-module-icon">
+                    <i class="bx @module.Icon"></i>
+                </span>
+                <div>
+                    <h6>@module.PluralLabel</h6>
+                    <small dir="ltr">@module.Name</small>
+                </div>
+                <i class="bx bx-chevron-left chevron"></i>
+            </a>
+        }
+    </div>
 </div>

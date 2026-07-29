@@ -52,7 +52,7 @@
                                 case FieldType.Checkbox:
                                     <input type="checkbox" name="fld_@field.Name" value="true" class="form-check-input" />
                                     break;
-                                case FieldType.Number or FieldType.Decimal or FieldType.Currency:
+                                case FieldType.Number or FieldType.Decimal or FieldType.Currency or FieldType.Percent:
                                     <input type="number" name="fld_@field.Name" value="@defaultValue" class="form-control" required="@field.IsRequired" />
                                     break;
                                 case FieldType.Date:

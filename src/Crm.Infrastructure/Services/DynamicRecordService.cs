@@ -583,7 +583,11 @@ public class DynamicRecordService
             var value = string.IsNullOrWhiteSpace(raw) ? null : raw.Trim();
 
             if (value is null && field.DefaultValue is not null)
-                value = field.DefaultValue;
+            {
+                value = field.DefaultValue == "__TODAY__"
+                    ? DateTime.Today.ToString("yyyy-MM-dd")
+                    : field.DefaultValue;
+            }
 
             if (field.IsRequired && value is null)
             {
@@ -593,14 +597,42 @@ public class DynamicRecordService
 
             if (value is not null)
             {
+                if (field.MaxLength is int maxLen && value.Length > maxLen)
+                {
+                    errors[field.Name] = $"طول «{field.Label}» نباید بیشتر از {maxLen} باشد.";
+                    continue;
+                }
+
                 switch (field.Type)
                 {
-                    case FieldType.Number when !long.TryParse(value, out _):
-                        errors[field.Name] = $"مقدار «{field.Label}» باید عدد صحیح باشد.";
-                        continue;
-                    case FieldType.Decimal or FieldType.Currency when !decimal.TryParse(value, out _):
-                        errors[field.Name] = $"مقدار «{field.Label}» باید عددی باشد.";
-                        continue;
+                    case FieldType.Number:
+                        if (!long.TryParse(value, out var n))
+                        {
+                            errors[field.Name] = $"مقدار «{field.Label}» باید عدد صحیح باشد.";
+                            continue;
+                        }
+                        if (field.MaxLength is int maxDigits && value.TrimStart('-').Length > maxDigits)
+                        {
+                            errors[field.Name] = $"«{field.Label}» حداکثر {maxDigits} رقم مجاز است.";
+                            continue;
+                        }
+                        break;
+                    case FieldType.Decimal:
+                    case FieldType.Currency:
+                    case FieldType.Percent:
+                        if (!decimal.TryParse(value, System.Globalization.NumberStyles.Number,
+                                System.Globalization.CultureInfo.InvariantCulture, out _) &&
+                            !decimal.TryParse(value, out _))
+                        {
+                            errors[field.Name] = $"مقدار «{field.Label}» باید عددی باشد.";
+                            continue;
+                        }
+                        if (!ValidateDecimalDigits(field, value, out var digitErr))
+                        {
+                            errors[field.Name] = digitErr!;
+                            continue;
+                        }
+                        break;
                     case FieldType.Email when !value.Contains('@'):
                         errors[field.Name] = $"مقدار «{field.Label}» ایمیل معتبر نیست.";
                         continue;
@@ -609,6 +641,10 @@ public class DynamicRecordService
                         errors[field.Name] = $"مقدار «{field.Label}» از میان گزینه‌های مجاز نیست.";
                         continue;
                 }
+
+                ApplyValidationRules(field, value, values, errors);
+                if (errors.ContainsKey(field.Name))
+                    continue;
             }
 
             data[field.Name] = value;
@@ -618,6 +654,178 @@ public class DynamicRecordService
             throw new RecordValidationException(errors);
 
         return data;
+    }
+
+    private static bool ValidateDecimalDigits(FieldDef field, string value, out string? error)
+    {
+        error = null;
+        var normalized = value.Trim().TrimStart('-');
+        var parts = normalized.Split('.', 2);
+        var intPart = parts[0];
+        var fracPart = parts.Length > 1 ? parts[1] : "";
+
+        if (field.IntegerDigits is int id && intPart.Length > id)
+        {
+            error = $"تعداد ارقام صحیح «{field.Label}» نباید بیشتر از {id} باشد.";
+            return false;
+        }
+        if (field.DecimalDigits is int dd && fracPart.Length > dd)
+        {
+            error = $"تعداد ارقام اعشاری «{field.Label}» نباید بیشتر از {dd} باشد.";
+            return false;
+        }
+        return true;
+    }
+
+    private static void ApplyValidationRules(
+        FieldDef field,
+        string value,
+        Dictionary<string, string?> allValues,
+        Dictionary<string, string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(field.ValidationRulesJson) || errors.ContainsKey(field.Name))
+            return;
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(field.ValidationRulesJson);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array)
+                return;
+
+            foreach (var ruleEl in doc.RootElement.EnumerateArray())
+            {
+                var ruleName = ruleEl.TryGetProperty("rule", out var r) ? r.GetString() : null;
+                var ruleValue = ruleEl.TryGetProperty("value", out var v) && v.ValueKind != System.Text.Json.JsonValueKind.Null
+                    ? v.GetString()
+                    : null;
+                if (string.IsNullOrEmpty(ruleName))
+                    continue;
+
+                switch (ruleName)
+                {
+                    case "englishOnly" when !System.Text.RegularExpressions.Regex.IsMatch(value, @"^[A-Za-z\s]+$"):
+                        errors[field.Name] = $"«{field.Label}» فقط باید حروف انگلیسی باشد.";
+                        return;
+                    case "persianOnly" when !System.Text.RegularExpressions.Regex.IsMatch(value, @"^[\u0600-\u06FF\s]+$"):
+                        errors[field.Name] = $"«{field.Label}» فقط باید حروف فارسی باشد.";
+                        return;
+                    case "minLength" when int.TryParse(ruleValue, out var minL) && value.Length < minL:
+                        errors[field.Name] = $"حداقل تعداد کاراکتر «{field.Label}» باید {minL} باشد.";
+                        return;
+                    case "maxLength" when int.TryParse(ruleValue, out var maxL) && value.Length > maxL:
+                        errors[field.Name] = $"حداکثر تعداد کاراکتر «{field.Label}» باید {maxL} باشد.";
+                        return;
+                    case "nationalId" when !IsValidIranianNationalId(value):
+                        errors[field.Name] = $"«{field.Label}» کد ملی معتبر نیست.";
+                        return;
+                    case "contains" when !string.IsNullOrEmpty(ruleValue) && !value.Contains(ruleValue, StringComparison.Ordinal):
+                        errors[field.Name] = $"«{field.Label}» باید شامل «{ruleValue}» باشد.";
+                        return;
+                    case "digitsOnly" when !System.Text.RegularExpressions.Regex.IsMatch(value, @"^-?\d+$"):
+                        errors[field.Name] = $"«{field.Label}» فقط باید اعداد صحیح باشد.";
+                        return;
+                    case "min" when decimal.TryParse(value, out var num) && decimal.TryParse(ruleValue, out var minV) && num < minV:
+                        errors[field.Name] = $"حداقل مقدار «{field.Label}» باید {minV} باشد.";
+                        return;
+                    case "max" when decimal.TryParse(value, out var num2) && decimal.TryParse(ruleValue, out var maxV) && num2 > maxV:
+                        errors[field.Name] = $"حداکثر مقدار «{field.Label}» باید {maxV} باشد.";
+                        return;
+                    case "beforeToday":
+                    case "beforeOrOnToday":
+                    case "afterToday":
+                    case "afterOrOnToday":
+                    case "beforeField":
+                    case "afterField":
+                    case "afterNDays":
+                        if (!TryParseDateValue(value, out var date))
+                        {
+                            errors[field.Name] = $"مقدار «{field.Label}» تاریخ معتبر نیست.";
+                            return;
+                        }
+                        var today = DateTime.Today;
+                        if (ruleName == "beforeToday" && date.Date >= today)
+                        {
+                            errors[field.Name] = $"«{field.Label}» باید قبل از امروز باشد.";
+                            return;
+                        }
+                        if (ruleName == "beforeOrOnToday" && date.Date > today)
+                        {
+                            errors[field.Name] = $"«{field.Label}» باید قبل از یا مساوی امروز باشد.";
+                            return;
+                        }
+                        if (ruleName == "afterToday" && date.Date <= today)
+                        {
+                            errors[field.Name] = $"«{field.Label}» باید بعد از امروز باشد.";
+                            return;
+                        }
+                        if (ruleName == "afterOrOnToday" && date.Date < today)
+                        {
+                            errors[field.Name] = $"«{field.Label}» باید بعد از یا مساوی امروز باشد.";
+                            return;
+                        }
+                        if (ruleName == "afterNDays" && int.TryParse(ruleValue, out var nDays))
+                        {
+                            var threshold = today.AddDays(nDays);
+                            if (date.Date <= threshold)
+                            {
+                                errors[field.Name] = $"«{field.Label}» باید بعد از {nDays} روز آینده باشد.";
+                                return;
+                            }
+                        }
+                        if ((ruleName is "beforeField" or "afterField") && !string.IsNullOrWhiteSpace(ruleValue))
+                        {
+                            allValues.TryGetValue(ruleValue, out var otherRaw);
+                            if (string.IsNullOrWhiteSpace(otherRaw) || !TryParseDateValue(otherRaw, out var otherDate))
+                                break;
+                            if (ruleName == "beforeField" && date.Date >= otherDate.Date)
+                            {
+                                errors[field.Name] = $"«{field.Label}» باید قبل از فیلد مرتبط باشد.";
+                                return;
+                            }
+                            if (ruleName == "afterField" && date.Date <= otherDate.Date)
+                            {
+                                errors[field.Name] = $"«{field.Label}» باید بعد از فیلد مرتبط باشد.";
+                                return;
+                            }
+                        }
+                        break;
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // ignore invalid rule json
+        }
+    }
+
+    private static bool TryParseDateValue(string value, out DateTime date)
+    {
+        if (DateTime.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.AssumeLocal, out date))
+            return true;
+        if (DateTime.TryParse(value, out date))
+            return true;
+        date = default;
+        return false;
+    }
+
+    /// <summary>اعتبارسنجی کد ملی ایران (۱۰ رقم + رقم کنترل).</summary>
+    private static bool IsValidIranianNationalId(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+        var code = input.Trim();
+        if (code.Length != 10 || !code.All(char.IsDigit))
+            return false;
+        if (code.Distinct().Count() == 1)
+            return false;
+
+        var check = code[9] - '0';
+        var sum = 0;
+        for (var i = 0; i < 9; i++)
+            sum += (code[i] - '0') * (10 - i);
+        var rem = sum % 11;
+        return (rem < 2 && check == rem) || (rem >= 2 && check == 11 - rem);
     }
 
     /// <summary>تشخیص تکراری روی فیلدهای علامت‌خورده با IsUniqueCheck (حالت or / and).</summary>

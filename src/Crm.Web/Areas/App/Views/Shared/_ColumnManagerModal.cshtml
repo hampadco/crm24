@@ -1,0 +1,138 @@
+@model Crm.Web.Areas.App.Models.RecordListViewModel
+@using Crm.Core.Entities
+@using Crm.Infrastructure.Services
+@{
+    var selectedSet = Model.SelectedColumnIds.ToHashSet();
+    var selectedFields = Model.SelectedColumnIds
+        .Select(id => Model.AllFields.FirstOrDefault(f => f.Id == id))
+        .Where(f => f is not null)
+        .Cast<FieldDef>()
+        .ToList();
+
+    var blocks = Model.Blocks.OrderBy(b => b.SortOrder).ThenBy(b => b.Id).ToList();
+    var ungrouped = Model.AllFields
+        .Where(f => f.BlockId is null)
+        .OrderBy(f => f.SortOrder)
+        .ThenBy(f => f.Id)
+        .ToList();
+    var maxCols = ListColumnService.MaxColumns;
+}
+
+<div class="modal fade" id="columnManagerModal" tabindex="-1" aria-labelledby="columnManagerTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <form method="post" action="/App/m/@Model.Module.Name/columns" class="modal-content crm-colmgr" id="columnManagerForm"
+              data-max-columns="@maxCols">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title" id="columnManagerTitle">
+                    <i class="bx bx-columns me-1"></i> مدیریت ستون‌ها
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="crm-colmgr-grid">
+                    <section class="crm-colmgr-pane">
+                        <header class="crm-colmgr-pane-head">
+                            <strong>فیلدهای موجود</strong>
+                            <input type="search" class="form-control form-control-sm" id="columnManagerSearch"
+                                   placeholder="جستجوی فیلد..." autocomplete="off" />
+                        </header>
+                        <div class="crm-colmgr-pane-body" id="columnManagerAvailable">
+                            @if (blocks.Count > 0)
+                            {
+                                @foreach (var block in blocks)
+                                {
+                                    var blockFields = Model.AllFields
+                                        .Where(f => f.BlockId == block.Id)
+                                        .OrderBy(f => f.SortOrder)
+                                        .ThenBy(f => f.Id)
+                                        .ToList();
+                                    if (blockFields.Count == 0) { continue; }
+                                    <div class="crm-colmgr-group">
+                                        <div class="crm-colmgr-group-title">@block.Label</div>
+                                        @foreach (var field in blockFields)
+                                        {
+                                            <button type="button"
+                                                    class="crm-colmgr-item @(selectedSet.Contains(field.Id) ? "is-selected" : null)"
+                                                    data-field-id="@field.Id"
+                                                    data-field-label="@field.Label"
+                                                    data-available-item>
+                                                <span>@field.Label</span>
+                                                <i class="bx bx-plus"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                                @if (ungrouped.Count > 0)
+                                {
+                                    <div class="crm-colmgr-group">
+                                        <div class="crm-colmgr-group-title">سایر فیلدها</div>
+                                        @foreach (var field in ungrouped)
+                                        {
+                                            <button type="button"
+                                                    class="crm-colmgr-item @(selectedSet.Contains(field.Id) ? "is-selected" : null)"
+                                                    data-field-id="@field.Id"
+                                                    data-field-label="@field.Label"
+                                                    data-available-item>
+                                                <span>@field.Label</span>
+                                                <i class="bx bx-plus"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="crm-colmgr-group">
+                                    <div class="crm-colmgr-group-title">همه فیلدها</div>
+                                    @foreach (var field in Model.AllFields.OrderBy(f => f.SortOrder).ThenBy(f => f.Id))
+                                    {
+                                        <button type="button"
+                                                class="crm-colmgr-item @(selectedSet.Contains(field.Id) ? "is-selected" : null)"
+                                                data-field-id="@field.Id"
+                                                data-field-label="@field.Label"
+                                                data-available-item>
+                                            <span>@field.Label</span>
+                                            <i class="bx bx-plus"></i>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </section>
+
+                    <section class="crm-colmgr-pane">
+                        <header class="crm-colmgr-pane-head">
+                            <strong>
+                                فیلدهای انتخاب‌شده
+                                (<span class="text-muted fw-normal" id="columnManagerCount">
+                                    (@selectedFields.Count از @maxCols)
+                                </span>
+                            </strong>
+                            <small class="text-muted">برای جابه‌جایی بکشید</small>
+                        </header>
+                        <div class="crm-colmgr-pane-body crm-colmgr-selected" id="columnManagerSelected">
+                            @foreach (var field in selectedFields)
+                            {
+                                <div class="crm-colmgr-selected-item" data-field-id="@field.Id">
+                                    <i class="bx bx-menu crm-colmgr-handle"></i>
+                                    <span class="flex-grow-1">@field.Label</span>
+                                    <button type="button" class="btn btn-sm btn-icon text-danger" data-remove-column title="حذف">
+                                        <i class="bx bx-x"></i>
+                                    </button>
+                                    <input type="hidden" name="fieldIds" value="@field.Id" />
+                                </div>
+                            }
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save me-1"></i> ذخیره ستون‌ها
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

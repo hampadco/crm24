@@ -15,7 +15,8 @@ public enum FieldType
     Email = 10,
     Phone = 11,
     Url = 12,
-    Lookup = 13
+    Lookup = 13,
+    Percent = 14
 }
 
 /// <summary>تعریف ماژول (موجودیت) — هسته معماری Metadata-First.</summary>
@@ -79,9 +80,17 @@ public class FieldDef : TenantEntity
     public int SortOrder { get; set; }
     public string? DefaultValue { get; set; }
     public int? MaxLength { get; set; }
+    /// <summary>تعداد ارقام صحیح مجاز (عدد اعشار / درصد).</summary>
+    public int? IntegerDigits { get; set; }
+    /// <summary>تعداد ارقام اعشاری مجاز.</summary>
+    public int? DecimalDigits { get; set; }
     public bool IsVisible { get; set; } = true;
     /// <summary>json dependency: { "field":"stage","op":"eq","value":"Closed Won" }</summary>
     public string? VisibilityRuleJson { get; set; }
+    /// <summary>عبارت فرمول ذخیره‌شده (موتور محاسبه اختیاری است).</summary>
+    public string? FormulaExpression { get; set; }
+    /// <summary>json array قوانین اعتبارسنجی: [{ "rule":"minLength","value":"2" }, ...]</summary>
+    public string? ValidationRulesJson { get; set; }
 
     /// <summary>برای Lookup: نام ماژول مقصد.</summary>
     public string? LookupModule { get; set; }

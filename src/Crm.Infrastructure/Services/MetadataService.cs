@@ -149,7 +149,12 @@ public class MetadataService
         bool isUniqueCheck = false,
         string? defaultValue = null,
         string? visibilityRuleJson = null,
-        string? lookupModule = null)
+        string? lookupModule = null,
+        int? integerDigits = null,
+        int? decimalDigits = null,
+        string? formulaExpression = null,
+        string? validationRulesJson = null,
+        IReadOnlyList<(string Value, string Label)>? picklistOptions = null)
     {
         var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId)
             ?? throw new InvalidOperationException("ماژول یافت نشد.");
@@ -168,6 +173,9 @@ public class MetadataService
                 throw new InvalidOperationException("بلاک انتخاب‌شده معتبر نیست.");
         }
 
+        if (type == FieldType.Picklist && (picklistOptions is null || picklistOptions.Count == 0))
+            throw new InvalidOperationException("برای فیلد انتخابی حداقل یک گزینه لازم است.");
+
         var maxSort = await _db.Fields.Where(f => f.ModuleId == moduleId).MaxAsync(f => (int?)f.SortOrder) ?? 0;
         var field = new FieldDef
         {
@@ -180,15 +188,40 @@ public class MetadataService
             ShowInList = showInList,
             BlockId = blockId,
             MaxLength = maxLength,
+            IntegerDigits = integerDigits,
+            DecimalDigits = decimalDigits,
             IsVisible = isVisible,
             IsUniqueCheck = isUniqueCheck,
-            DefaultValue = defaultValue,
-            VisibilityRuleJson = visibilityRuleJson,
+            DefaultValue = string.IsNullOrWhiteSpace(defaultValue) ? null : defaultValue.Trim(),
+            VisibilityRuleJson = string.IsNullOrWhiteSpace(visibilityRuleJson) ? null : visibilityRuleJson.Trim(),
+            FormulaExpression = string.IsNullOrWhiteSpace(formulaExpression) ? null : formulaExpression.Trim(),
+            ValidationRulesJson = string.IsNullOrWhiteSpace(validationRulesJson) ? null : validationRulesJson.Trim(),
             LookupModule = lookupModule,
             SortOrder = maxSort + 1
         };
         _db.Fields.Add(field);
         await _db.SaveChangesAsync();
+
+        if ((type is FieldType.Picklist or FieldType.MultiPicklist) && picklistOptions is { Count: > 0 })
+        {
+            var order = 0;
+            foreach (var (value, optLabel) in picklistOptions)
+            {
+                var v = string.IsNullOrWhiteSpace(value) ? NormalizeSystemName(optLabel) : value.Trim();
+                if (string.IsNullOrWhiteSpace(v))
+                    v = "opt_" + (++order);
+                _db.PicklistValues.Add(new PicklistValue
+                {
+                    FieldId = field.Id,
+                    Value = v,
+                    Label = string.IsNullOrWhiteSpace(optLabel) ? v : optLabel.Trim(),
+                    SortOrder = ++order,
+                    IsActive = true
+                });
+            }
+            await _db.SaveChangesAsync();
+        }
+
         InvalidateFieldCache(moduleId);
         return field;
     }
@@ -204,7 +237,12 @@ public class MetadataService
         bool isVisible,
         bool isUniqueCheck,
         string? defaultValue,
-        string? visibilityRuleJson)
+        string? visibilityRuleJson,
+        int? integerDigits = null,
+        int? decimalDigits = null,
+        string? formulaExpression = null,
+        string? validationRulesJson = null,
+        IReadOnlyList<(string Value, string Label)>? picklistOptions = null)
     {
         var field = await _db.Fields.FirstOrDefaultAsync(f => f.Id == id)
             ?? throw new InvalidOperationException("فیلد یافت نشد.");
@@ -222,12 +260,85 @@ public class MetadataService
         field.SortOrder = sortOrder;
         field.BlockId = blockId;
         field.MaxLength = maxLength;
+        field.IntegerDigits = integerDigits;
+        field.DecimalDigits = decimalDigits;
         field.IsVisible = isVisible;
         field.IsUniqueCheck = isUniqueCheck;
-        field.DefaultValue = defaultValue;
-        field.VisibilityRuleJson = visibilityRuleJson;
+        field.DefaultValue = string.IsNullOrWhiteSpace(defaultValue) ? null : defaultValue.Trim();
+        field.VisibilityRuleJson = string.IsNullOrWhiteSpace(visibilityRuleJson) ? null : visibilityRuleJson.Trim();
+        field.FormulaExpression = string.IsNullOrWhiteSpace(formulaExpression) ? null : formulaExpression.Trim();
+        field.ValidationRulesJson = string.IsNullOrWhiteSpace(validationRulesJson) ? null : validationRulesJson.Trim();
+
+        if (picklistOptions is not null && field.Type is FieldType.Picklist or FieldType.MultiPicklist)
+        {
+            var existing = await _db.PicklistValues.Where(p => p.FieldId == field.Id).ToListAsync();
+            _db.PicklistValues.RemoveRange(existing);
+            var order = 0;
+            foreach (var (value, optLabel) in picklistOptions)
+            {
+                var v = string.IsNullOrWhiteSpace(value) ? NormalizeSystemName(optLabel) : value.Trim();
+                if (string.IsNullOrWhiteSpace(v))
+                    v = "opt_" + (++order);
+                _db.PicklistValues.Add(new PicklistValue
+                {
+                    FieldId = field.Id,
+                    Value = v,
+                    Label = string.IsNullOrWhiteSpace(optLabel) ? v : optLabel.Trim(),
+                    SortOrder = ++order,
+                    IsActive = true
+                });
+            }
+        }
+
         await _db.SaveChangesAsync();
         InvalidateFieldCache(field.ModuleId);
+    }
+
+    /// <summary>
+    /// فیلدهای بدون بلاک را داخل بلاک پیش‌فرض («اطلاعات اولیه» / main) قرار می‌دهد.
+    /// اگر بلاک وجود نداشت می‌سازد؛ اگر «main» یا اولین بلاک موجود بود همان را استفاده می‌کند.
+    /// </summary>
+    public async Task EnsureUngroupedFieldsInDefaultBlockAsync(int moduleId)
+    {
+        var ungrouped = await _db.Fields
+            .Where(f => f.ModuleId == moduleId && f.BlockId == null)
+            .OrderBy(f => f.SortOrder).ThenBy(f => f.Id)
+            .ToListAsync();
+        if (ungrouped.Count == 0)
+            return;
+
+        var block = await _db.FieldBlocks
+            .Where(b => b.ModuleId == moduleId)
+            .OrderBy(b => b.Name == "main" ? 0 : 1)
+            .ThenBy(b => b.SortOrder)
+            .ThenBy(b => b.Id)
+            .FirstOrDefaultAsync();
+
+        if (block is null)
+        {
+            block = new FieldBlock
+            {
+                ModuleId = moduleId,
+                Name = "main",
+                Label = "اطلاعات اولیه",
+                SortOrder = 1
+            };
+            _db.FieldBlocks.Add(block);
+            await _db.SaveChangesAsync();
+        }
+
+        var order = await _db.Fields
+            .Where(f => f.ModuleId == moduleId && f.BlockId == block.Id)
+            .MaxAsync(f => (int?)f.SortOrder) ?? 0;
+
+        foreach (var field in ungrouped)
+        {
+            field.BlockId = block.Id;
+            field.SortOrder = ++order;
+        }
+
+        await _db.SaveChangesAsync();
+        InvalidateFieldCache(moduleId);
     }
 
     /// <summary>
