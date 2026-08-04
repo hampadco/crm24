@@ -37,7 +37,7 @@
                     {
                         <div class="card mb-2 kanban-card shadow-none border" data-id="@card.Id" style="cursor: grab">
                             <div class="card-body p-3">
-                                <a href="/App/m/@Model.Module.Name/@card.Id/edit" class="fw-semibold d-block mb-1">@card.Title</a>
+                                <a href="/App/m/@Model.Module.Name/@card.Id" class="fw-semibold d-block mb-1">@card.Title</a>
                                 @if (card.Amount is not null)
                                 {
                                     <div class="text-success small">@card.Amount</div>

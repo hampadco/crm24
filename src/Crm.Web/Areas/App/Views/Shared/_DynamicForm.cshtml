@@ -1,17 +1,27 @@
 @using Crm.Core.Entities
 @model Crm.Web.Areas.App.Models.RecordFormViewModel
 
-@* فرم داینامیک: از روی FieldDef های ماژول ساخته می‌شود؛ دسترسی per-field پروفایل اعمال می‌شود. *@
+@* فرم داینامیک: بلاک‌ها به‌صورت کارت؛ فیلدها گرید چندستونه *@
 @foreach (var (block, groupFields) in Model.GroupedFields())
 {
-    if (block is not null)
-    {
-        <div class="mb-4 crm-dep-target"
-             @if (!string.IsNullOrWhiteSpace(block.VisibilityRuleJson))
+    var blockLabel = block?.Label ?? "اطلاعات";
+    var hasRule = block is not null && !string.IsNullOrWhiteSpace(block.VisibilityRuleJson);
+
+    <section class="crm-rf-block crm-dep-target"
+             @if (hasRule)
              {
-                 <text>data-visibility-rule="@block.VisibilityRuleJson"</text>
+                 <text>data-visibility-rule="@block!.VisibilityRuleJson"</text>
              }>
-            <h6 class="text-muted text-uppercase small mb-3 border-bottom pb-2">@block.Label</h6>
+        <header class="crm-rf-block-head">
+            <div class="crm-rf-block-icon" aria-hidden="true">
+                <i class="bx bx-layer"></i>
+            </div>
+            <div>
+                <h2 class="crm-rf-block-title">@blockLabel</h2>
+                <p class="crm-rf-block-hint">@groupFields.Count فیلد در این بخش</p>
+            </div>
+        </header>
+        <div class="crm-rf-block-body">
             <div class="row g-3">
                 @foreach (var field in groupFields)
                 {
@@ -19,25 +29,5 @@
                 }
             </div>
         </div>
-    }
-    else if (Model.Blocks.Count > 0)
-    {
-        <div class="mb-4">
-            <div class="row g-3">
-                @foreach (var field in groupFields)
-                {
-                    @await Html.PartialAsync("_DynamicFormField", Model, new ViewDataDictionary(ViewData) { ["FormField"] = field })
-                }
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="row g-3">
-            @foreach (var field in groupFields)
-            {
-                @await Html.PartialAsync("_DynamicFormField", Model, new ViewDataDictionary(ViewData) { ["FormField"] = field })
-            }
-        </div>
-    }
+    </section>
 }

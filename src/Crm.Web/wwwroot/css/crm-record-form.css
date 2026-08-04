@@ -1,0 +1,296 @@
+/* فرم ایجاد / ویرایش ماژول — هم‌سبک صفحه جزئیات */
+
+.crm-rf {
+  --rf-border: #e2e8f0;
+  --rf-muted: #64748b;
+  --rf-text: #0f172a;
+  --rf-accent: #2f6fed;
+  --rf-soft: #f8fafc;
+  --rf-radius: 0.9rem;
+  --rf-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.crm-rf-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.15rem;
+}
+
+.crm-rf-header-main {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.crm-rf-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, rgba(47, 111, 237, 0.16), rgba(47, 111, 237, 0.05));
+  color: var(--rf-accent);
+  font-size: 1.45rem;
+  flex-shrink: 0;
+}
+
+.crm-rf-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--rf-muted);
+  margin-bottom: 0.25rem;
+}
+
+.crm-rf-breadcrumb a {
+  color: var(--rf-muted);
+  text-decoration: none;
+}
+
+.crm-rf-breadcrumb a:hover {
+  color: var(--rf-accent);
+}
+
+.crm-rf-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--rf-text);
+  line-height: 1.35;
+}
+
+.crm-rf-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--rf-muted);
+}
+
+.crm-rf-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.crm-rf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.crm-rf-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.crm-rf-block {
+  background: #fff;
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius);
+  box-shadow: var(--rf-shadow);
+  overflow: visible;
+}
+
+.crm-rf-block-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.95rem 1.15rem;
+  background: linear-gradient(180deg, #fbfcfe 0%, #fff 100%);
+  border-bottom: 1px solid var(--rf-border);
+}
+
+.crm-rf-block-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(47, 111, 237, 0.1);
+  color: var(--rf-accent);
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.crm-rf-block-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--rf-text);
+}
+
+.crm-rf-block-hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--rf-muted);
+}
+
+.crm-rf-block-body {
+  padding: 1.1rem 1.15rem 1.25rem;
+}
+
+.crm-rf-field {
+  min-width: 0;
+}
+
+.crm-rf-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.4rem;
+}
+
+.crm-rf-req {
+  color: #ef4444;
+  font-weight: 800;
+  margin-inline-start: 0.15rem;
+}
+
+.crm-rf .crm-rf-control {
+  border: 1px solid #d0d7e2;
+  border-radius: 0.55rem;
+  min-height: 2.45rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--rf-text);
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.crm-rf textarea.crm-rf-control {
+  min-height: 6.5rem;
+  resize: vertical;
+}
+
+.crm-rf .crm-rf-control:hover {
+  border-color: #a8b3c7;
+}
+
+.crm-rf .crm-rf-control:focus {
+  border-color: var(--rf-accent);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
+  background: #fff;
+}
+
+.crm-rf .crm-rf-control:disabled,
+.crm-rf .crm-rf-control[readonly] {
+  background: var(--rf-soft);
+  color: #475569;
+  opacity: 1;
+}
+
+.crm-rf .crm-rf-igroup .input-group-text {
+  border-radius: 0.55rem;
+  border-color: #d0d7e2;
+  background: var(--rf-soft);
+  color: var(--rf-muted);
+  font-weight: 700;
+}
+
+.crm-rf .crm-rf-igroup .crm-rf-control {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.crm-rf .crm-rf-igroup .input-group-text:last-child {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+.crm-rf-check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.45rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--rf-border);
+  border-radius: 0.55rem;
+  background: var(--rf-soft);
+}
+
+.crm-rf-check .form-check-input {
+  margin: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.crm-rf-check .form-check-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+.crm-rf-footer {
+  position: sticky;
+  bottom: 0.75rem;
+  z-index: 20;
+  margin-top: 0.35rem;
+}
+
+.crm-rf-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--rf-border);
+  border-radius: var(--rf-radius);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+
+.crm-rf-footer .btn-primary {
+  min-width: 7.5rem;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(47, 111, 237, 0.28);
+}
+
+/* Select2 داخل فرم */
+.crm-rf .select2-container--default .select2-selection--single {
+  min-height: 2.45rem;
+  border: 1px solid #d0d7e2;
+  border-radius: 0.55rem;
+  padding: 0.25rem 0.35rem;
+  display: flex;
+  align-items: center;
+}
+
+.crm-rf .select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 1.4;
+  padding-inline: 0.4rem;
+  color: var(--rf-text);
+  font-size: 0.9rem;
+}
+
+.crm-rf .select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 100%;
+  top: 0;
+}
+
+.crm-rf .select2-container--default.select2-container--focus .select2-selection--single,
+.crm-rf .select2-container--default.select2-container--open .select2-selection--single {
+  border-color: var(--rf-accent);
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.15);
+}
+
+@media (max-width: 575.98px) {
+  .crm-rf-block-body {
+    padding: 0.9rem;
+  }
+
+  .crm-rf-footer {
+    bottom: 0.4rem;
+  }
+}

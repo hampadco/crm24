@@ -437,6 +437,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.1rem;
+  position: relative;
+  z-index: 2;
 }
 
 .crm-dt-action {
@@ -452,11 +454,18 @@
   padding: 0;
   text-decoration: none;
   cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .crm-dt-action:hover {
   color: var(--crm-dt-accent);
   background: var(--crm-dt-accent-soft);
+}
+
+.crm-dt-action--view:hover {
+  color: var(--crm-dt-accent);
 }
 
 .crm-dt-action--danger:hover {
@@ -466,6 +475,15 @@
 
 .crm-dt-action .bx {
   font-size: 1.05rem;
+  pointer-events: none;
+}
+
+.crm-dt-table tbody tr.crm-dt-row {
+  cursor: pointer;
+}
+
+.crm-dt-table tbody tr.crm-dt-row:hover > td {
+  background: var(--crm-dt-hover);
 }
 
 .crm-dt-footer {

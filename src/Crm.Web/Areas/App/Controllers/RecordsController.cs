@@ -568,6 +568,7 @@ public class RecordsController : AppControllerBase
                 {
                     Label = g.First().FieldLabel ?? g.First().ModuleLabel,
                     ModuleName = g.Key,
+                    TabKey = $"rel-{g.Key}",
                     Records = g.ToList()
                 });
             }
@@ -580,6 +581,7 @@ public class RecordsController : AppControllerBase
             {
                 Label = g.First().ModuleLabel,
                 ModuleName = g.Key,
+                TabKey = $"rel-{g.Key}",
                 Records = g.ToList()
             });
         }
@@ -666,9 +668,22 @@ public class RecordsController : AppControllerBase
                 {
                     Label = string.IsNullOrWhiteSpace(rel.Label) ? other.PluralLabel : rel.Label,
                     ModuleName = other.Name,
+                    TabKey = $"rel-{other.Name}",
                     Records = matched
                 });
             }
+        }
+
+        // یکتا کردن TabKey در صورت تکرار ماژول
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var g in groups)
+        {
+            if (string.IsNullOrWhiteSpace(g.TabKey))
+                g.TabKey = $"rel-{g.ModuleName}";
+            var baseKey = g.TabKey;
+            var n = 2;
+            while (!seen.Add(g.TabKey))
+                g.TabKey = $"{baseKey}-{n++}";
         }
 
         return groups;
@@ -731,13 +746,138 @@ public class RecordsController : AppControllerBase
         if (!result.Success)
         {
             TempData["Error"] = result.Error;
-            return RedirectToAction(nameof(Index), new { moduleName = "leads" });
+            return RedirectToAction(nameof(Details), new { moduleName = "leads", id });
         }
 
         TempData["Success"] = "سرنخ با موفقیت به مخاطب" +
             (result.OrganizationId is not null ? " + سازمان" : "") +
             (result.OpportunityId is not null ? " + فرصت فروش" : "") + " تبدیل شد.";
         return RedirectToAction(nameof(Index), new { moduleName = "opportunities" });
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/attachments")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(20 * 1024 * 1024)]
+    public async Task<IActionResult> UploadAttachment(
+        string moduleName,
+        int id,
+        IFormFile? file,
+        [FromServices] IWebHostEnvironment env,
+        [FromServices] Crm.Core.Abstractions.ITenantContext tenant)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var record = await _records.GetAsync(module.Id, id);
+        if (record is null)
+            return NotFound();
+
+        if (file is null || file.Length == 0)
+        {
+            TempData["Error"] = "فایلی انتخاب نشده است.";
+            return Redirect($"/App/m/{module.Name}/{id}#attachments");
+        }
+
+        if (file.Length > 20 * 1024 * 1024)
+        {
+            TempData["Error"] = "حداکثر حجم فایل ۲۰ مگابایت است.";
+            return Redirect($"/App/m/{module.Name}/{id}#attachments");
+        }
+
+        var safeName = Path.GetFileName(file.FileName);
+        if (string.IsNullOrWhiteSpace(safeName))
+            safeName = "file";
+
+        var ext = Path.GetExtension(safeName);
+        var storedName = $"{Guid.NewGuid():N}{ext}";
+        var tenantKey = tenant.TenantId?.ToString() ?? "0";
+        var relDir = Path.Combine("uploads", "records", tenantKey, module.Name, id.ToString());
+        var absDir = Path.Combine(env.WebRootPath ?? Path.GetTempPath(), relDir);
+        Directory.CreateDirectory(absDir);
+        var absPath = Path.Combine(absDir, storedName);
+
+        await using (var stream = System.IO.File.Create(absPath))
+            await file.CopyToAsync(stream);
+
+        _db.Attachments.Add(new Attachment
+        {
+            ModuleName = module.Name,
+            RecordId = id,
+            FileName = safeName,
+            StoredPath = "/" + relDir.Replace('\\', '/') + "/" + storedName,
+            ContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+            SizeBytes = file.Length
+        });
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "پیوست ذخیره شد.";
+        return Redirect($"/App/m/{module.Name}/{id}#attachments");
+    }
+
+    [HttpGet("/App/m/{moduleName}/{id:int}/attachments/{attachmentId:int}")]
+    public async Task<IActionResult> DownloadAttachment(
+        string moduleName,
+        int id,
+        int attachmentId,
+        [FromServices] IWebHostEnvironment env)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var att = await _db.Attachments.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == attachmentId && a.ModuleName == module.Name && a.RecordId == id);
+        if (att is null)
+            return NotFound();
+
+        var relative = att.StoredPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var abs = Path.Combine(env.WebRootPath, relative);
+        if (!System.IO.File.Exists(abs))
+            return NotFound();
+
+        return PhysicalFile(abs, att.ContentType, att.FileName);
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/attachments/{attachmentId:int}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteAttachment(
+        string moduleName,
+        int id,
+        int attachmentId,
+        [FromServices] IWebHostEnvironment env)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanEditAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var att = await _db.Attachments
+            .FirstOrDefaultAsync(a => a.Id == attachmentId && a.ModuleName == module.Name && a.RecordId == id);
+        if (att is null)
+            return NotFound();
+
+        var relative = att.StoredPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var abs = Path.Combine(env.WebRootPath, relative);
+        if (System.IO.File.Exists(abs))
+        {
+            try { System.IO.File.Delete(abs); } catch { /* ignore */ }
+        }
+
+        att.IsDeleted = true;
+        att.DeletedAtUtc = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "پیوست حذف شد.";
+        return Redirect($"/App/m/{module.Name}/{id}#attachments");
     }
 
     [HttpGet("/App/recycle-bin")]

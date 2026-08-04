@@ -2,35 +2,79 @@
 @{
     ViewData["PanelTitle"] = Model.Module.PluralLabel;
     var isEdit = Model.RecordId is not null;
+    var title = isEdit ? $"ویرایش {Model.Module.SingularLabel}" : $"{Model.Module.SingularLabel} جدید";
+    ViewData["Title"] = title;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">
-        <i class="bx @Model.Module.Icon text-primary me-1"></i>
-        @(isEdit ? $"ویرایش {Model.Module.SingularLabel}" : $"{Model.Module.SingularLabel} جدید")
-    </h4>
-    <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary">
-        <i class="bx bx-right-arrow-alt me-1"></i> بازگشت به لیست
-    </a>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-record-form.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
+<div class="crm-rf">
+    <div class="crm-rf-header">
+        <div class="crm-rf-header-main">
+            <div class="crm-rf-avatar" aria-hidden="true">
+                <i class="bx @Model.Module.Icon"></i>
+            </div>
+            <div>
+                <div class="crm-rf-breadcrumb">
+                    <a href="/App/m/@Model.Module.Name">@Model.Module.PluralLabel</a>
+                    <span>/</span>
+                    @if (isEdit && Model.RecordId is int rid)
+                    {
+                        <a href="/App/m/@Model.Module.Name/@rid">جزئیات</a>
+                        <span>/</span>
+                        <span>ویرایش</span>
+                    }
+                    else
+                    {
+                        <span>ایجاد</span>
+                    }
+                </div>
+                <h1 class="crm-rf-title">@title</h1>
+                <p class="crm-rf-sub">فیلدهای ستاره‌دار اجباری هستند. تغییرات با ذخیره اعمال می‌شوند.</p>
+            </div>
+        </div>
+        <div class="crm-rf-header-actions">
+            @if (isEdit && Model.RecordId is int detailId)
+            {
+                <a href="/App/m/@Model.Module.Name/@detailId" class="btn btn-outline-secondary btn-sm">
+                    <i class="bx bx-show me-1"></i> جزئیات
+                </a>
+            }
+            <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary btn-sm">
+                <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
+            </a>
+        </div>
+    </div>
 
-<div class="card">
-    <div class="card-body">
-        <form method="post"
-              asp-action="@(isEdit ? "Edit" : "Create")"
-              asp-route-moduleName="@Model.Module.Name"
-              asp-route-id="@Model.RecordId">
+    <partial name="_Alerts" />
+
+    <form method="post"
+          class="crm-rf-form"
+          asp-action="@(isEdit ? "Edit" : "Create")"
+          asp-route-moduleName="@Model.Module.Name"
+          asp-route-id="@Model.RecordId">
+        <div class="crm-rf-body">
             <partial name="_DynamicForm" model="Model" />
-            <div class="mt-4">
+        </div>
+
+        <div class="crm-rf-footer">
+            <div class="crm-rf-footer-inner">
                 <button type="submit" class="btn btn-primary">
                     <i class="bx bx-save me-1"></i> ذخیره
                 </button>
-                <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-label-secondary">انصراف</a>
+                @if (isEdit && Model.RecordId is int cancelId)
+                {
+                    <a href="/App/m/@Model.Module.Name/@cancelId" class="btn btn-label-secondary">انصراف</a>
+                }
+                else
+                {
+                    <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-label-secondary">انصراف</a>
+                }
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
 @section Scripts {

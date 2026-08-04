@@ -187,7 +187,7 @@
                     foreach (var record in Model.Records)
                     {
                         var data = Model.RecordData[record.Id];
-                        <tr data-record-id="@record.Id">
+                        <tr data-record-id="@record.Id" data-detail-url="/App/m/@Model.Module.Name/@record.Id" class="crm-dt-row">
                             <td class="crm-dt-check">
                                 <input type="checkbox" class="form-check-input crm-dt-row-check" value="@record.Id" aria-label="انتخاب ردیف" />
                             </td>
@@ -251,8 +251,11 @@
                             }
                             <td class="crm-dt-actions">
                                 <div class="crm-dt-action-btns">
-                                    <a href="/App/m/@Model.Module.Name/@record.Id" class="crm-dt-action" title="جزئیات">
-                                        <i class="bx bx-show"></i>
+                                    <a href="/App/m/@Model.Module.Name/@record.Id"
+                                       class="crm-dt-action crm-dt-action--view"
+                                       title="جزئیات"
+                                       aria-label="مشاهده جزئیات">
+                                        <i class="bx bx-show" aria-hidden="true"></i>
                                     </a>
                                     @if (Model.Module.Name == "leads" && Model.CanEdit)
                                     {

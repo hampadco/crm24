@@ -98,6 +98,10 @@
       if (!name) return;
       if (name.indexOf('f_') === 0 || name.indexOf('fields[') === 0) applyAll();
     });
+    // Select2 change از jQuery می‌آید و listener نیتیو را نمی‌زند
+    if (window.jQuery) {
+      jQuery(document).on('change', 'select[name^="f_"], select[name^="fields["]', applyAll);
+    }
     applyAll();
   }
 

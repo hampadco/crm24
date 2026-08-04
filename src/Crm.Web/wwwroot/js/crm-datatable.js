@@ -283,6 +283,31 @@
             });
         });
 
+        // کلیک روی ردیف → جزئیات (به‌جز چک‌باکس / لینک / دکمه / فرم)
+        root.querySelectorAll('tbody tr[data-detail-url]').forEach(function (tr) {
+            tr.addEventListener('click', function (e) {
+                if (e.defaultPrevented) return;
+                if (e.button !== 0) return;
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+
+                var interactive = e.target.closest(
+                    'a, button, input, label, select, textarea, form, .crm-dt-actions, .crm-dt-check'
+                );
+                if (interactive) return;
+
+                var url = tr.getAttribute('data-detail-url');
+                if (url) window.location.href = url;
+            });
+
+            tr.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                if (e.target !== tr) return;
+                e.preventDefault();
+                var url = tr.getAttribute('data-detail-url');
+                if (url) window.location.href = url;
+            });
+        });
+
         var clearBtn = root.querySelector('[data-crm-dt-clear-selection]');
         if (clearBtn) {
             clearBtn.addEventListener('click', function () {

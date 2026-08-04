@@ -105,12 +105,19 @@
         $(root || document).find('select.crm-select2').each(function () {
             var $el = $(this);
             if ($el.hasClass('select2-hidden-accessible')) return;
-            $el.wrap('<div class="position-relative"></div>').select2({
+            var allowClear = $el.data('allow-clear') === true || $el.data('allow-clear') === 'true';
+            // داخل کارت فرم overflow ممکن است دراپ‌داون را ببرد — والد body
+            var parent = $el.closest('.crm-rf-form').length ? $(document.body) : $el.parent();
+            if (!$el.parent().hasClass('position-relative') && parent[0] !== document.body) {
+                $el.wrap('<div class="position-relative"></div>');
+                parent = $el.parent();
+            }
+            $el.select2({
                 dir: 'rtl',
                 width: '100%',
                 placeholder: $el.data('placeholder') || 'جستجو و انتخاب…',
-                allowClear: !!$el.data('allow-clear'),
-                dropdownParent: $el.parent()
+                allowClear: allowClear,
+                dropdownParent: parent
             });
         });
     }

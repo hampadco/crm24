@@ -1,4 +1,4 @@
-/* منوی بالای دسته‌بندی‌شده App — بدون سایدبار */
+/* منوی کشویی App — باز شدن از راست به چپ */
 
 html.crm-app-topnav.layout-menu-fixed .layout-menu,
 html.crm-app-topnav .layout-menu.menu-vertical {
@@ -24,7 +24,7 @@ html.crm-app-topnav .layout-menu-toggle.d-xl-none {
 }
 
 html.crm-app-topnav #layout-navbar {
-  z-index: 1100;
+  z-index: 1050;
 }
 
 .crm-topnav-toggle {
@@ -39,14 +39,15 @@ html.crm-app-topnav #layout-navbar {
   padding: 0.4rem 0.85rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
 }
 
 .crm-topnav-toggle:hover,
 .crm-topnav-toggle.is-open {
   background: rgba(47, 111, 237, 0.08);
-  border-color: rgba(47, 111, 237, 0.35);
+  border-color: rgba(47, 111, 237, 0.4);
   color: #2f6fed;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.12);
 }
 
 .crm-topnav-brand {
@@ -67,48 +68,203 @@ html.crm-app-topnav #layout-navbar {
 .crm-topnav-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 1090;
-  animation: crmTopnavFadeIn 0.18s ease;
+  background: rgba(15, 23, 42, 0.42);
+  z-index: 1200;
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  backdrop-filter: blur(2px);
 }
 
+.crm-topnav-backdrop.is-visible {
+  opacity: 1;
+}
+
+/* کشو تمام‌قد از لبه راست — روی هدر می‌آید */
 .crm-topnav-panel {
   position: fixed;
   top: 0;
-  left: 0;
   right: 0;
-  z-index: 1095;
-  max-height: min(78vh, 640px);
-  overflow: auto;
+  bottom: 0;
+  z-index: 1210;
+  width: min(640px, 100vw);
+  display: flex;
+  flex-direction: column;
   background: #fff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.14);
-  animation: crmTopnavSlideDown 0.2s ease;
-  padding-top: 3.75rem; /* زیر navbar */
+  box-shadow: -12px 0 40px rgba(15, 23, 42, 0.18);
+  transform: translateX(105%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
 }
 
-.crm-topnav-panel-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 1.5rem;
+.crm-topnav-panel.is-open {
+  transform: translateX(0);
 }
 
-.crm-topnav-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 1.25rem 1rem;
+.crm-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 2px solid #e2e8f0;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #f8fafc 0%, #fff 100%);
 }
 
-.crm-topnav-col-title {
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+.crm-menu-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.crm-menu-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(47, 111, 237, 0.12);
+  color: #2f6fed;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.crm-menu-user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.crm-menu-user-meta strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crm-menu-user-meta span {
+  font-size: 0.78rem;
   color: #64748b;
-  margin: 0 0 0.55rem;
-  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.crm-topnav-links {
+.crm-menu-close {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.crm-menu-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.crm-menu-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ستون دسته‌ها — سمت راست در RTL */
+.crm-menu-cats {
+  width: 50%;
+  flex-shrink: 0;
+  overflow: auto;
+  padding: 0.65rem 0.5rem;
+  border-inline-end: 1px solid #e2e8f0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.crm-menu-cat {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: right;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.55rem;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.crm-menu-cat i {
+  font-size: 1.2rem;
+  color: #64748b;
+  width: 1.25rem;
+  text-align: center;
+  transition: color 0.15s;
+}
+
+.crm-menu-cat:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.crm-menu-cat:hover i {
+  color: #2f6fed;
+}
+
+.crm-menu-cat.is-active {
+  background: rgba(47, 111, 237, 0.1);
+  color: #2f6fed;
+  box-shadow: inset -3px 0 0 #2f6fed;
+}
+
+.crm-menu-cat.is-active i {
+  color: #2f6fed;
+}
+
+/* زیرمنو — سمت چپ */
+.crm-menu-sub {
+  width: 50%;
+  overflow: auto;
+  background: #f8fafc;
+  position: relative;
+}
+
+.crm-menu-pane {
+  display: none;
+  padding: 1rem 0.85rem 1.25rem;
+  animation: crmMenuPaneIn 0.22s ease;
+}
+
+.crm-menu-pane.is-active {
+  display: block;
+}
+
+.crm-menu-pane-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #64748b;
+  margin: 0 0.5rem 0.75rem;
+  letter-spacing: 0.01em;
+}
+
+.crm-menu-links {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -117,75 +273,79 @@ html.crm-app-topnav #layout-navbar {
   gap: 0.15rem;
 }
 
-.crm-topnav-links a {
+.crm-menu-links a {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.4rem 0.5rem;
-  border-radius: 0.4rem;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 0.5rem;
   color: #0f172a;
   text-decoration: none;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
 }
 
-.crm-topnav-links a i {
-  font-size: 1.05rem;
+.crm-menu-links a i {
+  font-size: 1.1rem;
   color: #64748b;
-  width: 1.15rem;
+  width: 1.2rem;
   text-align: center;
+  flex-shrink: 0;
 }
 
-.crm-topnav-links a:hover {
-  background: #f1f5f9;
+.crm-menu-links a:hover {
+  background: #fff;
+  color: #2f6fed;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  transform: translateX(-2px);
+}
+
+.crm-menu-links a:hover i,
+.crm-menu-links a.is-active i {
   color: #2f6fed;
 }
 
-.crm-topnav-links a:hover i,
-.crm-topnav-links a.is-active i {
-  color: #2f6fed;
-}
-
-.crm-topnav-links a.is-active {
-  background: rgba(47, 111, 237, 0.1);
+.crm-menu-links a.is-active {
+  background: #fff;
   color: #2f6fed;
   font-weight: 700;
+  box-shadow: 0 1px 4px rgba(47, 111, 237, 0.12);
 }
 
 body.crm-topnav-open {
   overflow: hidden;
 }
 
-@keyframes crmTopnavFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes crmMenuPaneIn {
+  from { opacity: 0; transform: translateX(10px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-@keyframes crmTopnavSlideDown {
-  from { transform: translateY(-12px); opacity: 0.85; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@media (max-width: 1199.98px) {
-  .crm-topnav-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767.98px) {
-  .crm-topnav-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
+@media (max-width: 575.98px) {
   .crm-topnav-panel {
-    max-height: 85vh;
-    padding-top: 3.5rem;
+    width: 100vw;
   }
-}
 
-@media (max-width: 480px) {
-  .crm-topnav-grid {
-    grid-template-columns: 1fr;
+  .crm-menu-cats {
+    width: 3.5rem;
+    padding: 0.5rem 0.3rem;
+  }
+
+  .crm-menu-cat {
+    justify-content: center;
+    padding: 0.75rem 0.35rem;
+  }
+
+  .crm-menu-cat span {
+    display: none;
+  }
+
+  .crm-menu-cat.is-active {
+    box-shadow: inset -3px 0 0 #2f6fed;
+  }
+
+  .crm-menu-sub {
+    width: calc(100% - 3.5rem);
   }
 }

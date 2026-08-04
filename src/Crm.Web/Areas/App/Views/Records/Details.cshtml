@@ -3,6 +3,9 @@
 @model Crm.Web.Areas.App.Models.RecordDetailViewModel
 @{
     ViewData["PanelTitle"] = Model.Module.PluralLabel;
+    var highlights = Model.HighlightFields();
+    var keyFields = Model.SummaryFields();
+
     string AuditActionLabel(string action) => action switch
     {
         "Create" => "ایجاد",
@@ -27,6 +30,22 @@
 
         return text;
     }
+
+    string IconForField(FieldDef field) => field.Type switch
+    {
+        FieldType.Email => "bx-envelope",
+        FieldType.Phone => "bx-phone",
+        FieldType.Url => "bx-link-alt",
+        FieldType.Picklist => "bx-purchase-tag-alt",
+        FieldType.Date or FieldType.DateTime => "bx-calendar",
+        FieldType.Currency or FieldType.Number or FieldType.Decimal => "bx-dollar",
+        FieldType.Lookup => "bx-link",
+        _ => field.Name.Contains("status", StringComparison.OrdinalIgnoreCase) || field.Name.Contains("stage", StringComparison.OrdinalIgnoreCase)
+            ? "bx-flag"
+            : field.Name.Contains("industry", StringComparison.OrdinalIgnoreCase) ? "bx-buildings"
+            : field.Name.Contains("web", StringComparison.OrdinalIgnoreCase) ? "bx-globe"
+            : "bx-info-circle"
+    };
 }
 
 @section Styles {
@@ -35,29 +54,45 @@
 
 <div class="crm-rd">
     <div class="crm-rd-header">
-        <div>
-            <h4>
-                <i class="bx @Model.Module.Icon text-primary me-1"></i>
-                @Model.Record.Title
-                <span class="badge bg-label-primary align-middle ms-1">@Model.Module.SingularLabel</span>
-            </h4>
-            <div class="crm-rd-meta">
-                ایجاد: @PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)
-                @if (Model.Record.UpdatedAtUtc is DateTime updated)
-                {
-                    <span class="mx-1">·</span>
-                    <span>بروزرسانی: @PersianDateHelper.ToJalaliDateTime(updated)</span>
-                }
+        <div class="crm-rd-header-main">
+            <div class="crm-rd-avatar" aria-hidden="true">
+                <i class="bx @Model.Module.Icon"></i>
+            </div>
+            <div>
+                <div class="crm-rd-breadcrumb">
+                    <a href="/App/m/@Model.Module.Name">@Model.Module.PluralLabel</a>
+                    <span>/</span>
+                    <span>جزئیات</span>
+                </div>
+                <h1 class="crm-rd-title">@Model.Record.Title</h1>
+                <div class="crm-rd-meta">
+                    <span class="crm-rd-chip"><i class="bx bx-cube"></i> @Model.Module.SingularLabel</span>
+                    <span class="crm-rd-chip"><i class="bx bx-time-five"></i> ایجاد @PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)</span>
+                    @if (Model.Record.UpdatedAtUtc is DateTime updated)
+                    {
+                        <span class="crm-rd-chip"><i class="bx bx-refresh"></i> بروزرسانی @PersianDateHelper.ToJalaliDateTime(updated)</span>
+                    }
+                </div>
             </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary">
+        <div class="crm-rd-actions">
+            <a asp-action="Index" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary btn-sm">
                 <i class="bx bx-right-arrow-alt me-1"></i> بازگشت
             </a>
+            @if (string.Equals(Model.Module.Name, "leads", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
+            {
+                <form asp-action="Convert" asp-route-id="@Model.Record.Id" method="post" class="d-inline"
+                      data-confirm="این سرنخ به مخاطب و فرصت فروش تبدیل شود؟">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="bx bx-transfer me-1"></i> تبدیل سرنخ
+                    </button>
+                </form>
+            }
             @if (Model.CanEdit)
             {
                 <a asp-action="Edit" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
-                   class="btn btn-primary">
+                   class="btn btn-primary btn-sm">
                     <i class="bx bx-edit me-1"></i> ویرایش
                 </a>
             }
@@ -66,7 +101,7 @@
                 <form asp-action="Delete" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
                       method="post" class="d-inline" data-confirm="این رکورد به سطل بازیابی منتقل شود؟">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-danger">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
                         <i class="bx bx-trash me-1"></i> حذف
                     </button>
                 </form>
@@ -76,84 +111,236 @@
 
     <partial name="_Alerts" />
 
+    @if (highlights.Count > 0)
+    {
+        <div class="crm-rd-highlights">
+            @foreach (var field in highlights)
+            {
+                var display = FormatFieldDisplay(field);
+                var lookupMod = Model.LookupModuleFor(field);
+                var lookupId = Model.LookupRecordId(field);
+                <div class="crm-rd-hcard">
+                    <div class="crm-rd-hcard-icon"><i class="bx @IconForField(field)"></i></div>
+                    <div class="crm-rd-hcard-body">
+                        <div class="crm-rd-hcard-label">@field.Label</div>
+                        <div class="crm-rd-hcard-value">
+                            @if (lookupMod is not null && lookupId is not null && display != "—")
+                            {
+                                <a href="/App/m/@lookupMod/@lookupId">@display</a>
+                            }
+                            else if (field.Type == FieldType.Url && display != "—")
+                            {
+                                <a href="@(display.StartsWith("http") ? display : "https://" + display)" target="_blank" rel="noopener">@display</a>
+                            }
+                            else if (field.Type == FieldType.Email && display != "—")
+                            {
+                                <a href="mailto:@display">@display</a>
+                            }
+                            else if (field.Type == FieldType.Phone && display != "—")
+                            {
+                                <a href="tel:@display" dir="ltr">@display</a>
+                            }
+                            else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
+                            {
+                                var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
+                                <span class="crm-rd-pill" style="--pill:@(pick?.Color ?? "#2f6fed")">@(pick?.Label ?? pv)</span>
+                            }
+                            else
+                            {
+                                <span>@display</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
     <div class="crm-rd-layout">
         <div class="crm-rd-main">
             <section id="summary" class="crm-rd-panel is-active" data-crm-rd-panel="summary">
-                <h5 class="crm-rd-panel-title">خلاصه</h5>
-                <dl class="crm-rd-dl">
-                    <div>
-                        <dt>عنوان</dt>
-                        <dd>@Model.Record.Title</dd>
-                    </div>
-                    @foreach (var field in Model.SummaryFields())
-                    {
-                        <div>
-                            <dt>@field.Label</dt>
-                            <dd>
-                                @{
-                                    var lookupMod = Model.LookupModuleFor(field);
-                                    var lookupId = Model.LookupRecordId(field);
+                <div class="crm-rd-masonry">
+                    <article class="crm-rd-card">
+                        <header class="crm-rd-card-head">
+                            <h3>فیلدهای کلیدی</h3>
+                        </header>
+                        <div class="crm-rd-card-body">
+                            <dl class="crm-rd-kv">
+                                @foreach (var field in keyFields)
+                                {
                                     var display = FormatFieldDisplay(field);
-                                }
-                                @if (lookupMod is not null && lookupId is not null && display != "—")
-                                {
-                                    <a href="/App/m/@lookupMod/@lookupId">@display</a>
-                                }
-                                else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
-                                {
-                                    var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
-                                    <span class="badge rounded-pill" style="background-color:@(pick?.Color ?? "#69809a")">@(pick?.Label ?? pv)</span>
-                                }
-                                else
-                                {
-                                    @display
-                                }
-                            </dd>
-                        </div>
-                    }
-                    <div>
-                        <dt>تاریخ ایجاد</dt>
-                        <dd>@PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)</dd>
-                    </div>
-                    <div>
-                        <dt>آخرین بروزرسانی</dt>
-                        <dd>@(Model.Record.UpdatedAtUtc is DateTime u ? PersianDateHelper.ToJalaliDateTime(u) : "—")</dd>
-                    </div>
-                </dl>
-
-                @if (Model.Relations.Count > 0)
-                {
-                    <div class="mt-4">
-                        <h6 class="text-muted mb-3">ارتباطات مرتبط</h6>
-                        @foreach (var group in Model.Relations)
-                        {
-                            <div class="mb-3">
-                                <div class="small text-muted mb-1">@group.Label</div>
-                                @if (group.Records.Count == 0)
-                                {
-                                    <div class="text-muted small">موردی ثبت نشده است.</div>
-                                }
-                                else
-                                {
-                                    <div class="d-flex flex-wrap gap-2">
-                                        @foreach (var item in group.Records)
-                                        {
-                                            <a class="badge bg-label-primary text-decoration-none"
-                                               href="/App/m/@item.ModuleName/@item.RecordId">@item.Title</a>
-                                        }
+                                    <div class="crm-rd-kv-row">
+                                        <dt>@field.Label</dt>
+                                        <dd>
+                                            @{
+                                                var lookupMod = Model.LookupModuleFor(field);
+                                                var lookupId = Model.LookupRecordId(field);
+                                            }
+                                            @if (lookupMod is not null && lookupId is not null && display != "—")
+                                            {
+                                                <a href="/App/m/@lookupMod/@lookupId">@display</a>
+                                            }
+                                            else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
+                                            {
+                                                var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
+                                                <span class="crm-rd-pill" style="--pill:@(pick?.Color ?? "#2f6fed")">@(pick?.Label ?? pv)</span>
+                                            }
+                                            else
+                                            {
+                                                @display
+                                            }
+                                        </dd>
                                     </div>
                                 }
+                            </dl>
+                        </div>
+                    </article>
+
+                    @foreach (var (block, groupFields) in Model.GroupedFields().Take(4))
+                    {
+                        <article class="crm-rd-card">
+                            <header class="crm-rd-card-head">
+                                <h3>@(block?.Label ?? "اطلاعات")</h3>
+                            </header>
+                            <div class="crm-rd-card-body">
+                                <dl class="crm-rd-kv">
+                                    @foreach (var field in groupFields.Take(8))
+                                    {
+                                        var display = FormatFieldDisplay(field);
+                                        <div class="crm-rd-kv-row">
+                                            <dt>@field.Label</dt>
+                                            <dd>@display</dd>
+                                        </div>
+                                    }
+                                </dl>
                             </div>
-                        }
-                    </div>
-                }
+                        </article>
+                    }
+
+                    <article class="crm-rd-card">
+                        <header class="crm-rd-card-head">
+                            <h3>فعالیت‌ها</h3>
+                            @if (Model.Activities.Count > 0)
+                            {
+                                <button type="button" class="crm-rd-card-link" data-crm-rd-jump="activities">مشاهده همه</button>
+                            }
+                        </header>
+                        <div class="crm-rd-card-body">
+                            @if (Model.Activities.Count == 0)
+                            {
+                                <div class="crm-rd-empty-sm">فعالیت مرتبطی ثبت نشده</div>
+                            }
+                            else
+                            {
+                                @foreach (var item in Model.Activities.Take(4))
+                                {
+                                    <a class="crm-rd-activity" href="/App/m/@item.ModuleName/@item.RecordId">
+                                        <span class="crm-rd-activity-badge">@item.ModuleLabel</span>
+                                        <span class="crm-rd-activity-title">@item.Title</span>
+                                    </a>
+                                }
+                            }
+                        </div>
+                    </article>
+
+                    <article class="crm-rd-card">
+                        <header class="crm-rd-card-head">
+                            <h3>یادداشت‌ها</h3>
+                            <button type="button" class="crm-rd-card-link" data-crm-rd-jump="notes">مدیریت</button>
+                        </header>
+                        <div class="crm-rd-card-body">
+                            @if (Model.Notes.Count == 0)
+                            {
+                                <div class="crm-rd-empty-sm">یادداشتی پیدا نشد</div>
+                            }
+                            else
+                            {
+                                @foreach (var note in Model.Notes.Take(3))
+                                {
+                                    <div class="crm-rd-note-preview">
+                                        <div class="crm-rd-note-meta">@PersianDateHelper.ToJalaliDateTime(note.CreatedAtUtc)</div>
+                                        <div class="crm-rd-note-text">@(note.Body.Length > 140 ? note.Body[..140] + "…" : note.Body)</div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </article>
+
+                    <article class="crm-rd-card">
+                        <header class="crm-rd-card-head">
+                            <h3>اسناد</h3>
+                            <button type="button" class="crm-rd-card-link" data-crm-rd-jump="attachments">مدیریت</button>
+                        </header>
+                        <div class="crm-rd-card-body">
+                            @if (Model.Attachments.Count == 0)
+                            {
+                                <div class="crm-rd-empty-sm">سندی پیدا نشد</div>
+                            }
+                            else
+                            {
+                                @foreach (var file in Model.Attachments.Take(4))
+                                {
+                                    <a class="crm-rd-file" href="/App/m/@Model.Module.Name/@Model.Record.Id/attachments/@file.Id">
+                                        <i class="bx bx-file"></i>
+                                        <span>@file.FileName</span>
+                                        <small>@(Math.Max(1, file.SizeBytes / 1024)) KB</small>
+                                    </a>
+                                }
+                            }
+                        </div>
+                    </article>
+
+                    @foreach (var group in Model.Relations.Take(4))
+                    {
+                        <article class="crm-rd-card">
+                            <header class="crm-rd-card-head">
+                                <h3>@group.Label</h3>
+                                <button type="button" class="crm-rd-card-link" data-crm-rd-jump="@group.TabKey">مشاهده</button>
+                            </header>
+                            <div class="crm-rd-card-body">
+                                @if (group.Records.Count == 0)
+                                {
+                                    <div class="crm-rd-empty-sm">موردی ثبت نشده</div>
+                                }
+                                else
+                                {
+                                    @foreach (var item in group.Records.Take(5))
+                                    {
+                                        <a class="crm-rd-rel-chip" href="/App/m/@item.ModuleName/@item.RecordId">@item.Title</a>
+                                    }
+                                }
+                            </div>
+                        </article>
+                    }
+
+                    <article class="crm-rd-card">
+                        <header class="crm-rd-card-head">
+                            <h3>تگ‌ها</h3>
+                        </header>
+                        <div class="crm-rd-card-body">
+                            @if (Model.Tags.Count == 0)
+                            {
+                                <div class="crm-rd-empty-sm">تگی متصل نیست</div>
+                            }
+                            else
+                            {
+                                @foreach (var tag in Model.Tags)
+                                {
+                                    <span class="crm-rd-tag" style="@(string.IsNullOrWhiteSpace(tag.Color) ? null : $"--tag:{tag.Color}")">
+                                        <i class="bx bx-purchase-tag"></i> @tag.Name
+                                    </span>
+                                }
+                            }
+                        </div>
+                    </article>
+                </div>
             </section>
 
             <section id="information" class="crm-rd-panel" data-crm-rd-panel="information">
-                <h5 class="crm-rd-panel-title">اطلاعات</h5>
+                <h5 class="crm-rd-panel-title">اطلاعات کامل</h5>
                 @foreach (var (block, groupFields) in Model.GroupedFields())
                 {
-                    <div class="crm-rd-block">
+                    <div class="crm-rd-block-card">
                         @if (block is not null)
                         {
                             <h6>@block.Label</h6>
@@ -188,7 +375,7 @@
                                         else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
                                         {
                                             var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
-                                            <span class="badge rounded-pill" style="background-color:@(pick?.Color ?? "#69809a")">@(pick?.Label ?? pv)</span>
+                                            <span class="crm-rd-pill" style="--pill:@(pick?.Color ?? "#2f6fed")">@(pick?.Label ?? pv)</span>
                                         }
                                         else
                                         {
@@ -252,9 +439,8 @@
 
             <section id="notes" class="crm-rd-panel" data-crm-rd-panel="notes">
                 <h5 class="crm-rd-panel-title">یادداشت‌ها</h5>
-                <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/notes" class="mb-4">
+                <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/notes" class="crm-rd-note-form">
                     @Html.AntiForgeryToken()
-                    <label class="form-label" for="noteText">یادداشت جدید</label>
                     <textarea id="noteText" name="text" class="form-control" rows="3" maxlength="4000" required
                               placeholder="متن یادداشت را بنویسید..."></textarea>
                     <div class="mt-2 text-end">
@@ -288,56 +474,61 @@
                 }
                 else
                 {
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>نوع</th>
-                                    <th>عنوان</th>
-                                    <th>فیلد ارتباط</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in Model.Activities)
-                                {
-                                    <tr>
-                                        <td><span class="badge bg-label-info">@item.ModuleLabel</span></td>
-                                        <td>
-                                            <a href="/App/m/@item.ModuleName/@item.RecordId">@item.Title</a>
-                                        </td>
-                                        <td class="text-muted small">@(item.FieldLabel ?? "—")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                    <div class="crm-rd-rel-list">
+                        @foreach (var item in Model.Activities)
+                        {
+                            <a class="crm-rd-rel-row" href="/App/m/@item.ModuleName/@item.RecordId">
+                                <span class="crm-rd-activity-badge">@item.ModuleLabel</span>
+                                <span class="crm-rd-rel-row-title">@item.Title</span>
+                                <i class="bx bx-chevron-left"></i>
+                            </a>
+                        }
                     </div>
                 }
             </section>
 
             <section id="attachments" class="crm-rd-panel" data-crm-rd-panel="attachments">
-                <h5 class="crm-rd-panel-title">پیوست‌ها</h5>
+                <h5 class="crm-rd-panel-title">اسناد و پیوست‌ها</h5>
+                <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/attachments"
+                      enctype="multipart/form-data" class="crm-rd-upload">
+                    @Html.AntiForgeryToken()
+                    <input type="file" name="file" class="form-control" required />
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bx bx-upload me-1"></i> آپلود
+                    </button>
+                </form>
+
                 @if (Model.Attachments.Count == 0)
                 {
                     <div class="crm-rd-empty">
                         <i class="bx bx-paperclip bx-md d-block mb-2"></i>
                         هنوز پیوستی بارگذاری نشده است.
-                        <div class="small mt-1">آپلود فایل به‌زودی در دسترس قرار می‌گیرد.</div>
                     </div>
                 }
                 else
                 {
-                    <ul class="list-group list-group-flush">
+                    <div class="crm-rd-rel-list">
                         @foreach (var file in Model.Attachments)
                         {
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span>
-                                    <i class="bx bx-file me-1"></i> @file.FileName
-                                    <span class="text-muted small">(@(file.SizeBytes / 1024) KB)</span>
-                                </span>
-                                <span class="text-muted small">@PersianDateHelper.ToJalaliDate(file.CreatedAtUtc)</span>
-                            </li>
+                            <div class="crm-rd-rel-row crm-rd-file-row">
+                                <a href="/App/m/@Model.Module.Name/@Model.Record.Id/attachments/@file.Id" class="crm-rd-file-link">
+                                    <i class="bx bx-file"></i>
+                                    <span>@file.FileName</span>
+                                    <small class="text-muted">@(Math.Max(1, file.SizeBytes / 1024)) KB · @PersianDateHelper.ToJalaliDate(file.CreatedAtUtc)</small>
+                                </a>
+                                @if (Model.CanEdit)
+                                {
+                                    <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/attachments/@file.Id/delete"
+                                          data-confirm="این پیوست حذف شود؟">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-icon btn-text-danger" title="حذف">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
                         }
-                    </ul>
+                    </div>
                 }
             </section>
 
@@ -345,55 +536,95 @@
                 <h5 class="crm-rd-panel-title">تگ‌ها</h5>
                 @if (Model.Tags.Count == 0)
                 {
-                    <div class="crm-rd-empty">
-                        <i class="bx bx-purchase-tag bx-md d-block mb-2"></i>
-                        تگی به این رکورد متصل نیست.
-                    </div>
+                    <div class="crm-rd-empty">تگی به این رکورد متصل نیست.</div>
                 }
                 else
                 {
                     <div>
                         @foreach (var tag in Model.Tags)
                         {
-                            <span class="crm-rd-tag" style="@(string.IsNullOrWhiteSpace(tag.Color) ? null : $"border-color:{tag.Color}; color:{tag.Color}")">
+                            <span class="crm-rd-tag" style="@(string.IsNullOrWhiteSpace(tag.Color) ? null : $"--tag:{tag.Color}")">
                                 <i class="bx bx-purchase-tag"></i> @tag.Name
                             </span>
                         }
                     </div>
                 }
             </section>
+
+            @foreach (var group in Model.Relations)
+            {
+                <section id="@group.TabKey" class="crm-rd-panel" data-crm-rd-panel="@group.TabKey">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h5 class="crm-rd-panel-title mb-0 border-0 pb-0">@group.Label</h5>
+                        <a class="btn btn-sm btn-outline-primary" href="/App/m/@group.ModuleName/create">
+                            <i class="bx bx-plus me-1"></i> افزودن مرتبط
+                        </a>
+                    </div>
+                    @if (group.Records.Count == 0)
+                    {
+                        <div class="crm-rd-empty">موردی ثبت نشده است.</div>
+                    }
+                    else
+                    {
+                        <div class="crm-rd-rel-list">
+                            @foreach (var item in group.Records)
+                            {
+                                <a class="crm-rd-rel-row" href="/App/m/@item.ModuleName/@item.RecordId">
+                                    <span class="crm-rd-rel-row-title">@item.Title</span>
+                                    <span class="text-muted small">@item.ModuleLabel</span>
+                                    <i class="bx bx-chevron-left"></i>
+                                </a>
+                            }
+                        </div>
+                    }
+                </section>
+            }
         </div>
 
         <aside class="crm-rd-sidebar">
-            <nav class="crm-rd-nav nav flex-column" data-crm-rd-nav>
+            <nav class="crm-rd-nav" data-crm-rd-nav>
                 <button type="button" class="nav-link active" data-crm-rd-target="summary">
-                    <i class="bx bx-info-circle"></i> خلاصه
+                    <i class="bx bx-grid-alt"></i> <span>خلاصه اطلاعات</span>
                 </button>
                 <button type="button" class="nav-link" data-crm-rd-target="information">
-                    <i class="bx bx-detail"></i> اطلاعات
+                    <i class="bx bx-detail"></i> <span>اطلاعات</span>
                 </button>
                 <button type="button" class="nav-link" data-crm-rd-target="updates">
-                    <i class="bx bx-history"></i> بروزرسانی‌ها
+                    <i class="bx bx-history"></i> <span>بروزرسانی‌ها</span>
                 </button>
                 <button type="button" class="nav-link" data-crm-rd-target="notes">
-                    <i class="bx bx-note"></i> یادداشت‌ها
+                    <i class="bx bx-note"></i> <span>یادداشت‌ها</span>
                     @if (Model.Notes.Count > 0)
                     {
-                        <span class="badge bg-label-secondary ms-auto">@Model.Notes.Count</span>
+                        <span class="crm-rd-count">@Model.Notes.Count</span>
                     }
                 </button>
                 <button type="button" class="nav-link" data-crm-rd-target="activities">
-                    <i class="bx bx-calendar-check"></i> فعالیت‌ها
+                    <i class="bx bx-calendar-check"></i> <span>فعالیت‌ها</span>
                     @if (Model.Activities.Count > 0)
                     {
-                        <span class="badge bg-label-secondary ms-auto">@Model.Activities.Count</span>
+                        <span class="crm-rd-count">@Model.Activities.Count</span>
                     }
                 </button>
                 <button type="button" class="nav-link" data-crm-rd-target="attachments">
-                    <i class="bx bx-paperclip"></i> پیوست‌ها
+                    <i class="bx bx-paperclip"></i> <span>اسناد</span>
+                    @if (Model.Attachments.Count > 0)
+                    {
+                        <span class="crm-rd-count">@Model.Attachments.Count</span>
+                    }
                 </button>
+                @foreach (var group in Model.Relations)
+                {
+                    <button type="button" class="nav-link" data-crm-rd-target="@group.TabKey">
+                        <i class="bx bx-link-alt"></i> <span>@group.Label</span>
+                        @if (group.Records.Count > 0)
+                        {
+                            <span class="crm-rd-count">@group.Records.Count</span>
+                        }
+                    </button>
+                }
                 <button type="button" class="nav-link" data-crm-rd-target="tags">
-                    <i class="bx bx-purchase-tag"></i> تگ‌ها
+                    <i class="bx bx-purchase-tag"></i> <span>تگ‌ها</span>
                 </button>
             </nav>
         </aside>
@@ -417,13 +648,9 @@
         nav.querySelectorAll('[data-crm-rd-target]').forEach(function (btn) {
             btn.classList.toggle('active', btn.getAttribute('data-crm-rd-target') === id);
         });
-        if (pushHash) {
-            history.replaceState(null, '', '#' + id);
-        }
+        if (pushHash) history.replaceState(null, '', '#' + id);
         var active = root.querySelector('[data-crm-rd-panel="' + id + '"]');
-        if (active) {
-            active.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        if (active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     nav.addEventListener('click', function (e) {
@@ -431,6 +658,13 @@
         if (!btn) return;
         e.preventDefault();
         showPanel(btn.getAttribute('data-crm-rd-target'), true);
+    });
+
+    root.addEventListener('click', function (e) {
+        var jump = e.target.closest('[data-crm-rd-jump]');
+        if (!jump) return;
+        e.preventDefault();
+        showPanel(jump.getAttribute('data-crm-rd-jump'), true);
     });
 
     var hash = (location.hash || '').replace(/^#/, '');

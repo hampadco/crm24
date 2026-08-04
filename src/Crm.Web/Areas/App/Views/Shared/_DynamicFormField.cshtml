@@ -15,22 +15,23 @@
     }
     var value = Model.Values.GetValueOrDefault(field.Name) ?? rawDefault;
     var hasError = Model.Errors.TryGetValue(field.Name, out var error);
-    var inputClass = $"form-control{(hasError ? " is-invalid" : "")}";
-    var colClass = field.Type == FieldType.MultilineText ? "col-12" : "col-md-6";
+    var inputClass = $"form-control crm-rf-control{(hasError ? " is-invalid" : "")}";
+    var selectClass = $"form-select crm-rf-control{(hasError ? " is-invalid" : "")}";
+    var colClass = field.Type == FieldType.MultilineText ? "col-12" : "col-md-6 col-xl-4";
     var ruleAttr = string.IsNullOrWhiteSpace(field.VisibilityRuleJson)
         ? null
         : field.VisibilityRuleJson;
 
-    <div class="@colClass crm-dep-target"
+    <div class="@colClass crm-dep-target crm-rf-field"
          @if (ruleAttr is not null)
          {
              <text>data-visibility-rule="@ruleAttr"</text>
          }>
-        <label class="form-label" for="@name">
+        <label class="crm-rf-label" for="@name">
             @field.Label
             @if (field.IsRequired)
             {
-                <span class="text-danger">*</span>
+                <span class="crm-rf-req" title="اجباری">*</span>
             }
         </label>
 
@@ -41,7 +42,10 @@
                 break;
 
             case FieldType.Picklist:
-                <select id="@name" name="@name" class="form-select @(hasError ? "is-invalid" : "")" disabled="@readOnly">
+                <select id="@name" name="@name" class="@selectClass crm-select2"
+                        data-placeholder="جستجو و انتخاب…"
+                        data-allow-clear="@(!field.IsRequired ? "true" : null)"
+                        disabled="@readOnly">
                     @if (!field.IsRequired)
                     {
                         <option value="">— انتخاب کنید —</option>
@@ -54,7 +58,10 @@
                 break;
 
             case FieldType.Lookup:
-                <select id="@name" name="@name" class="form-select @(hasError ? "is-invalid" : "")" disabled="@readOnly">
+                <select id="@name" name="@name" class="@selectClass crm-select2"
+                        data-placeholder="جستجو و انتخاب…"
+                        data-allow-clear="true"
+                        disabled="@readOnly">
                     <option value="">— انتخاب کنید —</option>
                     @if (Model.LookupOptions.TryGetValue(field.Name, out var options))
                     {
@@ -67,10 +74,11 @@
                 break;
 
             case FieldType.Checkbox:
-                <div class="form-check mt-2">
+                <div class="crm-rf-check">
                     <input type="hidden" name="@name" value="@(value == "true" ? "true" : "false")" />
-                    <input type="checkbox" class="form-check-input" checked="@(value == "true")" disabled="@readOnly"
+                    <input type="checkbox" class="form-check-input" id="@name" checked="@(value == "true")" disabled="@readOnly"
                            onchange="this.previousElementSibling.value = this.checked ? 'true' : 'false'" />
+                    <label class="form-check-label" for="@name">فعال</label>
                 </div>
                 break;
 
@@ -78,7 +86,7 @@
             case FieldType.Decimal:
             case FieldType.Currency:
             case FieldType.Percent:
-                <div class="input-group">
+                <div class="input-group crm-rf-igroup">
                     <input type="text" inputmode="decimal" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" maxlength="@(field.MaxLength)" />
                     @if (field.Type == FieldType.Percent)
                     {

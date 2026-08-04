@@ -266,6 +266,45 @@ public class RecordDetailViewModel
 
         return summary.Count > 0 ? summary : ordered.Take(6).ToList();
     }
+
+    /// <summary>کارت‌های بالای صفحه جزئیات — فیلدهای تماسی/وضعیتی (مثل رقیب).</summary>
+    public IReadOnlyList<FieldDef> HighlightFields()
+    {
+        var preferred = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "email", "phone", "mobile", "cellphone", "tel", "website", "web", "url",
+            "industry", "status", "stage", "leadstatus", "lead_status", "source",
+            "company", "organization", "city", "priority"
+        };
+
+        var ordered = Fields.Where(f => f.IsVisible)
+            .OrderBy(f => f.SortOrder)
+            .ThenBy(f => f.Id)
+            .ToList();
+
+        var picks = ordered
+            .Where(f => preferred.Contains(f.Name)
+                        || f.Type is FieldType.Email or FieldType.Phone or FieldType.Url
+                        || (f.ShowInList && f.Type is FieldType.Picklist or FieldType.Text))
+            .Where(f => f.Name is not ("name" or "title" or "subject" or "firstName" or "lastName" or "firstname" or "lastname"))
+            .GroupBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .Take(6)
+            .ToList();
+
+        if (picks.Count >= 3)
+            return picks;
+
+        foreach (var f in SummaryFields())
+        {
+            if (picks.Any(p => p.Id == f.Id)) continue;
+            if (f.Name is "name" or "title" or "subject") continue;
+            picks.Add(f);
+            if (picks.Count >= 6) break;
+        }
+
+        return picks;
+    }
 }
 
 public class RelatedRecordItem
@@ -281,5 +320,7 @@ public class RelatedRecordGroup
 {
     public string Label { get; set; } = string.Empty;
     public string ModuleName { get; set; } = string.Empty;
+    /// <summary>شناسه پایدار برای تب سایدبار (مثلاً rel-products).</summary>
+    public string TabKey { get; set; } = string.Empty;
     public IReadOnlyList<RelatedRecordItem> Records { get; set; } = [];
 }
