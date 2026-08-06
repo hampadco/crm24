@@ -1,0 +1,218 @@
+@model Crm.Web.Areas.App.Models.AccessHubModel
+@{
+    ViewData["PanelTitle"] = "تنظیمات";
+    var tab = Model.Tab;
+    string TabUrl(string t) => $"/App/access?tab={t}";
+    string UsersFilterUrl(string status, int? roleId = null, bool? admin = null, string? q = null)
+    {
+        var parts = new List<string> { "tab=users", $"status={status}" };
+        if (roleId is int rid) parts.Add($"roleId={rid}");
+        if (admin == true) parts.Add("admin=true");
+        if (!string.IsNullOrWhiteSpace(q)) parts.Add($"q={Uri.EscapeDataString(q)}");
+        return "/App/access?" + string.Join("&", parts);
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-access.css" asp-append-version="true" />
+}
+
+<div class="crm-access">
+    <div class="crm-access-hero">
+        <div>
+            <h4><i class="bx bx-user-circle"></i> مدیریت کاربر</h4>
+            <p class="crm-access-hero-meta">
+                @Model.ActiveUserCount از @Model.Limits.MaxUsers کاربر فعال — پلن: @Model.Limits.PlanName
+            </p>
+        </div>
+    </div>
+
+    <partial name="_Alerts" />
+
+    <nav class="crm-access-tabs" aria-label="مدیریت کاربر">
+        <a class="crm-access-tab @(tab == "users" ? "is-active" : "")" href="@TabUrl("users")">
+            <i class="bx bx-group"></i> کاربران
+        </a>
+        <a class="crm-access-tab @(tab == "roles" ? "is-active" : "")" href="@TabUrl("roles")">
+            <i class="bx bx-git-branch"></i> نقش‌ها و دسترسی
+        </a>
+    </nav>
+
+    @if (tab == "users")
+    {
+        <div class="crm-access-toolbar">
+            <div class="crm-access-chips">
+                <a class="crm-access-chip @(Model.Status == "all" && Model.AdminOnly != true ? "is-active" : "")"
+                   href="@UsersFilterUrl("all", Model.RoleId, null, Model.Q)">همه</a>
+                <a class="crm-access-chip @(Model.Status == "active" ? "is-active" : "")"
+                   href="@UsersFilterUrl("active", Model.RoleId, Model.AdminOnly, Model.Q)">فعال</a>
+                <a class="crm-access-chip @(Model.Status == "inactive" ? "is-active" : "")"
+                   href="@UsersFilterUrl("inactive", Model.RoleId, Model.AdminOnly, Model.Q)">غیرفعال</a>
+                <a class="crm-access-chip @(Model.AdminOnly == true ? "is-active" : "")"
+                   href="@UsersFilterUrl(Model.Status, Model.RoleId, true, Model.Q)">فقط ادمین</a>
+            </div>
+            @if (Model.CanAddUser)
+            {
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#teamUserModal">
+                    <i class="bx bx-user-plus me-1"></i> ایجاد کاربر
+                </button>
+            }
+            else
+            {
+                <a href="/App/subscription" class="btn btn-outline-warning btn-sm">ارتقای اشتراک</a>
+            }
+        </div>
+
+        <form method="get" action="/App/access" class="crm-access-search mb-3">
+            <input type="hidden" name="tab" value="users" />
+            <input type="hidden" name="status" value="@Model.Status" />
+            @if (Model.AdminOnly == true)
+            {
+                <input type="hidden" name="admin" value="true" />
+            }
+            <select name="roleId" class="form-select form-select-sm" style="max-width:12rem">
+                <option value="">همه نقش‌ها</option>
+                @foreach (var (id, name) in Model.RoleOptions.OrderBy(x => x.Value))
+                {
+                    if (Model.RoleId == id)
+                    {
+                        <option value="@id" selected>@name</option>
+                    }
+                    else
+                    {
+                        <option value="@id">@name</option>
+                    }
+                }
+            </select>
+            <input type="search" name="q" value="@Model.Q" class="form-control form-control-sm"
+                   placeholder="جستجو نام یا ایمیل…" style="max-width:16rem" />
+            <button type="submit" class="btn btn-sm btn-outline-primary">جستجو</button>
+        </form>
+
+        @if (Model.Users.Count == 0)
+        {
+            <div class="crm-access-empty">
+                <i class="bx bx-user-x"></i>
+                کاربری با این فیلتر پیدا نشد.
+            </div>
+        }
+        else
+        {
+            <div class="crm-access-user-list">
+                @foreach (var u in Model.Users)
+                {
+                    <a class="crm-access-user" href="/App/team-users/@u.Id/edit">
+                        <div class="crm-access-avatar">@u.Initials</div>
+                        <div class="crm-access-user-body">
+                            <div class="crm-access-user-name">
+                                @u.FullName
+                                @if (u.IsTenantAdmin)
+                                {
+                                    <span class="crm-access-badge crm-access-badge-admin">ادمین مالک</span>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(u.RoleName))
+                                {
+                                    <span class="crm-access-badge crm-access-badge-role">@u.RoleName</span>
+                                }
+                                <span class="crm-access-badge @(u.IsActive ? "crm-access-badge-on" : "crm-access-badge-off")">
+                                    @(u.IsActive ? "فعال" : "غیرفعال")
+                                </span>
+                            </div>
+                            <div class="crm-access-user-meta">
+                                <span><i class="bx bx-envelope"></i> <span dir="ltr">@u.Email</span></span>
+                                @if (!string.IsNullOrWhiteSpace(u.RoleName))
+                                {
+                                    <span><i class="bx bx-id-card"></i> نقش: @u.RoleName</span>
+                                }
+                            </div>
+                        </div>
+                        <i class="bx bx-chevron-left crm-access-user-chevron"></i>
+                    </a>
+                }
+            </div>
+        }
+
+        <div class="modal fade" id="teamUserModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <form action="/App/team-users/create" method="post" class="modal-content">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header">
+                        <h5 class="modal-title">ایجاد کاربر</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">نام و نام خانوادگی</label>
+                                <input type="text" name="fullName" class="form-control" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ایمیل (نام کاربری ورود)</label>
+                                <input type="email" name="email" class="form-control" dir="ltr" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">رمز عبور اولیه</label>
+                                <input type="password" name="password" class="form-control" dir="ltr" minlength="6" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">نقش *</label>
+                                <select name="crmRoleId" class="form-select" required>
+                                    <option value="">— انتخاب نقش —</option>
+                                    @foreach (var (id, name) in Model.RoleOptions.OrderBy(r => r.Value))
+                                    {
+                                        <option value="@id">@name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input type="checkbox" name="isTenantAdmin" value="true" class="form-check-input" id="isTenantAdmin" />
+                                    <label class="form-check-label" for="isTenantAdmin">مدیر Tenant (دسترسی کامل تنظیمات)</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                        <button type="submit" class="btn btn-primary">ذخیره کاربر</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="crm-access-toolbar">
+            <div class="crm-access-chips">
+                <span class="text-muted small align-self-center">
+                    درخت سازمانی — زیردست نمی‌تواند دسترسی بیشتر از بالادست داشته باشد.
+                </span>
+            </div>
+            <a href="/App/access/roles/create" class="btn btn-primary btn-sm">
+                <i class="bx bx-plus me-1"></i> نقش ریشه
+            </a>
+        </div>
+
+        @if (Model.RoleTree.Count == 0)
+        {
+            <div class="crm-access-empty">
+                <i class="bx bx-git-branch"></i>
+                هنوز نقشی تعریف نشده است.
+                <div class="mt-3">
+                    <a href="/App/access/roles/create" class="btn btn-primary btn-sm">اولین نقش را بسازید</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="crm-access-tree-wrap">
+                <ul class="crm-access-tree">
+                    @foreach (var node in Model.RoleTree)
+                    {
+                        <partial name="_RoleTreeNode" model="node" />
+                    }
+                </ul>
+            </div>
+        }
+    }
+</div>

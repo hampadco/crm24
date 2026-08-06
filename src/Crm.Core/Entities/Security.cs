@@ -1,12 +1,18 @@
 namespace Crm.Core.Entities;
 
-/// <summary>نقش درختی — لایه اول RBAC. مدیر رکوردهای زیردستان را می‌بیند.</summary>
+/// <summary>نقش درختی — سلسله‌مراتب سازمانی + مجوز ماژول. مدیر رکوردهای زیردستان را می‌بیند.</summary>
 public class Role : TenantEntity
 {
     public string Name { get; set; } = string.Empty;
     public int? ParentRoleId { get; set; }
     public Role? ParentRole { get; set; }
     public ICollection<Role> Children { get; set; } = new List<Role>();
+
+    /// <summary>نقش ادمین سیستم — دسترسی کامل ماژول‌ها (جدا از IsTenantAdmin کاربر).</summary>
+    public bool IsAdmin { get; set; }
+
+    public ICollection<RoleModulePermission> ModulePermissions { get; set; } = new List<RoleModulePermission>();
+    public ICollection<RoleFieldPermission> FieldPermissions { get; set; } = new List<RoleFieldPermission>();
 }
 
 public enum ModulePermissionLevel
@@ -25,7 +31,30 @@ public enum FieldAccess
     Hidden = 2
 }
 
-/// <summary>پروفایل دسترسی — لایه دوم RBAC: مجوز per-module و per-field.</summary>
+/// <summary>مجوز CRUD ماژول روی نقش.</summary>
+public class RoleModulePermission : TenantEntity
+{
+    public int RoleId { get; set; }
+    public Role Role { get; set; } = null!;
+    public int ModuleId { get; set; }
+
+    public bool CanView { get; set; }
+    public bool CanCreate { get; set; }
+    public bool CanEdit { get; set; }
+    public bool CanDelete { get; set; }
+}
+
+/// <summary>مجوز سطح فیلد روی نقش.</summary>
+public class RoleFieldPermission : TenantEntity
+{
+    public int RoleId { get; set; }
+    public Role Role { get; set; } = null!;
+    public int FieldId { get; set; }
+
+    public FieldAccess Access { get; set; } = FieldAccess.Editable;
+}
+
+/// <summary>پروفایل دسترسی — لایه قدیمی؛ مجوزها به Role منتقل شده‌اند. برای سازگاری داده نگه داشته می‌شود.</summary>
 public class Profile : TenantEntity
 {
     public string Name { get; set; } = string.Empty;

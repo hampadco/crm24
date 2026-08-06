@@ -188,8 +188,8 @@
                     @if (Tenant.IsTenantAdmin)
                     {
                         <li><a href="/App/customize" class="@(currentPath.StartsWith("/App/customize") ? "is-active" : "")"><i class="bx bx-customize"></i>سفارشی‌سازی ماژول</a></li>
+                        <li><a href="/App/access" class="@(currentPath.StartsWith("/App/access") || currentPath.StartsWith("/App/team-users") ? "is-active" : "")"><i class="bx bx-user-circle"></i>مدیریت کاربر</a></li>
                     }
-                    <li><a href="/App/team-users" class="@(currentPath.StartsWith("/App/team-users") ? "is-active" : "")"><i class="bx bx-group"></i>همکاران</a></li>
                     <li><a href="/App/integrations" class="@(currentPath.StartsWith("/App/integrations") ? "is-active" : "")"><i class="bx bx-plug"></i>یکپارچگی‌ها و API</a></li>
                     <li><a href="/App/subscription" class="@(currentPath.StartsWith("/App/subscription") ? "is-active" : "")"><i class="bx bx-badge-check"></i>اشتراک و تمدید</a></li>
                     <li><a href="/App/help" class="@(currentPath.StartsWith("/App/help") ? "is-active" : "")"><i class="bx bx-book-open"></i>مرکز آموزش</a></li>

@@ -1,7 +1,19 @@
 @using Crm.Core.Entities
+@using System.Net
+@using System.Text.RegularExpressions
 @model List<KbArticle>
 @{
     ViewData["PanelTitle"] = "پورتال مشتری";
+
+    string Excerpt(string? html, int max = 120)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return "";
+        var text = Regex.Replace(html, "<[^>]+>", " ");
+        text = WebUtility.HtmlDecode(text);
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+        if (text.Length <= max) return text;
+        return text[..max] + "…";
+    }
 }
 
 <h4 class="mb-4"><i class="bx bx-book-open text-primary me-1"></i> پایگاه دانش</h4>
@@ -35,7 +47,7 @@
                         {
                             <span class="badge bg-label-info mb-2">@article.Category</span>
                         }
-                        <p class="text-muted mb-0">@(article.Body.Length > 120 ? article.Body[..120] + "…" : article.Body)</p>
+                        <p class="text-muted mb-0">@Excerpt(article.Body)</p>
                     </div>
                 </div>
             </a>

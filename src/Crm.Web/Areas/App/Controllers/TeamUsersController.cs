@@ -6,7 +6,6 @@ using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Identity;
 using Crm.Infrastructure.Services;
 using Crm.Web.Areas.App.Models;
-using Crm.Web.Models;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -31,43 +30,12 @@ public class TeamUsersController : AppControllerBase
     }
 
     [HttpGet("/App/team-users")]
-    public async Task<IActionResult> Index(int page = 1)
+    public IActionResult Index()
     {
-        if (!await EnsureTenantAdminAsync())
+        if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
 
-        var tenantId = _tenant.TenantId!.Value;
-        var usersQuery = _db.Users.AsNoTracking()
-            .Where(u => u.TenantId == tenantId)
-            .OrderByDescending(u => u.IsTenantAdmin)
-            .ThenBy(u => u.FullName);
-
-        var (users, total, p, pageSize) = await AppPaging.ToPageAsync(usersQuery, page);
-
-        var profiles = await _db.Profiles.AsNoTracking()
-            .Where(pr => pr.TenantId == tenantId)
-            .ToDictionaryAsync(pr => pr.Id, pr => pr.Name);
-
-        var roles = await _db.CrmRoles.AsNoTracking()
-            .Where(r => r.TenantId == tenantId)
-            .ToDictionaryAsync(r => r.Id, r => r.Name);
-
-        var model = users.Select(u => new TeamUserListItem
-        {
-            User = u,
-            ProfileName = u.ProfileId is int pid ? profiles.GetValueOrDefault(pid) : null,
-            RoleName = u.CrmRoleId is int rid ? roles.GetValueOrDefault(rid) : null
-        }).ToList();
-
-        ViewBag.Limits = await _quota.GetLimitsAsync(tenantId);
-        ViewBag.UserCount = await _db.Users.AsNoTracking()
-            .CountAsync(u => u.TenantId == tenantId && u.IsActive);
-        ViewBag.Profiles = profiles;
-        ViewBag.Roles = roles;
-        AppPaging.SetViewBag(ViewBag, total, p, pageSize);
-
-        ViewData["Title"] = "همکاران";
-        return View(model);
+        return Redirect("/App/access?tab=users");
     }
 
     [HttpPost("/App/team-users/create")]
@@ -82,27 +50,27 @@ public class TeamUsersController : AppControllerBase
         if (!ModelState.IsValid)
         {
             TempData["Error"] = "اطلاعات فرم نامعتبر است.";
-            return RedirectToAction(nameof(Index));
+            return Redirect("/App/access?tab=users");
         }
 
         var (canAdd, quotaError) = await _quota.CanAddUserAsync(tenantId);
         if (!canAdd)
         {
             TempData["Error"] = quotaError;
-            return RedirectToAction(nameof(Index));
+            return Redirect("/App/access?tab=users");
         }
 
         var email = model.Email.Trim().ToLowerInvariant();
         if (await _userManager.FindByEmailAsync(email) is not null)
         {
             TempData["Error"] = "این ایمیل قبلاً در سیستم ثبت شده است.";
-            return RedirectToAction(nameof(Index));
+            return Redirect("/App/access?tab=users");
         }
 
-        if (!await IsValidProfileAndRoleAsync(tenantId, model.ProfileId, model.CrmRoleId))
+        if (model.CrmRoleId is not int roleId || !await IsValidRoleAsync(tenantId, roleId))
         {
-            TempData["Error"] = "پروفایل یا نقش انتخاب‌شده معتبر نیست.";
-            return RedirectToAction(nameof(Index));
+            TempData["Error"] = "انتخاب نقش الزامی است.";
+            return Redirect("/App/access?tab=users");
         }
 
         var user = new CrmUser
@@ -111,8 +79,7 @@ public class TeamUsersController : AppControllerBase
             Email = email,
             FullName = model.FullName.Trim(),
             TenantId = tenantId,
-            ProfileId = model.ProfileId,
-            CrmRoleId = model.CrmRoleId,
+            CrmRoleId = roleId,
             IsTenantAdmin = model.IsTenantAdmin,
             IsActive = true,
             CreatedAtUtc = DateTime.UtcNow
@@ -122,11 +89,11 @@ public class TeamUsersController : AppControllerBase
         if (!result.Succeeded)
         {
             TempData["Error"] = string.Join(" ", result.Errors.Select(e => e.Description));
-            return RedirectToAction(nameof(Index));
+            return Redirect("/App/access?tab=users");
         }
 
         TempData["Success"] = $"همکار «{user.FullName}» اضافه شد. می‌تواند از /App/Account/Login وارد شود.";
-        return RedirectToAction(nameof(Index));
+        return Redirect("/App/access?tab=users");
     }
 
     [HttpGet("/App/team-users/{id:int}/edit")]
@@ -148,7 +115,6 @@ public class TeamUsersController : AppControllerBase
             Id = user.Id,
             FullName = user.FullName,
             Email = user.Email ?? "",
-            ProfileId = user.ProfileId,
             CrmRoleId = user.CrmRoleId,
             IsTenantAdmin = user.IsTenantAdmin,
             IsActive = user.IsActive
@@ -177,9 +143,9 @@ public class TeamUsersController : AppControllerBase
             return View(model);
         }
 
-        if (!await IsValidProfileAndRoleAsync(tenantId, model.ProfileId, model.CrmRoleId))
+        if (model.CrmRoleId is not int roleId || !await IsValidRoleAsync(tenantId, roleId))
         {
-            TempData["Error"] = "پروفایل یا نقش انتخاب‌شده معتبر نیست.";
+            TempData["Error"] = "انتخاب نقش الزامی است.";
             return RedirectToAction(nameof(Edit), new { id });
         }
 
@@ -222,8 +188,7 @@ public class TeamUsersController : AppControllerBase
         user.UserName = email;
         user.NormalizedEmail = email.ToUpperInvariant();
         user.NormalizedUserName = email.ToUpperInvariant();
-        user.ProfileId = model.ProfileId;
-        user.CrmRoleId = model.CrmRoleId;
+        user.CrmRoleId = roleId;
         user.IsTenantAdmin = model.IsTenantAdmin;
         user.IsActive = model.IsActive;
 
@@ -246,25 +211,17 @@ public class TeamUsersController : AppControllerBase
         }
 
         TempData["Success"] = "اطلاعات همکار به‌روزرسانی شد.";
-        return RedirectToAction(nameof(Index));
+        return Redirect("/App/access?tab=users");
     }
 
     private Task<bool> EnsureTenantAdminAsync() => Task.FromResult(_tenant.IsTenantAdmin);
 
     private async Task LoadEditLookupsAsync(int tenantId)
     {
-        ViewBag.Profiles = await _db.Profiles.AsNoTracking()
-            .Where(p => p.TenantId == tenantId).OrderBy(p => p.Name).ToListAsync();
         ViewBag.Roles = await _db.CrmRoles.AsNoTracking()
             .Where(r => r.TenantId == tenantId).OrderBy(r => r.Name).ToListAsync();
     }
 
-    private async Task<bool> IsValidProfileAndRoleAsync(int tenantId, int? profileId, int? roleId)
-    {
-        if (profileId is int pid && !await _db.Profiles.AnyAsync(p => p.Id == pid && p.TenantId == tenantId))
-            return false;
-        if (roleId is int rid && !await _db.CrmRoles.AnyAsync(r => r.Id == rid && r.TenantId == tenantId))
-            return false;
-        return true;
-    }
+    private Task<bool> IsValidRoleAsync(int tenantId, int roleId) =>
+        _db.CrmRoles.AnyAsync(r => r.Id == roleId && r.TenantId == tenantId);
 }

@@ -18,10 +18,8 @@ public class TeamUserCreateModel
     [Display(Name = "رمز عبور")]
     public string Password { get; set; } = string.Empty;
 
-    [Display(Name = "پروفایل دسترسی")]
-    public int? ProfileId { get; set; }
-
     [Display(Name = "نقش سازمانی")]
+    [Required(ErrorMessage = "نقش الزامی است.")]
     public int? CrmRoleId { get; set; }
 
     [Display(Name = "مدیر Tenant (دسترسی کامل)")]
@@ -41,10 +39,8 @@ public class TeamUserEditModel
     [Display(Name = "ایمیل")]
     public string Email { get; set; } = string.Empty;
 
-    [Display(Name = "پروفایل دسترسی")]
-    public int? ProfileId { get; set; }
-
     [Display(Name = "نقش سازمانی")]
+    [Required(ErrorMessage = "نقش الزامی است.")]
     public int? CrmRoleId { get; set; }
 
     [Display(Name = "مدیر Tenant (دسترسی کامل)")]

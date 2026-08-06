@@ -1,0 +1,148 @@
+@model Crm.Web.Areas.App.Models.AccessRoleFormModel
+@{
+    ViewData["PanelTitle"] = "تنظیمات";
+    var isNew = Model.Id == 0;
+    var action = isNew ? "/App/access/roles/create" : $"/App/access/roles/{Model.Id}/edit";
+    bool Cap(int moduleId, string kind)
+    {
+        if (Model.IsAdmin) return true;
+        if (Model.ParentCaps is null) return true;
+        if (!Model.ParentCaps.TryGetValue(moduleId, out var c)) return false;
+        return kind switch
+        {
+            "v" => c.CanView,
+            "c" => c.CanCreate,
+            "e" => c.CanEdit,
+            "d" => c.CanDelete,
+            _ => false
+        };
+    }
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-access.css" asp-append-version="true" />
+}
+
+<div class="crm-access">
+    <div class="crm-access-hero">
+        <div>
+            <h4><i class="bx bx-id-card"></i> @(isNew ? "ایجاد نقش" : "ویرایش نقش")</h4>
+            <p class="crm-access-hero-meta">
+                @(string.IsNullOrWhiteSpace(Model.ParentName)
+                    ? "نقش ریشه — بالاترین سطح"
+                    : $"زیردست «{Model.ParentName}» — دسترسی نمی‌تواند از والد بیشتر باشد")
+            </p>
+        </div>
+        <a href="/App/access?tab=roles" class="btn btn-outline-secondary btn-sm">بازگشت به درخت</a>
+    </div>
+
+    <partial name="_Alerts" />
+
+    <form method="post" action="@action">
+        @Html.AntiForgeryToken()
+
+        <div class="crm-access-form-card mb-3">
+            <div class="crm-access-form-head"><strong>مشخصات نقش</strong></div>
+            <div class="crm-access-form-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">نام *</label>
+                        <input type="text" name="name" class="form-control" value="@Model.Name"
+                               placeholder="مثلاً مدیر فروش" required maxlength="100" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">گزارش به (والد)</label>
+                        <select name="parentRoleId" class="form-select" id="parentRoleId">
+                            <option value="">— بدون والد (ریشه) —</option>
+                            @foreach (var r in Model.ParentCandidates)
+                            {
+                                if (Model.ParentRoleId == r.Id)
+                                {
+                                    <option value="@r.Id" selected>@r.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@r.Id">@r.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input type="checkbox" name="isAdmin" value="true" class="form-check-input" id="isAdmin"
+                                   @(Model.IsAdmin ? "checked" : null)
+                                   @(Model.ParentRoleId is not null ? "disabled" : null) />
+                            <label class="form-check-label" for="isAdmin">نقش ادمین (دسترسی کامل همه ماژول‌ها)</label>
+                        </div>
+                        <div class="crm-access-hint mt-2">
+                            <i class="bx bx-info-circle me-1"></i>
+                            کاربران این نقش، رکوردهای کاربران نقش‌های زیردست را می‌بینند.
+                            تیک‌های مجوز زیردست حداکثر برابر والد است.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="crm-access-form-card">
+            <div class="crm-access-form-head"><strong>قوانین دسترسی ماژول‌ها</strong></div>
+            <div class="p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle crm-access-matrix">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">ماژول</th>
+                                <th class="text-center">مشاهده</th>
+                                <th class="text-center">ایجاد</th>
+                                <th class="text-center">ویرایش</th>
+                                <th class="text-center">حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in Model.Modules)
+                            {
+                                var allowV = Cap(m.ModuleId, "v");
+                                var allowC = Cap(m.ModuleId, "c");
+                                var allowE = Cap(m.ModuleId, "e");
+                                var allowD = Cap(m.ModuleId, "d");
+                                <tr>
+                                    <td class="ps-3">
+                                        <input type="hidden" name="moduleIds" value="@m.ModuleId" />
+                                        <div class="fw-semibold">@m.ModuleLabel</div>
+                                        <div class="small text-muted">@m.ModuleName</div>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="canView" value="@m.ModuleId" class="form-check-input"
+                                               @(m.CanView && allowV ? "checked" : null)
+                                               @(allowV ? null : "disabled") />
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="canCreate" value="@m.ModuleId" class="form-check-input"
+                                               @(m.CanCreate && allowC ? "checked" : null)
+                                               @(allowC ? null : "disabled") />
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="canEdit" value="@m.ModuleId" class="form-check-input"
+                                               @(m.CanEdit && allowE ? "checked" : null)
+                                               @(allowE ? null : "disabled") />
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="checkbox" name="canDelete" value="@m.ModuleId" class="form-check-input"
+                                               @(m.CanDelete && allowD ? "checked" : null)
+                                               @(allowD ? null : "disabled") />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="crm-access-form-foot d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save me-1"></i> ذخیره نقش و دسترسی
+                </button>
+                <a href="/App/access?tab=roles" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </div>
+    </form>
+</div>

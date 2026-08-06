@@ -2,22 +2,31 @@
 @model Crm.Web.Areas.App.Models.TeamUserEditModel
 @{
     ViewData["PanelTitle"] = "تنظیمات";
-    var profiles = (List<Profile>)ViewBag.Profiles;
     var roles = (List<Role>)ViewBag.Roles;
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0"><i class="bx bx-edit text-primary me-1"></i> ویرایش همکار</h4>
-    <a href="/App/team-users" class="btn btn-outline-secondary btn-sm">بازگشت</a>
-</div>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-access.css" asp-append-version="true" />
+}
 
-<partial name="_Alerts" />
+<div class="crm-access">
+    <div class="crm-access-hero">
+        <div>
+            <h4><i class="bx bx-edit"></i> ویرایش کاربر</h4>
+            <p class="crm-access-hero-meta">@Model.FullName</p>
+        </div>
+        <a href="/App/access?tab=users" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+    </div>
 
-<div class="card">
-    <div class="card-body">
-        <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="Id" />
+    <partial name="_Alerts" />
+
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="crm-access-form-card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <div class="crm-access-form-head">
+            <strong>اطلاعات کاربر</strong>
+        </div>
+        <div class="crm-access-form-body">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label asp-for="FullName" class="form-label"></label>
@@ -30,19 +39,9 @@
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
-                    <label asp-for="ProfileId" class="form-label"></label>
-                    <select asp-for="ProfileId" class="form-select">
-                        <option value="">— بدون پروفایل —</option>
-                        @foreach (var p in profiles)
-                        {
-                            <option value="@p.Id">@p.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="CrmRoleId" class="form-label"></label>
-                    <select asp-for="CrmRoleId" class="form-select">
-                        <option value="">— بدون نقش —</option>
+                    <label asp-for="CrmRoleId" class="form-label">نقش *</label>
+                    <select asp-for="CrmRoleId" class="form-select" required>
+                        <option value="">— انتخاب نقش —</option>
                         @foreach (var r in roles)
                         {
                             <option value="@r.Id">@r.Name</option>
@@ -65,11 +64,18 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-4">
-                <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+            <div class="crm-access-hint mt-3">
+                دسترسی ماژول‌ها از نقش کاربر می‌آید — از
+                <a href="/App/access?tab=roles">درخت نقش‌ها</a> تنظیم کنید.
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="crm-access-form-foot d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save me-1"></i> ذخیره تغییرات
+            </button>
+            <a href="/App/access?tab=users" class="btn btn-outline-secondary">انصراف</a>
+        </div>
+    </form>
 </div>
 
 @section Scripts {

@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
@@ -48,10 +50,12 @@ public class KbController : AppControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Save(int id, string title, string body, string? category, bool isPublishedToPortal)
     {
-        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
+        if (string.IsNullOrWhiteSpace(title) || IsBodyEmpty(body))
         {
-            TempData["Error"] = "عنوان و متن مقاله الزامی است.";
-            return RedirectToAction(nameof(Index));
+            TempData["Error"] = "عنوان و محتوای مقاله الزامی است.";
+            if (id > 0)
+                return RedirectToAction(nameof(Edit), new { id });
+            return RedirectToAction(nameof(Create));
         }
 
         KbArticle article;
@@ -72,7 +76,7 @@ public class KbController : AppControllerBase
 
         await _db.SaveChangesAsync();
         TempData["Success"] = "مقاله ذخیره شد.";
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(Edit), new { id = article.Id });
     }
 
     [HttpPost("/App/kb/{id:int}/delete")]
@@ -88,5 +92,27 @@ public class KbController : AppControllerBase
             TempData["Success"] = "مقاله حذف شد.";
         }
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>HTML خالی / فقط empty-state المنتور را محتوا حساب نمی‌کند.</summary>
+    internal static bool IsBodyEmpty(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+            return true;
+
+        if (body.Contains("elementor-empty-state", StringComparison.OrdinalIgnoreCase)
+            && !body.Contains("elementor-section", StringComparison.OrdinalIgnoreCase)
+            && !body.Contains("elementor-widget", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var text = Regex.Replace(body, "<[^>]+>", " ");
+        text = WebUtility.HtmlDecode(text);
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+        if (string.IsNullOrWhiteSpace(text)
+            || text.Contains("صفحه خالی است", StringComparison.Ordinal)
+            || text.Contains("برای شروع، یک بخش جدید اضافه کنید", StringComparison.Ordinal))
+            return true;
+
+        return text.Length < 2;
     }
 }

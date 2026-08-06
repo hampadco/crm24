@@ -102,7 +102,8 @@ public static partial class AppHelpContent
             Pages =
             [
                 new() { Title = "لیست رکورد", Route = "/App/m/{module}", Purpose = "نمایش، جستجو، CSV، اکسل" },
-                new() { Title = "ایجاد", Route = "/App/m/{module}/create", Purpose = "فرم داینامیک از FieldDef" },
+                new() { Title = "ایجاد", Route = "/App/m/{module}/create", Purpose = "فرم داینامیک؛ ?f_{field}=id برای پیش‌پر رابطه" },
+                new() { Title = "جزئیات", Route = "/App/m/{module}/{id}", Purpose = "خلاصه + زبانه‌های مرتبط + ایجاد/اتصال مرتبط" },
                 new() { Title = "ویرایش", Route = "/App/m/{module}/{id}/edit", Purpose = "ویرایش با سطح دسترسی فیلد" },
                 new() { Title = "کاریز", Route = "/App/kanban/{module}", Purpose = "فقط ماژول‌های دارای فیلد Stage" },
                 new() { Title = "سطل بازیابی", Route = "/App/recycle-bin", Purpose = "رکوردهای حذف‌شده — آموزش: recycle-bin" }
@@ -112,7 +113,9 @@ public static partial class AppHelpContent
                 new() { Label = "عنوان (Title)", Purpose = "شناسه انسانی رکورد در لیست و جستجو", ConnectsTo = "همه صفحات لیست و Lookup سایر ماژول‌ها" },
                 new() { Label = "مرحله (Stage) — فرصت", Purpose = "وضعیت معامله در قیف فروش", ConnectsTo = "کاریز /App/kanban/opportunities — PicklistValues" },
                 new() { Label = "مبلغ — فرصت", Purpose = "ارزش معامله", ConnectsTo = "گزارش جمع، داشبورد، تبدیل به پروژه (Budget)" },
-                new() { Label = "سازمان (Lookup)", Purpose = "شرکت والد مخاطب", ConnectsTo = "ماژول accounts — OrganizationRecordId در فاکتور" },
+                new() { Label = "سازمان (Lookup)", Purpose = "شرکت والد مخاطب", ConnectsTo = "ماژول organizations — RelationDef سازمان→مخاطبین" },
+                new() { Label = "مخاطب (Lookup) — فرصت", Purpose = "فرد معامله", ConnectsTo = "ماژول contacts — RelationDef مخاطب→فرصت‌ها" },
+                new() { Label = "فرصت (Lookup) — مالی", Purpose = "سند فروش وابسته به معامله", ConnectsTo = "quotes/invoices/sales_orders — RelationDef فرصت→اسناد" },
                 new() { Label = "منبع — سرنخ", Purpose = "کمپین یا کانال ورود", ConnectsTo = "کمپین‌ها /App/campaigns — گزارش اثربخشی" },
                 new() { Label = "مسئول (Owner)", Purpose = "کاربر CRM مسئول پیگیری", ConnectsTo = "همکاران /App/team-users — فیلتر گزارش و دسترسی" },
                 new() { Label = "فیلدهای Date/DateTime", Purpose = "تاریخ شمسی", ConnectsTo = "تقویم /App/calendar — گردش‌کار زمان‌بندی‌شده" }
@@ -121,14 +124,16 @@ public static partial class AppHelpContent
             [
                 new() { Target = "تبدیل سرنخ", HelpSlug = "modules",
                     Description = "Lead → Contact + Account + Opportunity (یک‌کلیک از لیست سرنخ)." },
-                new() { Target = "فاکتور", TargetRoute = "/App/finance/invoices/create", HelpSlug = "finance",
-                    Description = "فیلد «مخاطب مرتبط» = ContactRecordId رکورد contacts." },
+                new() { Target = "ایجاد/اتصال مرتبط", HelpSlug = "modules", TargetRoute = "/App/m/organizations",
+                    Description = "از جزئیات: ایجاد مرتبط با ?f_lookup=id یا POST link-related برای وصل رکورد موجود." },
+                new() { Target = "فاکتور", TargetRoute = "/App/m/invoices", HelpSlug = "finance",
+                    Description = "از فرصت → زبانه فاکتورها؛ فیلد opportunity روی سند مالی." },
                 new() { Target = "وب‌فرم", TargetRoute = "/App/webforms", HelpSlug = "webforms",
                     Description = "ثبت فرم سایت → رکورد جدید در ماژول انتخابی (معمولاً leads)." },
                 new() { Target = "گردش‌کار", TargetRoute = "/App/workflows", HelpSlug = "workflows",
                     Description = "Trigger روی create/update هر ماژول — شرط روی فیلدهای همان رکورد." }
             ],
-            RelatedTopicSlugs = ["crm-map", "kanban", "finance", "webforms", "workflows"]
+            RelatedTopicSlugs = ["crm-map", "kanban", "finance", "webforms", "workflows", "access"]
         },
 
         ["kanban"] = new()
@@ -184,19 +189,21 @@ public static partial class AppHelpContent
         {
             Pages =
             [
-                new() { Title = "لیست همکاران", Route = "/App/team-users", Purpose = "کاربران Identity این Tenant" },
-                new() { Title = "افزودن", Route = "/App/team-users/create", Purpose = "ایجاد کاربر + نقش" },
+                new() { Title = "تب کاربران", Route = "/App/access?tab=users", Purpose = "لیست کارت کاربران + فیلتر" },
+                new() { Title = "افزودن", Route = "/App/access?tab=users", Purpose = "مودال ایجاد کاربر" },
                 new() { Title = "ویرایش", Route = "/App/team-users/{id}/edit", Purpose = "نقش، پروفایل، فعال/غیرفعال" }
             ],
             Fields =
             [
                 new() { Label = "Email", Purpose = "نام کاربری ورود به /App/Account/Login", ConnectsTo = "Identity — جدا از PortalUser.Email" },
-                new() { Label = "IsTenantAdmin", Purpose = "دسترسی مدیریت تیم و تنظیمات", ConnectsTo = "صفحات team-users، subscription" },
-                new() { Label = "Role / Profile", Purpose = "سطح دسترسی ماژول و فیلد", ConnectsTo = "RecordAccessService — فیلتر لیست‌ها" },
+                new() { Label = "IsTenantAdmin", Purpose = "دسترسی مدیریت تیم و تنظیمات", ConnectsTo = "صفحات access، subscription" },
+                new() { Label = "Role / Profile", Purpose = "سطح دسترسی ماژول و فیلد", ConnectsTo = "RecordAccessService — فیلتر لیست‌ها؛ تعریف در /App/access" },
                 new() { Label = "IsActive", Purpose = "مسدودسازی ورود", ConnectsTo = "آزاد شدن ظرفیت پلن Subscription" }
             ],
             Relations =
             [
+                new() { Target = "نقش و دسترسی", TargetRoute = "/App/access", HelpSlug = "access",
+                    Description = "هاب مدیریت کاربر: تب نقش‌ها + پروفایل‌ها؛ اینجا فقط اختصاص به کاربر." },
                 new() { Target = "اشتراک", TargetRoute = "/App/subscription", HelpSlug = "subscription",
                     Description = "MaxUsers پلن ← تعداد کاربران فعال." },
                 new() { Target = "تیکت", TargetRoute = "/App/tickets", HelpSlug = "tickets",
@@ -204,7 +211,31 @@ public static partial class AppHelpContent
                 new() { Target = "پروژه", HelpSlug = "projects",
                     Description = "AssignedUserId وظیفه پروژه = همکار." }
             ],
-            RelatedTopicSlugs = ["subscription", "portal-users", "modules"]
+            RelatedTopicSlugs = ["access", "subscription", "portal-users", "modules"]
+        },
+
+        ["access"] = new()
+        {
+            Pages =
+            [
+                new() { Title = "هاب مدیریت کاربر", Route = "/App/access", Purpose = "تب کاربران / نقش‌ها / پروفایل‌ها" },
+                new() { Title = "ایجاد نقش", Route = "/App/access/roles/create", Purpose = "نام + گزارش به (ParentRoleId)" },
+                new() { Title = "پروفایل جدید/ویرایش", Route = "/App/access/profiles/create", Purpose = "ماتریس CanView/Create/Edit/Delete روی ماژول‌ها" }
+            ],
+            Fields =
+            [
+                new() { Label = "Role.ParentRoleId", Purpose = "گزارش به / سلسله‌مراتب سازمانی", ConnectsTo = "RecordAccessService — دید رکورد زیردستان" },
+                new() { Label = "Profile.IsAdmin", Purpose = "پروفایل ادمین سیستم", ConnectsTo = "دسترسی کامل ماژول‌ها" },
+                new() { Label = "ProfileModulePermission", Purpose = "ماتریس CRUD", ConnectsTo = "RecordAccessService روی /App/m/..." }
+            ],
+            Relations =
+            [
+                new() { Target = "همکاران", TargetRoute = "/App/access?tab=users", HelpSlug = "team-users",
+                    Description = "ProfileId و CrmRoleId روی User اینجا تعریف می‌شوند؛ اختصاص در تب کاربران." },
+                new() { Target = "ماژول‌ها", HelpSlug = "modules",
+                    Description = "هر ردیف ماتریس = یک ModuleDef فعال Tenant." }
+            ],
+            RelatedTopicSlugs = ["team-users", "modules", "customize"]
         },
 
         ["subscription"] = new()
@@ -285,6 +316,8 @@ public static partial class AppHelpContent
             ],
             Relations =
             [
+                new() { Target = "فرصت فروش", HelpSlug = "modules", TargetRoute = "/App/m/opportunities",
+                    Description = "Lookup opportunity روی quotes/invoices/sales_orders + ایجاد مرتبط از جزئیات فرصت." },
                 new() { Target = "محصولات", HelpSlug = "products", TargetRoute = "/App/products",
                     Description = "هر Line به Product وصل — یا Title دستی." },
                 new() { Target = "مخاطب", HelpSlug = "modules", TargetRoute = "/App/m/contacts",

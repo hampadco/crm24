@@ -206,7 +206,19 @@ public class RecordsController : AppControllerBase
         if (!await _access.CanCreateAsync(module.Id))
             return Forbid("Identity.Application");
 
-        var model = await BuildFormModelAsync(module, recordId: null, values: null);
+        // Prefill از query: ?f_organization=12&f_contact=34
+        var prefill = new Dictionary<string, string?>();
+        foreach (var key in Request.Query.Keys)
+        {
+            if (!key.StartsWith("f_", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var fieldName = key[2..];
+            var val = Request.Query[key].ToString();
+            if (!string.IsNullOrWhiteSpace(fieldName) && !string.IsNullOrWhiteSpace(val))
+                prefill[fieldName] = val;
+        }
+
+        var model = await BuildFormModelAsync(module, recordId: null, values: prefill.Count > 0 ? prefill : null);
         ViewData["Title"] = $"{module.SingularLabel} جدید";
         return View("Form", model);
     }
@@ -516,7 +528,8 @@ public class RecordsController : AppControllerBase
                     ModuleLabel = row.ModuleLabel,
                     RecordId = row.Id,
                     Title = row.Title,
-                    FieldLabel = field.Label
+                    FieldLabel = field.Label,
+                    LinkFieldName = field.Name
                 });
             }
         }
@@ -525,6 +538,51 @@ public class RecordsController : AppControllerBase
             .GroupBy(r => (r.ModuleName, r.RecordId))
             .Select(g => g.First())
             .ToList();
+    }
+
+    private async Task<List<(int Id, string Title)>> LoadLinkCandidatesAsync(
+        string relatedModuleName, string linkFieldName, int parentRecordId, HashSet<int> alreadyLinked)
+    {
+        if (!IsSafeJsonKey(linkFieldName))
+            return [];
+
+        var relatedModule = await _metadata.GetModuleByNameAsync(relatedModuleName);
+        if (relatedModule is null)
+            return [];
+
+        var parentStr = parentRecordId.ToString();
+        var rows = await _db.Database
+            .SqlQuery<RelatedSqlRow>($"""
+                SELECT r."Id" AS "Id",
+                       r."Title" AS "Title",
+                       m."Name" AS "ModuleName",
+                       m."SingularLabel" AS "ModuleLabel"
+                FROM "Records" r
+                INNER JOIN "Modules" m ON m."Id" = r."ModuleId"
+                WHERE r."ModuleId" = {relatedModule.Id}
+                  AND r."IsDeleted" = FALSE
+                  AND COALESCE(r."CustomData" ->> {linkFieldName}, '') <> {parentStr}
+                ORDER BY r."Title" ASC
+                LIMIT 80
+                """)
+            .ToListAsync();
+
+        return rows
+            .Where(r => !alreadyLinked.Contains(r.Id))
+            .Select(r => (r.Id, r.Title))
+            .ToList();
+    }
+
+    private async Task EnrichRelationGroupsAsync(List<RelatedRecordGroup> groups, int parentRecordId)
+    {
+        foreach (var g in groups)
+        {
+            g.ParentRecordId = parentRecordId;
+            if (string.IsNullOrWhiteSpace(g.LinkFieldName))
+                continue;
+            var linked = g.Records.Select(r => r.RecordId).ToHashSet();
+            g.LinkCandidates = await LoadLinkCandidatesAsync(g.ModuleName, g.LinkFieldName, parentRecordId, linked);
+        }
     }
 
     private async Task<List<RelatedRecordGroup>> BuildRelationGroupsAsync(
@@ -556,7 +614,8 @@ public class RecordsController : AppControllerBase
                 ModuleLabel = related.ModuleLabel,
                 RecordId = related.Id,
                 Title = related.Title,
-                FieldLabel = field.Label
+                FieldLabel = field.Label,
+                LinkFieldName = field.Name
             });
         }
 
@@ -569,6 +628,8 @@ public class RecordsController : AppControllerBase
                     Label = g.First().FieldLabel ?? g.First().ModuleLabel,
                     ModuleName = g.Key,
                     TabKey = $"rel-{g.Key}",
+                    LinkFieldName = null,
+                    ParentRecordId = recordId,
                     Records = g.ToList()
                 });
             }
@@ -582,6 +643,8 @@ public class RecordsController : AppControllerBase
                 Label = g.First().ModuleLabel,
                 ModuleName = g.Key,
                 TabKey = $"rel-{g.Key}",
+                LinkFieldName = g.First().LinkFieldName,
+                ParentRecordId = recordId,
                 Records = g.ToList()
             });
         }
@@ -610,6 +673,7 @@ public class RecordsController : AppControllerBase
                     continue;
 
                 List<RelatedRecordItem> matched;
+                string? linkField = rel.LinkFieldName;
 
                 // LinkFieldName: Lookup روی ماژول مقصد که به مبدأ اشاره می‌کند
                 if (!string.IsNullOrWhiteSpace(rel.LinkFieldName)
@@ -639,7 +703,8 @@ public class RecordsController : AppControllerBase
                         ModuleLabel = row.ModuleLabel,
                         RecordId = row.Id,
                         Title = row.Title,
-                        FieldLabel = rel.Label
+                        FieldLabel = rel.Label,
+                        LinkFieldName = linkName
                     }).ToList();
                 }
                 else
@@ -651,6 +716,7 @@ public class RecordsController : AppControllerBase
                         .GroupBy(x => x.RecordId)
                         .Select(x => x.First())
                         .ToList();
+                    linkField ??= matched.FirstOrDefault()?.LinkFieldName;
                 }
 
                 var already = groups.FirstOrDefault(g =>
@@ -659,6 +725,8 @@ public class RecordsController : AppControllerBase
                 {
                     if (!string.IsNullOrWhiteSpace(rel.Label))
                         already.Label = rel.Label;
+                    if (!string.IsNullOrWhiteSpace(linkField))
+                        already.LinkFieldName = linkField;
                     if (matched.Count > 0 && already.Records.Count == 0)
                         already.Records = matched;
                     continue;
@@ -669,6 +737,8 @@ public class RecordsController : AppControllerBase
                     Label = string.IsNullOrWhiteSpace(rel.Label) ? other.PluralLabel : rel.Label,
                     ModuleName = other.Name,
                     TabKey = $"rel-{other.Name}",
+                    LinkFieldName = linkField,
+                    ParentRecordId = recordId,
                     Records = matched
                 });
             }
@@ -686,7 +756,51 @@ public class RecordsController : AppControllerBase
                 g.TabKey = $"{baseKey}-{n++}";
         }
 
+        await EnrichRelationGroupsAsync(groups, recordId);
         return groups;
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/link-related")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> LinkRelated(
+        string moduleName, int id, string relatedModule, string linkField, int relatedRecordId)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        var related = await _metadata.GetModuleByNameAsync(relatedModule);
+        if (module is null || related is null)
+            return NotFound();
+
+        if (!await _access.CanEditAsync(related.Id))
+            return Forbid("Identity.Application");
+
+        if (!IsSafeJsonKey(linkField))
+        {
+            TempData["Error"] = "فیلد ارتباط نامعتبر است.";
+            return Redirect($"/App/m/{module.Name}/{id}");
+        }
+
+        var linkOk = await _db.Fields.AsNoTracking().AnyAsync(f =>
+            f.ModuleId == related.Id
+            && f.Name == linkField
+            && f.Type == FieldType.Lookup
+            && f.LookupModule == module.Name);
+        if (!linkOk)
+        {
+            TempData["Error"] = "این ارتباط برای اتصال پشتیبانی نمی‌شود.";
+            return Redirect($"/App/m/{module.Name}/{id}");
+        }
+
+        var parent = await _records.GetAsync(module.Id, id);
+        var child = await _records.GetAsync(related.Id, relatedRecordId);
+        if (parent is null || child is null)
+            return NotFound();
+
+        var data = DynamicRecordService.ParseData(child);
+        data[linkField] = id.ToString();
+        await _records.UpdateAsync(related.Id, relatedRecordId, data);
+
+        TempData["Success"] = $"«{child.Title}» به این {module.SingularLabel} متصل شد.";
+        return Redirect($"/App/m/{module.Name}/{id}#rel-{related.Name}");
     }
 
     [HttpGet("/App/m/{moduleName}/export")]

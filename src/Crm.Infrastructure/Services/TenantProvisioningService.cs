@@ -61,7 +61,7 @@ public class TenantProvisioningService
         await _db.SaveChangesAsync();
 
         // نقش‌ها و پروفایل‌های پیش‌فرض
-        var ceoRole = new Role { TenantId = tenant.Id, Name = "مدیر عامل" };
+        var ceoRole = new Role { TenantId = tenant.Id, Name = "مدیر عامل", IsAdmin = true };
         _db.CrmRoles.Add(ceoRole);
         await _db.SaveChangesAsync();
 

@@ -421,9 +421,31 @@ public class SalesModuleSeeder
         }
 
         _db.SharingRules.Add(new SharingRule { TenantId = tenantId, ModuleId = module.Id, DefaultLevel = SharingLevel.Private });
-        _db.ProfileModulePermissions.AddRange(
-            new ProfileModulePermission { TenantId = tenantId, ProfileId = adminProfileId, ModuleId = module.Id, CanView = true, CanCreate = true, CanEdit = true, CanDelete = true },
-            new ProfileModulePermission { TenantId = tenantId, ProfileId = userProfileId, ModuleId = module.Id, CanView = true, CanCreate = true, CanEdit = true, CanDelete = false });
+        if (adminProfileId > 0 && userProfileId > 0)
+        {
+            _db.ProfileModulePermissions.AddRange(
+                new ProfileModulePermission { TenantId = tenantId, ProfileId = adminProfileId, ModuleId = module.Id, CanView = true, CanCreate = true, CanEdit = true, CanDelete = true },
+                new ProfileModulePermission { TenantId = tenantId, ProfileId = userProfileId, ModuleId = module.Id, CanView = true, CanCreate = true, CanEdit = true, CanDelete = false });
+        }
+
+        var roles = await _db.CrmRoles.AsNoTracking()
+            .Where(r => r.TenantId == tenantId)
+            .Select(r => new { r.Id, r.IsAdmin, r.ParentRoleId })
+            .ToListAsync();
+        foreach (var role in roles)
+        {
+            var full = role.IsAdmin || role.ParentRoleId is null;
+            _db.RoleModulePermissions.Add(new RoleModulePermission
+            {
+                TenantId = tenantId,
+                RoleId = role.Id,
+                ModuleId = module.Id,
+                CanView = true,
+                CanCreate = true,
+                CanEdit = true,
+                CanDelete = full
+            });
+        }
 
         await _db.SaveChangesAsync();
     }

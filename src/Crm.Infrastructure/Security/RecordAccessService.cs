@@ -6,8 +6,7 @@ using Crm.Infrastructure.Data;
 namespace Crm.Infrastructure.Security;
 
 /// <summary>
-/// پیاده‌سازی الگوریتم دسترسی سه‌لایه (نقش درختی + پروفایل + Sharing Rule)
-/// به‌صورت فیلتر روی IQueryable — دسترسی در لایه Query اعمال می‌شود نه UI.
+/// دسترسی: نقش درختی (دید زیردستان) + مجوز ماژول روی نقش + Sharing Rule.
 /// </summary>
 public class RecordAccessService
 {
@@ -25,22 +24,42 @@ public class RecordAccessService
     public async Task<bool> CanEditAsync(int moduleId) => await HasModulePermissionAsync(moduleId, p => p.CanEdit);
     public async Task<bool> CanDeleteAsync(int moduleId) => await HasModulePermissionAsync(moduleId, p => p.CanDelete);
 
-    private async Task<bool> HasModulePermissionAsync(int moduleId, Func<ProfileModulePermission, bool> check)
+    private async Task<bool> HasModulePermissionAsync(int moduleId, Func<RoleModulePermission, bool> check)
     {
         if (_tenant.IsTenantAdmin)
             return true;
 
-        if (_tenant.ProfileId is not int profileId)
+        if (_tenant.RoleId is not int roleId)
             return false;
 
-        var perm = await _db.ProfileModulePermissions
+        var role = await _db.CrmRoles.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == roleId);
+        if (role is null)
+            return false;
+        if (role.IsAdmin)
+            return true;
+
+        var perm = await _db.RoleModulePermissions
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.ProfileId == profileId && p.ModuleId == moduleId);
+            .FirstOrDefaultAsync(p => p.RoleId == roleId && p.ModuleId == moduleId);
+
+        // سازگاری موقت: اگر هنوز روی نقش migrate نشده، از Profile قدیمی بخوان
+        if (perm is null && _tenant.ProfileId is int profileId)
+        {
+            var legacy = await _db.ProfileModulePermissions.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.ProfileId == profileId && p.ModuleId == moduleId);
+            return legacy is not null && check(new RoleModulePermission
+            {
+                CanView = legacy.CanView,
+                CanCreate = legacy.CanCreate,
+                CanEdit = legacy.CanEdit,
+                CanDelete = legacy.CanDelete
+            });
+        }
 
         return perm is not null && check(perm);
     }
 
-    /// <summary>فیلتر دیدپذیری رکوردها بر اساس Sharing Rule و سلسله‌مراتب نقش.</summary>
     public async Task<IQueryable<DynamicRecord>> ApplyVisibilityAsync(IQueryable<DynamicRecord> query, int moduleId)
     {
         if (_tenant.IsTenantAdmin)
@@ -52,7 +71,7 @@ public class RecordAccessService
 
         var level = sharing?.DefaultLevel ?? SharingLevel.Private;
         if (level != SharingLevel.Private)
-            return query; // Public-RO/RW/Full: همه رکوردهای ماژول دیده می‌شوند
+            return query;
 
         var userId = _tenant.UserId ?? 0;
         var visibleUserIds = await GetSelfAndSubordinateUserIdsAsync(userId);
@@ -62,7 +81,6 @@ public class RecordAccessService
             r.CreatedByUserId == userId);
     }
 
-    /// <summary>آیا کاربر جاری مجاز به ویرایش این رکورد خاص است؟ (سطح رکورد، بعد از مجوز ماژول)</summary>
     public async Task<bool> CanModifyRecordAsync(DynamicRecord record)
     {
         if (_tenant.IsTenantAdmin)
@@ -87,10 +105,13 @@ public class RecordAccessService
         return record.OwnerUserId is int owner && visibleUserIds.Contains(owner);
     }
 
-    /// <summary>سطح دسترسی فیلدها برای پروفایل کاربر جاری: fieldId → دسترسی.</summary>
     public async Task<Dictionary<int, FieldAccess>> GetFieldAccessMapAsync(int moduleId)
     {
-        if (_tenant.IsTenantAdmin || _tenant.ProfileId is not int profileId)
+        if (_tenant.IsTenantAdmin || _tenant.RoleId is not int roleId)
+            return new Dictionary<int, FieldAccess>();
+
+        var role = await _db.CrmRoles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == roleId);
+        if (role?.IsAdmin == true)
             return new Dictionary<int, FieldAccess>();
 
         var fieldIds = await _db.Fields
@@ -98,13 +119,22 @@ public class RecordAccessService
             .Select(f => f.Id)
             .ToListAsync();
 
-        return await _db.ProfileFieldPermissions
+        var map = await _db.RoleFieldPermissions
             .AsNoTracking()
-            .Where(p => p.ProfileId == profileId && fieldIds.Contains(p.FieldId))
+            .Where(p => p.RoleId == roleId && fieldIds.Contains(p.FieldId))
             .ToDictionaryAsync(p => p.FieldId, p => p.Access);
+
+        if (map.Count == 0 && _tenant.ProfileId is int profileId)
+        {
+            map = await _db.ProfileFieldPermissions
+                .AsNoTracking()
+                .Where(p => p.ProfileId == profileId && fieldIds.Contains(p.FieldId))
+                .ToDictionaryAsync(p => p.FieldId, p => p.Access);
+        }
+
+        return map;
     }
 
-    /// <summary>شناسه کاربرِ خود + تمام کاربران نقش‌های زیردست (بازگشتی روی درخت نقش).</summary>
     private async Task<HashSet<int>> GetSelfAndSubordinateUserIdsAsync(int userId)
     {
         var result = new HashSet<int> { userId };

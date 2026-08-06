@@ -314,6 +314,7 @@ public class RelatedRecordItem
     public int RecordId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? FieldLabel { get; set; }
+    public string? LinkFieldName { get; set; }
 }
 
 public class RelatedRecordGroup
@@ -322,5 +323,10 @@ public class RelatedRecordGroup
     public string ModuleName { get; set; } = string.Empty;
     /// <summary>شناسه پایدار برای تب سایدبار (مثلاً rel-products).</summary>
     public string TabKey { get; set; } = string.Empty;
+    /// <summary>نام فیلد Lookup روی ماژول مرتبط که به رکورد جاری اشاره می‌کند.</summary>
+    public string? LinkFieldName { get; set; }
+    public int ParentRecordId { get; set; }
     public IReadOnlyList<RelatedRecordItem> Records { get; set; } = [];
+    /// <summary>رکوردهای قابل‌اتصال (هنوز به این والد لینک نشده‌اند).</summary>
+    public IReadOnlyList<(int Id, string Title)> LinkCandidates { get; set; } = [];
 }

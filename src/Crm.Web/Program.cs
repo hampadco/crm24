@@ -50,6 +50,7 @@ builder.Services.AddScoped<RecordImportExportService>();
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<TenantLifecycleService>();
 builder.Services.AddScoped<TenantQuotaService>();
+builder.Services.AddScoped<RolePermissionService>();
 builder.Services.AddScoped<SalesModuleSeeder>();
 builder.Services.AddScoped<BusinessModuleSeeder>();
 builder.Services.AddScoped<DemoTenantSeeder>();

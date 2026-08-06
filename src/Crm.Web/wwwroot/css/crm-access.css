@@ -1,0 +1,538 @@
+/* مدیریت کاربر — هم‌سبک panel-theme (#5a8dee) */
+
+.crm-access {
+    --acc-primary: var(--panel-primary, #5a8dee);
+    --acc-primary-soft: var(--panel-primary-soft, rgba(90, 141, 238, 0.14));
+    --acc-surface: var(--panel-surface, #fff);
+    --acc-border: var(--panel-border, rgba(15, 23, 42, 0.07));
+    --acc-radius: var(--panel-radius, 0.7rem);
+    --acc-shadow: var(--panel-shadow-sm, 0 2px 8px rgba(15, 23, 42, 0.07));
+    --acc-shadow-md: var(--panel-shadow-md, 0 6px 18px rgba(15, 23, 42, 0.09));
+    --acc-muted: #64748b;
+    --acc-text: #1e293b;
+}
+
+.crm-access-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.crm-access-hero h4 {
+    margin: 0;
+    font-weight: 700;
+    color: var(--acc-text);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.crm-access-hero h4 i {
+    color: var(--acc-primary);
+}
+
+.crm-access-hero-meta {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: var(--acc-muted);
+}
+
+.crm-access-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.35rem;
+    margin-bottom: 1.25rem;
+    background: var(--acc-surface);
+    border: 1px solid var(--acc-border);
+    border-radius: var(--acc-radius);
+    box-shadow: var(--acc-shadow);
+}
+
+.crm-access-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1rem;
+    border-radius: calc(var(--acc-radius) - 0.15rem);
+    color: var(--acc-muted);
+    font-weight: 600;
+    font-size: 0.92rem;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.crm-access-tab:hover {
+    color: var(--acc-text);
+    background: #f8fafc;
+}
+
+.crm-access-tab.is-active {
+    color: var(--acc-primary);
+    background: linear-gradient(135deg, rgba(90, 141, 238, 0.16) 0%, rgba(90, 141, 238, 0.08) 100%);
+    box-shadow: 0 4px 14px rgba(90, 141, 238, 0.18);
+}
+
+.crm-access-tab i {
+    font-size: 1.15rem;
+}
+
+.crm-access-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.crm-access-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.crm-access-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--acc-border);
+    background: var(--acc-surface);
+    color: var(--acc-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.crm-access-chip:hover {
+    border-color: rgba(90, 141, 238, 0.35);
+    color: var(--acc-primary);
+}
+
+.crm-access-chip.is-active {
+    background: var(--acc-primary);
+    border-color: var(--acc-primary);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(90, 141, 238, 0.28);
+}
+
+.crm-access-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.crm-access-search .form-control,
+.crm-access-search .form-select {
+    min-width: 10rem;
+    border-radius: 0.55rem;
+    border-color: var(--acc-border);
+    font-size: 0.9rem;
+}
+
+.crm-access-search .form-control:focus,
+.crm-access-search .form-select:focus {
+    border-color: rgba(90, 141, 238, 0.45);
+    box-shadow: 0 0 0 3px var(--acc-primary-soft);
+}
+
+.crm-access-user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.crm-access-user {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--acc-surface);
+    border: 1px solid var(--acc-border);
+    border-radius: var(--acc-radius);
+    box-shadow: var(--acc-shadow);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.crm-access-user:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--acc-shadow-md);
+    border-color: rgba(90, 141, 238, 0.22);
+    color: inherit;
+}
+
+.crm-access-avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--acc-primary);
+    background: var(--acc-primary-soft);
+    flex-shrink: 0;
+}
+
+.crm-access-user-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.crm-access-user-name {
+    font-weight: 700;
+    color: var(--acc-text);
+    margin: 0 0 0.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.crm-access-user-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem 1.1rem;
+    font-size: 0.82rem;
+    color: var(--acc-muted);
+}
+
+.crm-access-user-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.crm-access-user-meta [dir="ltr"] {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+}
+
+.crm-access-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.crm-access-badge-admin {
+    background: rgba(245, 158, 11, 0.15);
+    color: #b45309;
+}
+
+.crm-access-badge-role {
+    background: var(--acc-primary-soft);
+    color: var(--acc-primary);
+}
+
+.crm-access-badge-on {
+    background: rgba(34, 197, 94, 0.14);
+    color: #15803d;
+}
+
+.crm-access-badge-off {
+    background: rgba(148, 163, 184, 0.2);
+    color: #64748b;
+}
+
+.crm-access-user-chevron {
+    color: #cbd5e1;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.crm-access-user:hover .crm-access-user-chevron {
+    color: var(--acc-primary);
+}
+
+.crm-access-role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.75rem;
+}
+
+.crm-access-role-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1.1rem 1.15rem;
+    background: var(--acc-surface);
+    border: 1px solid var(--acc-border);
+    border-radius: var(--acc-radius);
+    box-shadow: var(--acc-shadow);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    min-height: 6.5rem;
+}
+
+.crm-access-role-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--acc-shadow-md);
+    border-color: rgba(90, 141, 238, 0.28);
+    color: inherit;
+}
+
+.crm-access-role-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.crm-access-role-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.6rem;
+    display: grid;
+    place-items: center;
+    background: var(--acc-primary-soft);
+    color: var(--acc-primary);
+    font-size: 1.2rem;
+}
+
+.crm-access-role-name {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.02rem;
+    color: var(--acc-text);
+}
+
+.crm-access-role-parent {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--acc-muted);
+}
+
+.crm-access-role-foot {
+    margin-top: auto;
+    font-size: 0.78rem;
+    color: var(--acc-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.crm-access-profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 0.75rem;
+}
+
+.crm-access-profile-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    padding: 1.15rem;
+    background: var(--acc-surface);
+    border: 1px solid var(--acc-border);
+    border-radius: var(--acc-radius);
+    box-shadow: var(--acc-shadow);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.crm-access-profile-card:hover {
+    box-shadow: var(--acc-shadow-md);
+    border-color: rgba(90, 141, 238, 0.22);
+}
+
+.crm-access-profile-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--acc-text);
+}
+
+.crm-access-empty {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    background: var(--acc-surface);
+    border: 1px dashed rgba(15, 23, 42, 0.12);
+    border-radius: var(--acc-radius);
+    color: var(--acc-muted);
+}
+
+.crm-access-empty i {
+    font-size: 2rem;
+    color: #cbd5e1;
+    display: block;
+    margin-bottom: 0.65rem;
+}
+
+.crm-access-form-card {
+    background: var(--acc-surface);
+    border: 1px solid var(--acc-border);
+    border-radius: var(--acc-radius);
+    box-shadow: var(--acc-shadow);
+    overflow: hidden;
+}
+
+.crm-access-form-card .card-header,
+.crm-access-form-card > .crm-access-form-head {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--acc-border);
+    background: #f8fafc;
+}
+
+.crm-access-form-card .card-body,
+.crm-access-form-card > .crm-access-form-body {
+    padding: 1.25rem;
+}
+
+.crm-access-form-card .card-footer,
+.crm-access-form-card > .crm-access-form-foot {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--acc-border);
+    background: #f8fafc;
+}
+
+.crm-access-hint {
+    padding: 0.85rem 1rem;
+    border-radius: 0.55rem;
+    background: var(--acc-primary-soft);
+    color: #334155;
+    font-size: 0.85rem;
+    border: 1px solid rgba(90, 141, 238, 0.18);
+}
+
+.crm-access-matrix {
+    margin: 0;
+}
+
+.crm-access-matrix thead th {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--acc-muted);
+    text-transform: none;
+    border-bottom-color: var(--acc-border);
+    background: #f8fafc;
+    white-space: nowrap;
+}
+
+.crm-access-matrix tbody td {
+    vertical-align: middle;
+    border-color: var(--acc-border);
+}
+
+.crm-access-matrix .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    cursor: pointer;
+}
+
+@media (max-width: 767.98px) {
+    .crm-access-user {
+        align-items: flex-start;
+    }
+
+    .crm-access-user-chevron {
+        display: none;
+    }
+
+    .crm-access-search {
+        width: 100%;
+    }
+
+    .crm-access-search .form-control,
+    .crm-access-search .form-select {
+        flex: 1;
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+/* ===== درخت نقش‌ها ===== */
+.crm-access-tree-wrap {
+    background: var(--acc-surface);
+    border: 1px solid var(--acc-border);
+    border-radius: var(--acc-radius);
+    box-shadow: var(--acc-shadow);
+    padding: 1.25rem 1rem 1.25rem 0.5rem;
+}
+
+.crm-access-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+}
+
+.crm-access-tree .crm-access-tree {
+    margin-inline-start: 1.75rem;
+    padding-inline-start: 1.1rem;
+    border-inline-start: 2px solid rgba(90, 141, 238, 0.22);
+}
+
+.crm-access-tree-node {
+    position: relative;
+    margin: 0 0 0.65rem;
+}
+
+.crm-access-tree .crm-access-tree > .crm-access-tree-node::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: -1.1rem;
+    top: 1.4rem;
+    width: 1rem;
+    height: 2px;
+    background: rgba(90, 141, 238, 0.22);
+}
+
+.crm-access-tree-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid var(--acc-border);
+    border-radius: calc(var(--acc-radius) - 0.1rem);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.crm-access-tree-card:hover {
+    background: #fff;
+    border-color: rgba(90, 141, 238, 0.28);
+    box-shadow: var(--acc-shadow);
+}
+
+.crm-access-tree-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.crm-access-tree-name {
+    font-weight: 700;
+    color: var(--acc-text);
+    text-decoration: none;
+}
+
+.crm-access-tree-name:hover {
+    color: var(--acc-primary);
+}
+
+.crm-access-tree-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.75rem;
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--acc-muted);
+}
+
+.crm-access-tree-actions {
+    display: flex;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}

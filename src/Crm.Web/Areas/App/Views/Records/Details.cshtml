@@ -553,13 +553,54 @@
 
             @foreach (var group in Model.Relations)
             {
+                var createHref = !string.IsNullOrWhiteSpace(group.LinkFieldName)
+                    ? $"/App/m/{group.ModuleName}/create?f_{group.LinkFieldName}={group.ParentRecordId}"
+                    : $"/App/m/{group.ModuleName}/create";
                 <section id="@group.TabKey" class="crm-rd-panel" data-crm-rd-panel="@group.TabKey">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                         <h5 class="crm-rd-panel-title mb-0 border-0 pb-0">@group.Label</h5>
-                        <a class="btn btn-sm btn-outline-primary" href="/App/m/@group.ModuleName/create">
-                            <i class="bx bx-plus me-1"></i> افزودن مرتبط
-                        </a>
+                        <div class="d-flex flex-wrap gap-2">
+                            @if (!string.IsNullOrWhiteSpace(group.LinkFieldName))
+                            {
+                                <a class="btn btn-sm btn-primary" href="@createHref">
+                                    <i class="bx bx-plus me-1"></i> ایجاد مرتبط
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-sm btn-outline-primary" href="@createHref">
+                                    <i class="bx bx-plus me-1"></i> افزودن مرتبط
+                                </a>
+                            }
+                        </div>
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(group.LinkFieldName))
+                    {
+                        <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/link-related"
+                              class="crm-rd-link-form mb-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="relatedModule" value="@group.ModuleName" />
+                            <input type="hidden" name="linkField" value="@group.LinkFieldName" />
+                            <div class="d-flex flex-wrap gap-2 align-items-end">
+                                <div class="flex-grow-1" style="min-width:12rem">
+                                    <label class="form-label small mb-1">اتصال رکورد موجود</label>
+                                    <select name="relatedRecordId" class="form-select form-select-sm crm-select2"
+                                            data-placeholder="جستجو و انتخاب…" data-allow-clear="true" required>
+                                        <option value="">— انتخاب کنید —</option>
+                                        @foreach (var cand in group.LinkCandidates)
+                                        {
+                                            <option value="@cand.Id">@cand.Title</option>
+                                        }
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bx bx-link me-1"></i> اتصال
+                                </button>
+                            </div>
+                        </form>
+                    }
+
                     @if (group.Records.Count == 0)
                     {
                         <div class="crm-rd-empty">موردی ثبت نشده است.</div>

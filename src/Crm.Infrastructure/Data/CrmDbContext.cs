@@ -30,6 +30,8 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<DynamicRecord> Records => Set<DynamicRecord>();
 
     public DbSet<Role> CrmRoles => Set<Role>();
+    public DbSet<RoleModulePermission> RoleModulePermissions => Set<RoleModulePermission>();
+    public DbSet<RoleFieldPermission> RoleFieldPermissions => Set<RoleFieldPermission>();
     public DbSet<Profile> Profiles => Set<Profile>();
     public DbSet<ProfileModulePermission> ProfileModulePermissions => Set<ProfileModulePermission>();
     public DbSet<ProfileFieldPermission> ProfileFieldPermissions => Set<ProfileFieldPermission>();
@@ -156,6 +158,18 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         {
             e.ToTable("CrmRoles");
             e.HasOne(r => r.ParentRole).WithMany(r => r.Children).HasForeignKey(r => r.ParentRoleId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<RoleModulePermission>(e =>
+        {
+            e.HasIndex(p => new { p.TenantId, p.RoleId, p.ModuleId }).IsUnique();
+            e.HasOne(p => p.Role).WithMany(r => r.ModulePermissions).HasForeignKey(p => p.RoleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RoleFieldPermission>(e =>
+        {
+            e.HasIndex(p => new { p.TenantId, p.RoleId, p.FieldId }).IsUnique();
+            e.HasOne(p => p.Role).WithMany(r => r.FieldPermissions).HasForeignKey(p => p.RoleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<ProfileModulePermission>(e =>

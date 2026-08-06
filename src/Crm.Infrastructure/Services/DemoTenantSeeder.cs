@@ -396,7 +396,7 @@ public class DemoTenantSeeder
             _db.Tenants.Add(tenant);
             await _db.SaveChangesAsync();
 
-            var ceo = new Role { TenantId = tenant.Id, Name = "مدیر عامل" };
+            var ceo = new Role { TenantId = tenant.Id, Name = "مدیر عامل", IsAdmin = true };
             _db.CrmRoles.Add(ceo);
             await _db.SaveChangesAsync();
 

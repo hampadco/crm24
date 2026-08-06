@@ -1,0 +1,36 @@
+@model Crm.Web.Areas.App.Models.AccessRoleTreeNode
+
+<li class="crm-access-tree-node">
+    <div class="crm-access-tree-card">
+        <div class="crm-access-tree-main">
+            <div class="crm-access-role-icon"><i class="bx bx-briefcase"></i></div>
+            <div>
+                <a class="crm-access-tree-name" href="/App/access/roles/@Model.Id/edit">@Model.Name</a>
+                <div class="crm-access-tree-meta">
+                    @if (Model.IsAdmin)
+                    {
+                        <span class="crm-access-badge crm-access-badge-admin">ادمین نقش</span>
+                    }
+                    <span><i class="bx bx-group"></i> @Model.UserCount کاربر</span>
+                </div>
+            </div>
+        </div>
+        <div class="crm-access-tree-actions">
+            <a href="/App/access/roles/@Model.Id/edit" class="btn btn-sm btn-outline-primary" title="ویرایش و دسترسی">
+                <i class="bx bx-edit"></i>
+            </a>
+            <a href="/App/access/roles/create?parentId=@Model.Id" class="btn btn-sm btn-primary" title="افزودن زیردست">
+                <i class="bx bx-plus"></i>
+            </a>
+        </div>
+    </div>
+    @if (Model.Children.Count > 0)
+    {
+        <ul class="crm-access-tree">
+            @foreach (var child in Model.Children)
+            {
+                <partial name="_RoleTreeNode" model="child" />
+            }
+        </ul>
+    }
+</li>

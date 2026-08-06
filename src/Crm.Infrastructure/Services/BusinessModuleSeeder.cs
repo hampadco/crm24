@@ -13,47 +13,59 @@ public class BusinessModuleSeeder
 {
     private readonly CrmDbContext _db;
     private readonly IMemoryCache _cache;
+    private readonly RolePermissionService _rolePerms;
 
-    public BusinessModuleSeeder(CrmDbContext db, IMemoryCache cache)
+    public BusinessModuleSeeder(CrmDbContext db, IMemoryCache cache, RolePermissionService rolePerms)
     {
         _db = db;
         _cache = cache;
+        _rolePerms = rolePerms;
     }
 
     public async Task EnsureSeededAsync(int tenantId)
     {
+        await _rolePerms.EnsureMigratedAsync(tenantId);
+
         var cacheKey = $"business-modules-ok:{tenantId}";
-        if (_cache.TryGetValue(cacheKey, out bool ok) && ok)
-            return;
-
-        var expected = new[]
+        if (!_cache.TryGetValue(cacheKey, out bool ok) || !ok)
         {
-            "tickets", "products", "vendors", "campaigns", "quotes", "sales_orders", "invoices",
-            "purchase_orders", "contracts", "warranties", "projects", "project_tasks", "project_phases",
-            "leaves", "commissions", "documents", "services", "pricebooks", "payments", "warehouses", "product_sales"
-        };
-        var have = await _db.Modules.CountAsync(m => m.TenantId == tenantId && expected.Contains(m.Name));
-        var mutated = false;
+            var expected = new[]
+            {
+                "tickets", "products", "vendors", "campaigns", "quotes", "sales_orders", "invoices",
+                "purchase_orders", "contracts", "warranties", "projects", "project_tasks", "project_phases",
+                "leaves", "commissions", "documents", "services", "pricebooks", "payments", "warehouses", "product_sales"
+            };
+            var have = await _db.Modules.CountAsync(m => m.TenantId == tenantId && expected.Contains(m.Name));
+            var mutated = false;
 
-        if (have < expected.Length)
-        {
-            var adminProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
-            var userProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && !p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
-            await SeedAsync(tenantId, adminProfile, userProfile);
-            mutated = true;
+            if (have < expected.Length)
+            {
+                var adminProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
+                var userProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && !p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
+                await SeedAsync(tenantId, adminProfile, userProfile);
+                mutated = true;
+            }
+
+            var extrasKey = $"business-demo-extras-ok:{tenantId}";
+            if (!_cache.TryGetValue(extrasKey, out bool extrasOk) || !extrasOk)
+            {
+                await EnsureDemoExtrasAsync(tenantId);
+                _cache.Set(extrasKey, true, TimeSpan.FromHours(24));
+                mutated = true;
+            }
+
+            if (mutated)
+                _cache.Remove($"modules:{tenantId}");
+            _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
         }
 
-        var extrasKey = $"business-demo-extras-ok:{tenantId}";
-        if (!_cache.TryGetValue(extrasKey, out bool extrasOk) || !extrasOk)
+        // فرصت → پیش‌فاکتور/فاکتور (حتی برای tenantهای از قبل seedشده)
+        var financeKey = $"business-finance-opp-links:{tenantId}";
+        if (!_cache.TryGetValue(financeKey, out bool finOk) || !finOk)
         {
-            await EnsureDemoExtrasAsync(tenantId);
-            _cache.Set(extrasKey, true, TimeSpan.FromHours(24));
-            mutated = true;
+            await EnsureFinanceOpportunityLinksAsync(tenantId);
+            _cache.Set(financeKey, true, TimeSpan.FromHours(24));
         }
-
-        if (mutated)
-            _cache.Remove($"modules:{tenantId}");
-        _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
     }
 
     public async Task SeedAsync(int tenantId, int adminProfileId, int userProfileId)
@@ -110,6 +122,7 @@ public class BusinessModuleSeeder
         [
             F("name", "عنوان", FieldType.Text, required: true),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
+            F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
             F("amount", "مبلغ", FieldType.Currency),
             F("status", "وضعیت", FieldType.Picklist, defaultValue: "draft",
                 picklist: [P("draft", "پیش‌نویس"), P("sent", "ارسال‌شده"), P("accepted", "پذیرفته"), P("rejected", "رد شده")]),
@@ -121,6 +134,7 @@ public class BusinessModuleSeeder
         [
             F("name", "شماره/عنوان سفارش", FieldType.Text, required: true),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
+            F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
             F("amount", "مبلغ", FieldType.Currency),
             F("status", "وضعیت", FieldType.Picklist, defaultValue: "new",
                 picklist: [P("new", "جدید"), P("processing", "در حال پردازش"), P("shipped", "ارسال‌شده"), P("done", "تکمیل"), P("cancelled", "لغو")]),
@@ -132,6 +146,7 @@ public class BusinessModuleSeeder
         [
             F("name", "شماره فاکتور", FieldType.Text, required: true, unique: true),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
+            F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
             F("amount", "مبلغ", FieldType.Currency),
             F("status", "وضعیت", FieldType.Picklist, defaultValue: "unpaid",
                 picklist: [P("unpaid", "پرداخت‌نشده"), P("partial", "نیمه‌پرداخت"), P("paid", "پرداخت‌شده"), P("void", "باطل")]),
@@ -567,6 +582,98 @@ public class BusinessModuleSeeder
                 });
             }
         }
+        await _db.SaveChangesAsync();
+    }
+
+    /// <summary>Lookup فرصت روی مالی + RelationDef فرصت→پیش‌فاکتور/فاکتور/سفارش.</summary>
+    private async Task EnsureFinanceOpportunityLinksAsync(int tenantId)
+    {
+        await EnsureLookupFieldAsync(tenantId, "quotes", "opportunity", "فرصت فروش", "opportunities");
+        await EnsureLookupFieldAsync(tenantId, "invoices", "opportunity", "فرصت فروش", "opportunities");
+        await EnsureLookupFieldAsync(tenantId, "sales_orders", "opportunity", "فرصت فروش", "opportunities");
+
+        var modules = await _db.Modules.AsNoTracking()
+            .Where(m => m.TenantId == tenantId)
+            .ToDictionaryAsync(m => m.Name, m => m.Id);
+
+        if (modules.TryGetValue("opportunities", out var oppId))
+        {
+            if (modules.TryGetValue("quotes", out var quotesId))
+                await EnsureRelationAsync(tenantId, oppId, quotesId, "پیش‌فاکتورها", "فرصت فروش", "opportunity");
+            if (modules.TryGetValue("invoices", out var invoicesId))
+                await EnsureRelationAsync(tenantId, oppId, invoicesId, "فاکتورها", "فرصت فروش", "opportunity");
+            if (modules.TryGetValue("sales_orders", out var ordersId))
+                await EnsureRelationAsync(tenantId, oppId, ordersId, "سفارش‌های فروش", "فرصت فروش", "opportunity");
+        }
+
+        _cache.Remove($"modules:{tenantId}");
+        foreach (var id in modules.Values)
+        {
+            _cache.Remove($"fields:{tenantId}:{id}");
+            _cache.Remove($"blocks:{tenantId}:{id}");
+        }
+    }
+
+    private async Task EnsureLookupFieldAsync(
+        int tenantId, string moduleName, string fieldName, string label, string lookupModule)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == moduleName);
+        if (module is null) return;
+
+        if (await _db.Fields.AnyAsync(f => f.ModuleId == module.Id && f.Name == fieldName))
+            return;
+
+        var blockId = await _db.FieldBlocks.Where(b => b.ModuleId == module.Id)
+            .OrderBy(b => b.SortOrder)
+            .Select(b => (int?)b.Id)
+            .FirstOrDefaultAsync();
+        var maxSort = await _db.Fields.Where(f => f.ModuleId == module.Id).MaxAsync(f => (int?)f.SortOrder) ?? 0;
+
+        _db.Fields.Add(new FieldDef
+        {
+            TenantId = tenantId,
+            ModuleId = module.Id,
+            BlockId = blockId,
+            Name = fieldName,
+            Label = label,
+            Type = FieldType.Lookup,
+            LookupModule = lookupModule,
+            IsCustom = false,
+            IsRequired = false,
+            ShowInList = true,
+            SortOrder = maxSort + 1
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task EnsureRelationAsync(
+        int tenantId, int sourceModuleId, int targetModuleId,
+        string tabLabel, string relatedFieldLabel, string linkFieldName)
+    {
+        var exists = await _db.Relations.AnyAsync(r =>
+            r.TenantId == tenantId
+            && r.SourceModuleId == sourceModuleId
+            && r.TargetModuleId == targetModuleId
+            && r.LinkFieldName == linkFieldName);
+        if (exists) return;
+
+        var lookupOk = await _db.Fields.AnyAsync(f =>
+            f.TenantId == tenantId
+            && f.ModuleId == targetModuleId
+            && f.Name == linkFieldName
+            && f.Type == FieldType.Lookup);
+        if (!lookupOk) return;
+
+        _db.Relations.Add(new RelationDef
+        {
+            TenantId = tenantId,
+            SourceModuleId = sourceModuleId,
+            TargetModuleId = targetModuleId,
+            Label = tabLabel,
+            RelatedFieldLabel = relatedFieldLabel,
+            LinkFieldName = linkFieldName,
+            Kind = RelationKind.OneToMany
+        });
         await _db.SaveChangesAsync();
     }
 
