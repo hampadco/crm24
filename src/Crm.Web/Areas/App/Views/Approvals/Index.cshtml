@@ -1,0 +1,57 @@
+@model IReadOnlyList<Crm.Web.Areas.App.Controllers.ApprovalListItem>
+@{
+    ViewData["PanelTitle"] = "تأییدیه‌ها";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0 fw-bold">درخواست‌های تأیید در انتظار</h4>
+</div>
+
+<partial name="_Alerts" />
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-light border">درخواست معلقی برای نقش شما وجود ندارد.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle bg-white shadow-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>قانون</th>
+                    <th>ماژول</th>
+                    <th>رکورد</th>
+                    <th>تاریخ</th>
+                    <th style="width:14rem">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model)
+            {
+                var req = item.Request;
+                <tr>
+                    <td>@item.RuleName</td>
+                    <td dir="ltr">@req.ModuleName</td>
+                    <td>
+                        <a href="/App/m/@req.ModuleName/@req.RecordId">@item.RecordTitle</a>
+                    </td>
+                    <td class="small text-muted">@req.CreatedAtUtc.ToLocalTime().ToString("yyyy/MM/dd HH:mm")</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            <form method="post" action="/App/approvals/@req.Id/approve" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-success">تأیید</button>
+                            </form>
+                            <form method="post" action="/App/approvals/@req.Id/reject" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-outline-danger">رد</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,352 @@
+@using Crm.Core.Entities
+@using Crm.Web.Areas.App.Controllers
+@model PrintTemplate
+@{
+    var modules = (IEnumerable<ModuleDef>)(ViewBag.Modules ?? Array.Empty<ModuleDef>());
+    var roles = (IEnumerable<PrintTemplatesController.RoleOption>)(ViewBag.Roles
+        ?? Enumerable.Empty<PrintTemplatesController.RoleOption>());
+    var selectedRoleIds = (IList<int>)(ViewBag.SelectedRoleIds ?? new List<int>());
+    ViewBag.StepTemplateId = Model.Id;
+    var isNew = Model.Id == 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-print-designer.css" asp-append-version="true" />
+    <style>
+        @foreach (var f in PrintFonts.All)
+        {
+            @Html.Raw($"@font-face{{font-family:'pf-{f.Slug}';src:url('/panel-assets/vendor/fonts/farsi-fonts-fa-num/{f.Slug}-400.woff2') format('woff2');font-display:swap;}}")
+            @Html.Raw($".pf-opt-{f.Slug}{{font-family:'pf-{f.Slug}',Tahoma,sans-serif;}}")
+        }
+    </style>
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h4 class="mb-0"><i class="bx bx-printer text-primary me-1"></i> @ViewData["Title"]</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bx bx-arrow-back me-1"></i> بازگشت به فهرست</a>
+</div>
+
+<partial name="_Stepper" />
+<partial name="_Alerts" />
+
+<form asp-action="SaveSettings" method="post" class="pt-settings" id="ptSettingsForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Id" value="@Model.Id" />
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+
+            <div class="card mb-3">
+                <div class="card-header pt-card-header">
+                    <i class="bx bx-info-circle"></i>
+                    <span>اطلاعات قالب پرینت</span>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">نام قالب <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" value="@Model.Name" class="form-control" required
+                               placeholder="مثلاً پیش‌فاکتور حقوقی" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">ماژول <span class="text-danger">*</span></label>
+                        <select name="ModuleId" class="form-select" required>
+                            <option value="">انتخاب کنید…</option>
+                            @foreach (var m in modules)
+                            {
+                                <option value="@m.Id" selected="@(Model.ModuleId == m.Id)">
+                                    @m.PluralLabel@(m.IsChildModule ? " (فرزند)" : "")
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">سرویس‌دهنده <span class="text-danger">*</span></label>
+                        <select name="ServiceProvider" class="form-select">
+                            <option value="browser" selected="@(Model.ServiceProvider != "gutenberg")">مرورگر (دیالوگ چاپ)</option>
+                            <option value="gutenberg" selected="@(Model.ServiceProvider == "gutenberg")">گوتنبرگ (سرویس PDF)</option>
+                        </select>
+                        <div class="form-text">خروجی Word همیشه از سمت سرور ساخته می‌شود.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">نوع ویرایشگر</label>
+                        <select name="IsHtmlEditor" class="form-select">
+                            <option value="false" selected="@(!Model.IsHtmlEditor)">ویرایشگر متنی</option>
+                            <option value="true" selected="@Model.IsHtmlEditor">ویرایشگر حرفه‌ای HTML</option>
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-4 pt-1">
+                        <label class="form-check">
+                            <input type="checkbox" name="IsActive" value="true" class="form-check-input" checked="@(isNew || Model.IsActive)" />
+                            <input type="hidden" name="IsActive" value="false" />
+                            <span class="form-check-label">وضعیت: فعال</span>
+                        </label>
+                        <label class="form-check">
+                            <input type="checkbox" name="IsDefault" value="true" class="form-check-input" checked="@Model.IsDefault" />
+                            <input type="hidden" name="IsDefault" value="false" />
+                            <span class="form-check-label">قالب پیش‌فرض این ماژول</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header pt-card-header">
+                    <i class="bx bx-file-blank"></i>
+                    <span>تنظیمات صفحه</span>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">فرمت صفحه <span class="text-danger">*</span></label>
+                        <select name="PageSize" class="form-select" id="ptPageSize">
+                            @foreach (var s in PrintPageSizes.All)
+                            {
+                                <option value="@s.Name" selected="@(string.Equals(Model.PageSize, s.Name, StringComparison.OrdinalIgnoreCase))">
+                                    @s.Name (@s.WidthMm×@s.HeightMm میلی‌متر)
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">جهت صفحه</label>
+                        <select name="Landscape" class="form-select" id="ptSettingsLandscape">
+                            @if (!Model.Landscape)
+                            {
+                                <option value="false" selected>عمودی</option>
+                                <option value="true">افقی</option>
+                            }
+                            else
+                            {
+                                <option value="false">عمودی</option>
+                                <option value="true" selected>افقی</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">جهت متن صفحه</label>
+                        <select name="TextDirection" class="form-select" id="ptSettingsTextDirection">
+                            @if (Model.TextDirection != "ltr")
+                            {
+                                <option value="rtl" selected>راست به چپ (RTL)</option>
+                                <option value="ltr">چپ به راست (LTR)</option>
+                            }
+                            else
+                            {
+                                <option value="rtl">راست به چپ (RTL)</option>
+                                <option value="ltr" selected>چپ به راست (LTR)</option>
+                            }
+                        </select>
+                        <div class="form-text">تراز هر پاراگراف (چپ/وسط/راست) در مرحله طراحی تنظیم می‌شود.</div>
+                    </div>
+                    <input type="hidden" name="MarginTop" value="@Model.MarginTop" />
+                    <input type="hidden" name="MarginRight" value="@Model.MarginRight" />
+                    <input type="hidden" name="MarginBottom" value="@Model.MarginBottom" />
+                    <input type="hidden" name="MarginLeft" value="@Model.MarginLeft" />
+                    <div class="col-12">
+                        <div class="alert alert-primary py-2 px-3 mb-0 small">
+                            <i class="bx bx-info-circle me-1"></i>
+                            حاشیه‌ها، تراز پاراگراف‌ها و پیش‌نمایش زندهٔ اندازه کاغذ در
+                            <strong>مرحله طراحی</strong> در دسترس‌اند. جهت صفحه/متن را هم آنجا می‌توانید عوض کنید.
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">نوع فونت</label>
+                        <select name="FontFamily" class="form-select pt-font-select" id="ptFontFamily">
+                            @foreach (var f in PrintFonts.All)
+                            {
+                                <option value="@f.Slug" class="pf-opt-@f.Slug"
+                                        selected="@(string.Equals(Model.FontFamily, f.Slug, StringComparison.OrdinalIgnoreCase))">
+                                    @f.Label
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">اندازه فونت (pt)</label>
+                        <input type="number" name="FontSize" min="6" max="40" value="@(Model.FontSize == 0 ? 12 : Model.FontSize)" class="form-control" id="ptFontSize" />
+                    </div>
+                    <div class="col-12">
+                        <div class="pt-font-preview" id="ptFontPreview">نمونه متن فارسی ۱۲۳۴۵۶۷۸۹۰ — پیش‌فاکتور فروش</div>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-4 pt-1">
+                        <label class="form-check">
+                            <input type="checkbox" name="RepeatHeaderEachPage" value="true" class="form-check-input" checked="@Model.RepeatHeaderEachPage" />
+                            <input type="hidden" name="RepeatHeaderEachPage" value="false" />
+                            <span class="form-check-label">تکرار سرفصل در همه صفحات</span>
+                        </label>
+                        <label class="form-check">
+                            <input type="checkbox" name="ShowPageNumbers" value="true" class="form-check-input" checked="@Model.ShowPageNumbers" />
+                            <input type="hidden" name="ShowPageNumbers" value="false" />
+                            <span class="form-check-label">نمایش شماره صفحه</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-5">
+
+            <div class="card mb-3">
+                <div class="card-header pt-card-header">
+                    <i class="bx bx-share-alt"></i>
+                    <span>اشتراک‌گذاری با</span>
+                </div>
+                <div class="card-body">
+                    <select class="form-select mb-3" id="ptShareMode" name="ShareWithAllRoles">
+                        <option value="true" selected="@(isNew || Model.ShareWithAllRoles)">همه نقش‌ها</option>
+                        <option value="false" selected="@(!isNew && !Model.ShareWithAllRoles)">نقش‌های انتخابی</option>
+                    </select>
+                    <div id="ptRolesBox" class="pt-role-list @(isNew || Model.ShareWithAllRoles ? "d-none" : "")">
+                        @foreach (var role in roles)
+                        {
+                            <label class="pt-role-chip">
+                                <input type="checkbox" name="roleIds" value="@role.Id" checked="@selectedRoleIds.Contains(role.Id)" />
+                                <span>@role.Name</span>
+                            </label>
+                        }
+                        @if (!roles.Any())
+                        {
+                            <span class="text-muted small">نقشی تعریف نشده است.</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header pt-card-header">
+                    <i class="bx bx-water"></i>
+                    <span>تنظیمات واترمارک</span>
+                    <label class="form-check form-switch ms-auto mb-0">
+                        <input type="checkbox" name="WatermarkEnabled" value="true" class="form-check-input" id="ptWatermarkEnabled" checked="@Model.WatermarkEnabled" />
+                        <input type="hidden" name="WatermarkEnabled" value="false" />
+                    </label>
+                </div>
+                <div class="card-body row g-3 @(Model.WatermarkEnabled ? "" : "pt-disabled")" id="ptWatermarkBox">
+                    <div class="col-md-6">
+                        <label class="form-label">نوع واترمارک</label>
+                        <select name="WatermarkType" class="form-select" id="ptWatermarkType">
+                            <option value="text" selected="@(Model.WatermarkType != "image")">متن</option>
+                            <option value="image" selected="@(Model.WatermarkType == "image")">تصویر</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6" data-wm="text">
+                        <label class="form-label">متن واترمارک</label>
+                        <input type="text" name="WatermarkText" value="@Model.WatermarkText" class="form-control" placeholder="پیش‌نویس" />
+                    </div>
+                    <div class="col-md-6 d-none" data-wm="image">
+                        <label class="form-label">آدرس تصویر</label>
+                        <input type="text" name="WatermarkImagePath" value="@Model.WatermarkImagePath" class="form-control" dir="ltr" placeholder="/uploads/watermark.png" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">شفافیت (٪)</label>
+                        <input type="number" name="WatermarkOpacity" min="1" max="100" value="@(Model.WatermarkOpacity == 0 ? 12 : Model.WatermarkOpacity)" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">چرخش (درجه)</label>
+                        <input type="number" name="WatermarkRotation" min="-180" max="180" value="@Model.WatermarkRotation" class="form-control" />
+                    </div>
+                    <div class="col-md-4" data-wm="text">
+                        <label class="form-label">اندازه (pt)</label>
+                        <input type="number" name="WatermarkFontSize" min="8" max="300" value="@(Model.WatermarkFontSize == 0 ? 72 : Model.WatermarkFontSize)" class="form-control" />
+                    </div>
+                    <div class="col-md-4" data-wm="text">
+                        <label class="form-label">رنگ</label>
+                        <input type="color" name="WatermarkColor" value="@(string.IsNullOrWhiteSpace(Model.WatermarkColor) ? "#9e9e9e" : Model.WatermarkColor)" class="form-control form-control-color" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header pt-card-header">
+                    <i class="bx bx-file"></i>
+                    <span>تنظیمات فایل</span>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-12">
+                        <label class="form-label">الگوی نام فایل خروجی</label>
+                        <input type="text" name="FileNamePattern" value="@Model.FileNamePattern" class="form-control" dir="ltr"
+                               placeholder="{$RECORD.number}-{$RECORD.title}" />
+                        <div class="form-text">می‌توانید از توکن‌های رکورد استفاده کنید؛ خالی یعنی عنوان رکورد.</div>
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-4">
+                        <label class="form-check">
+                            <input type="checkbox" name="AllowPdf" value="true" class="form-check-input" checked="@(isNew || Model.AllowPdf)" />
+                            <input type="hidden" name="AllowPdf" value="false" />
+                            <span class="form-check-label">اجازه خروجی PDF / چاپ</span>
+                        </label>
+                        <label class="form-check">
+                            <input type="checkbox" name="AllowWord" value="true" class="form-check-input" checked="@(isNew || Model.AllowWord)" />
+                            <input type="hidden" name="AllowWord" value="false" />
+                            <span class="form-check-label">اجازه خروجی Word</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header pt-card-header">
+                    <i class="bx bx-code-curly"></i>
+                    <span>استایل سفارشی (CSS)</span>
+                </div>
+                <div class="card-body">
+                    <textarea name="CustomCss" class="form-control font-monospace" rows="7" dir="ltr"
+                              placeholder=".print-body h2 { color: #0d6efd; }">@Model.CustomCss</textarea>
+                    <div class="form-text">این CSS بعد از استایل پایه اعمال می‌شود و فقط روی خروجی چاپ اثر دارد.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="pt-sticky-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="bx bx-right-arrow-alt me-1"></i> ذخیره و ادامه به طراحی محتوا
+        </button>
+        @if (!isNew)
+        {
+            <a asp-action="Design" asp-route-id="@Model.Id" class="btn btn-outline-primary">
+                <i class="bx bx-edit-alt me-1"></i> رفتن به ویرایشگر
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+(function () {
+    var shareMode = document.getElementById('ptShareMode');
+    var rolesBox = document.getElementById('ptRolesBox');
+    shareMode.addEventListener('change', function () {
+        rolesBox.classList.toggle('d-none', shareMode.value === 'true');
+    });
+
+    var wmToggle = document.getElementById('ptWatermarkEnabled');
+    var wmBox = document.getElementById('ptWatermarkBox');
+    wmToggle.addEventListener('change', function () {
+        wmBox.classList.toggle('pt-disabled', !wmToggle.checked);
+    });
+
+    var wmType = document.getElementById('ptWatermarkType');
+    function syncWatermarkType() {
+        wmBox.querySelectorAll('[data-wm]').forEach(function (el) {
+            el.classList.toggle('d-none', el.getAttribute('data-wm') !== wmType.value);
+        });
+    }
+    wmType.addEventListener('change', syncWatermarkType);
+    syncWatermarkType();
+
+    var fontSelect = document.getElementById('ptFontFamily');
+    var fontSize = document.getElementById('ptFontSize');
+    var preview = document.getElementById('ptFontPreview');
+    function syncFont() {
+        preview.style.fontFamily = "'pf-" + fontSelect.value + "', Tahoma, sans-serif";
+        preview.style.fontSize = (parseInt(fontSize.value, 10) || 12) + 'pt';
+        fontSelect.style.fontFamily = "'pf-" + fontSelect.value + "', Tahoma, sans-serif";
+    }
+    fontSelect.addEventListener('change', syncFont);
+    fontSize.addEventListener('input', syncFont);
+    syncFont();
+})();
+</script>
+}

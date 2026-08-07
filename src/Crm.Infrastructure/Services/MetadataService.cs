@@ -587,6 +587,8 @@ public class MetadataService
         };
         _db.Relations.Add(relation);
         await _db.SaveChangesAsync();
+        InvalidateFieldCache(sourceModuleId);
+        InvalidateFieldCache(targetModuleId);
         return relation;
     }
 
@@ -607,8 +609,117 @@ public class MetadataService
     {
         var relation = await _db.Relations.FirstOrDefaultAsync(r => r.Id == id)
             ?? throw new InvalidOperationException("رابطه یافت نشد.");
+        var sourceId = relation.SourceModuleId;
+        var targetId = relation.TargetModuleId;
+
+        var links = await _db.RecordLinks.Where(l => l.RelationId == id).ToListAsync();
+        if (links.Count > 0)
+            _db.RecordLinks.RemoveRange(links);
+
         _db.Relations.Remove(relation);
         await _db.SaveChangesAsync();
+        InvalidateFieldCache(sourceId);
+        InvalidateFieldCache(targetId);
+    }
+
+    public async Task<ModuleDef> CreateModuleAsync(
+        string name, string singular, string plural, string icon, string menuGroup)
+    {
+        name = NormalizeSystemName(name);
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("نام سیستمی ماژول معتبر نیست.");
+
+        var tenantId = _tenant.TenantId
+            ?? throw new InvalidOperationException("Tenant مشخص نیست.");
+
+        var exists = await _db.Modules.IgnoreQueryFilters()
+            .AnyAsync(m => m.TenantId == tenantId && m.Name == name);
+        if (exists)
+            throw new InvalidOperationException("ماژولی با این نام از قبل وجود دارد.");
+
+        singular = string.IsNullOrWhiteSpace(singular) ? name : singular.Trim();
+        plural = string.IsNullOrWhiteSpace(plural) ? singular : plural.Trim();
+        icon = string.IsNullOrWhiteSpace(icon) ? "bx-grid-alt" : icon.Trim();
+        if (icon.StartsWith("bx ", StringComparison.OrdinalIgnoreCase))
+            icon = icon[3..].Trim();
+        menuGroup = string.IsNullOrWhiteSpace(menuGroup) ? "tools" : menuGroup.Trim().ToLowerInvariant();
+
+        var maxSort = await _db.Modules.MaxAsync(m => (int?)m.SortOrder) ?? 0;
+        var module = new ModuleDef
+        {
+            Name = name,
+            SingularLabel = singular,
+            PluralLabel = plural,
+            Icon = icon,
+            IsSystem = false,
+            IsActive = true,
+            ShowInMenu = true,
+            MenuGroup = menuGroup,
+            SortOrder = maxSort + 1
+        };
+        _db.Modules.Add(module);
+        await _db.SaveChangesAsync();
+
+        var block = new FieldBlock
+        {
+            ModuleId = module.Id,
+            Name = "main",
+            Label = "اطلاعات اولیه",
+            SortOrder = 1
+        };
+        _db.FieldBlocks.Add(block);
+        await _db.SaveChangesAsync();
+
+        _db.Fields.Add(new FieldDef
+        {
+            ModuleId = module.Id,
+            BlockId = block.Id,
+            Name = "name",
+            Label = "نام",
+            Type = FieldType.Text,
+            IsCustom = true,
+            IsRequired = true,
+            ShowInList = true,
+            IsVisible = true,
+            SortOrder = 1,
+            MaxLength = 200
+        });
+        await _db.SaveChangesAsync();
+
+        InvalidateModulesCache();
+        InvalidateFieldCache(module.Id);
+        return module;
+    }
+
+    public async Task UpdateModuleSettingsAsync(
+        int moduleId,
+        string singularLabel,
+        string pluralLabel,
+        string icon,
+        string menuGroup,
+        bool showInMenu)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.Id == moduleId)
+            ?? throw new InvalidOperationException("ماژول یافت نشد.");
+
+        if (string.IsNullOrWhiteSpace(singularLabel))
+            throw new InvalidOperationException("برچسب مفرد الزامی است.");
+        if (string.IsNullOrWhiteSpace(pluralLabel))
+            throw new InvalidOperationException("برچسب جمع الزامی است.");
+
+        icon = string.IsNullOrWhiteSpace(icon) ? module.Icon : icon.Trim();
+        if (icon.StartsWith("bx ", StringComparison.OrdinalIgnoreCase))
+            icon = icon[3..].Trim();
+
+        menuGroup = string.IsNullOrWhiteSpace(menuGroup) ? module.MenuGroup : menuGroup.Trim().ToLowerInvariant();
+
+        module.SingularLabel = singularLabel.Trim();
+        module.PluralLabel = pluralLabel.Trim();
+        module.Icon = string.IsNullOrWhiteSpace(icon) ? "bx-grid-alt" : icon;
+        module.MenuGroup = menuGroup;
+        module.ShowInMenu = showInMenu && !module.IsChildModule;
+        await _db.SaveChangesAsync();
+        InvalidateModulesCache();
     }
 
     public async Task UpdateModuleDuplicateModeAsync(int moduleId, string mode)

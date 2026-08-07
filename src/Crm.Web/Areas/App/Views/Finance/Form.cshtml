@@ -33,6 +33,12 @@
                         }
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">عنوان چاپی</label>
+                    <input asp-for="PrintTitle" class="form-control"
+                           placeholder="مثلاً فرم استعلام بها — خالی = @kindLabel" />
+                    <div class="form-text">روی چاپ نمایش داده می‌شود؛ نوع سند در سیستم عوض نمی‌شود.</div>
+                </div>
                 <div class="col-md-2">
                     <label class="form-label">تخفیف کلی (٪)</label>
                     <input asp-for="DiscountPercent" class="form-control" type="number" step="any" min="0" max="100" />

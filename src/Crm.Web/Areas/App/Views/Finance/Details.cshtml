@@ -12,7 +12,8 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
     <h4 class="mb-0">
         <i class="bx bx-receipt text-primary me-1"></i>
-        @kindLabel شماره @Model.Number
+        @(string.IsNullOrWhiteSpace(Model.PrintTitle) ? kindLabel : Model.PrintTitle)
+        <span class="text-muted fs-6">شماره @Model.Number</span>
         <partial name="_DocStatusBadge" model="Model.Status" />
     </h4>
     <div class="d-flex gap-2">

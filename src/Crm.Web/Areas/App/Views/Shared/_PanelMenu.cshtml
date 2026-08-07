@@ -3,7 +3,7 @@
 @{
     var currentPath = Context.Request.Path.Value ?? "";
     var modules = (await Metadata.GetActiveModulesAsync())
-        .Where(m => m.ShowInMenu)
+        .Where(m => m.ShowInMenu && !m.IsChildModule)
         .OrderBy(m => m.SortOrder)
         .ThenBy(m => m.Id)
         .ToList();
@@ -29,7 +29,9 @@
             || currentPath.StartsWith("/App/templates", StringComparison.OrdinalIgnoreCase)
             || Group("marketing").Any(IsActiveMod))
             return "marketing";
-        if (currentPath.StartsWith("/App/kanban", StringComparison.OrdinalIgnoreCase) || Group("sales").Any(IsActiveMod))
+        if (currentPath.StartsWith("/App/kanban", StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith("/App/finance", StringComparison.OrdinalIgnoreCase)
+            || Group("sales").Any(IsActiveMod))
             return "sales";
         if (currentPath.StartsWith("/App/kb", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/portal-users", StringComparison.OrdinalIgnoreCase)
@@ -39,11 +41,14 @@
         if (Group("projects").Any(IsActiveMod)) return "projects";
         if (currentPath.StartsWith("/App/calendar", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/workflows", StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith("/App/approvals", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/reports", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/recycle-bin", StringComparison.OrdinalIgnoreCase)
             || Group("tools").Any(IsActiveMod))
             return "tools";
         if (currentPath.StartsWith("/App/customize", StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith("/App/print-templates", StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith("/App/access", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/team-users", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/integrations", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/subscription", StringComparison.OrdinalIgnoreCase)
@@ -177,6 +182,7 @@
                     }
                     <li><a href="/App/calendar" class="@(currentPath.StartsWith("/App/calendar") ? "is-active" : "")"><i class="bx bx-calendar"></i>تقویم</a></li>
                     <li><a href="/App/workflows" class="@(currentPath.StartsWith("/App/workflows") ? "is-active" : "")"><i class="bx bx-git-branch"></i>گردش‌کار</a></li>
+                    <li><a href="/App/approvals" class="@(currentPath.StartsWith("/App/approvals") ? "is-active" : "")"><i class="bx bx-check-shield"></i>تأییدیه‌ها</a></li>
                     <li><a href="/App/reports" class="@(currentPath.StartsWith("/App/reports") ? "is-active" : "")"><i class="bx bx-bar-chart-alt-2"></i>گزارش‌ساز</a></li>
                     <li><a href="/App/recycle-bin" class="@(currentPath.StartsWith("/App/recycle-bin") ? "is-active" : "")"><i class="bx bx-recycle"></i>سطل بازیابی</a></li>
                 </ul>
@@ -188,6 +194,7 @@
                     @if (Tenant.IsTenantAdmin)
                     {
                         <li><a href="/App/customize" class="@(currentPath.StartsWith("/App/customize") ? "is-active" : "")"><i class="bx bx-customize"></i>سفارشی‌سازی ماژول</a></li>
+                        <li><a href="/App/print-templates" class="@(currentPath.StartsWith("/App/print-templates") ? "is-active" : "")"><i class="bx bx-printer"></i>قالب‌های چاپ</a></li>
                         <li><a href="/App/access" class="@(currentPath.StartsWith("/App/access") || currentPath.StartsWith("/App/team-users") ? "is-active" : "")"><i class="bx bx-user-circle"></i>مدیریت کاربر</a></li>
                     }
                     <li><a href="/App/integrations" class="@(currentPath.StartsWith("/App/integrations") ? "is-active" : "")"><i class="bx bx-plug"></i>یکپارچگی‌ها و API</a></li>

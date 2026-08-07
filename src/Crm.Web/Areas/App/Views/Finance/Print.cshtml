@@ -5,17 +5,23 @@
 @{
     Layout = null;
     var kindLabel = FinanceController.KindLabel(Model.Kind);
+    var printTitle = (string?)ViewBag.PrintTitle ?? kindLabel;
+    var tenantName = (string?)ViewBag.TenantName ?? "";
+    var logoPath = (string?)ViewBag.TenantLogoPath;
 }
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@kindLabel شماره @Model.Number</title>
+    <title>@printTitle شماره @Model.Number</title>
     <style>
         body { font-family: Tahoma, 'Iranian Sans', sans-serif; font-size: 13px; color: #222; margin: 30px; }
-        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
+        .header-brand { display: flex; align-items: center; gap: 12px; text-align: left; }
+        .header-logo { max-height: 56px; max-width: 140px; object-fit: contain; }
         h1 { font-size: 20px; margin: 0; }
+        .kind-hint { font-size: 11px; color: #666; margin-top: 4px; }
         table { width: 100%; border-collapse: collapse; margin: 16px 0; }
         th, td { border: 1px solid #999; padding: 6px 10px; text-align: right; }
         th { background: #f0f0f0; }
@@ -23,13 +29,30 @@
         .totals { width: 320px; margin-inline-start: auto; }
         .grand { font-weight: bold; font-size: 15px; border-top: 2px solid #333 !important; }
         .note { border: 1px dashed #999; padding: 10px; margin-top: 16px; }
-        @@media print { .no-print { display: none; } body { margin: 10px; } }
+        .print-footer {
+            margin-top: 36px;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            letter-spacing: 0.02em;
+        }
+        @@media print {
+            .no-print { display: none; }
+            body { margin: 10px; }
+            .print-footer { position: fixed; bottom: 0; left: 0; right: 0; }
+        }
     </style>
 </head>
 <body onload="window.print()">
     <div class="header">
         <div>
-            <h1>@kindLabel</h1>
+            <h1>@printTitle</h1>
+            @if (!string.Equals(printTitle, kindLabel, StringComparison.Ordinal))
+            {
+                <div class="kind-hint">نوع سند: @kindLabel</div>
+            }
             <div>شماره: @Model.Number</div>
             <div>تاریخ: @PersianDateHelper.ToJalaliDate(Model.IssueDateUtc)</div>
             @if (Model.ValidUntilUtc is DateTime valid)
@@ -37,9 +60,15 @@
                 <div>اعتبار تا: @PersianDateHelper.ToJalaliDate(valid)</div>
             }
         </div>
-        <div style="text-align:left">
-            <strong>@ViewBag.TenantName</strong>
-            <div>مشتری: @Model.CustomerName</div>
+        <div class="header-brand">
+            @if (!string.IsNullOrWhiteSpace(logoPath))
+            {
+                <img class="header-logo" src="@logoPath" alt="@tenantName" />
+            }
+            <div>
+                <strong>@tenantName</strong>
+                <div>مشتری: @Model.CustomerName</div>
+            </div>
         </div>
     </div>
 
@@ -77,6 +106,8 @@
     {
         <div class="note">@Model.Note</div>
     }
+
+    <div class="print-footer">تهیه‌شده با BamaCRM</div>
 
     <button class="no-print" onclick="window.print()">چاپ</button>
 </body>

@@ -34,7 +34,8 @@ public class FinanceService
 
     public async Task<SalesDocument> CreateAsync(
         SalesDocumentKind kind, string customerName, int? contactRecordId, int? organizationRecordId,
-        decimal discountPercent, string? note, DateTime? validUntilUtc, List<LineInput> lines)
+        decimal discountPercent, string? note, DateTime? validUntilUtc, List<LineInput> lines,
+        string? printTitle = null)
     {
         if (lines.Count == 0)
             throw new InvalidOperationException("سند بدون آیتم قابل ثبت نیست.");
@@ -49,7 +50,8 @@ public class FinanceService
             IssueDateUtc = DateTime.UtcNow,
             ValidUntilUtc = validUntilUtc,
             DiscountPercent = discountPercent,
-            Note = note?.Trim()
+            Note = note?.Trim(),
+            PrintTitle = string.IsNullOrWhiteSpace(printTitle) ? null : printTitle.Trim()
         };
 
         BuildLines(document, lines);
@@ -64,7 +66,9 @@ public class FinanceService
         return document;
     }
 
-    public async Task UpdateAsync(int id, string customerName, decimal discountPercent, string? note, List<LineInput> lines)
+    public async Task UpdateAsync(
+        int id, string customerName, decimal discountPercent, string? note, List<LineInput> lines,
+        string? printTitle = null)
     {
         var document = await GetAsync(id) ?? throw new InvalidOperationException("سند یافت نشد.");
         if (document.Status != SalesDocumentStatus.Draft)
@@ -73,6 +77,7 @@ public class FinanceService
         document.CustomerName = customerName.Trim();
         document.DiscountPercent = discountPercent;
         document.Note = note?.Trim();
+        document.PrintTitle = string.IsNullOrWhiteSpace(printTitle) ? null : printTitle.Trim();
 
         _db.SalesDocumentLines.RemoveRange(document.Lines.ToList());
         document.Lines.Clear();

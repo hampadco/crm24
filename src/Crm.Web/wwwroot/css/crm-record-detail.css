@@ -682,3 +682,63 @@
 .crm-rd-file-link small {
   display: block;
 }
+
+/* مودال انتخاب قالب چاپ */
+.crm-print-export {
+  border: 0;
+  border-radius: 0.85rem;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.16);
+}
+
+.crm-print-export .modal-header,
+.crm-print-export .modal-footer {
+  padding-inline: 1.25rem;
+}
+
+.crm-print-export .modal-body {
+  padding: 1rem 1.25rem 0.75rem;
+}
+
+.crm-print-export-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-height: 1.5rem;
+}
+
+.crm-print-export .select2-container--default .select2-selection--single {
+  min-height: 42px;
+  border-radius: 0.5rem;
+  border-color: rgba(0, 0, 0, 0.12);
+  padding: 0.35rem 0.25rem;
+}
+
+.crm-print-export .select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 1.6;
+  padding-inline: 0.65rem;
+}
+
+.crm-print-export .select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 40px;
+}
+
+.crm-print-export .select2-dropdown {
+  border-radius: 0.5rem;
+  border-color: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.crm-print-export .select2-search--dropdown .select2-search__field {
+  border-radius: 0.4rem;
+  direction: rtl;
+}
+
+.crm-print-export .select2-results__option--highlighted {
+  background: rgba(105, 108, 255, 0.12) !important;
+  color: #4b4dc4 !important;
+}
+
+.crm-print-export a.btn.disabled {
+  pointer-events: none;
+  opacity: 0.45;
+}

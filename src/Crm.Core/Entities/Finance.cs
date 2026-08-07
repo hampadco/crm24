@@ -87,6 +87,9 @@ public class SalesDocument : TenantEntity
 
     public string? Note { get; set; }
 
+    /// <summary>عنوان چاپی سفارشی (مثلاً «فرم استعلام بها»). اگر خالی باشد از نوع سند استفاده می‌شود.</summary>
+    public string? PrintTitle { get; set; }
+
     /// <summary>سند مبدأ در تبدیل (پیش‌فاکتور ← سفارش ← فاکتور).</summary>
     public int? SourceDocumentId { get; set; }
 

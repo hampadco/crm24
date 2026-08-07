@@ -64,6 +64,9 @@ public class RecordListViewModel
     /// <summary>آیا این ماژول فیلد مرحله‌ای برای نمای کاریز دارد؟</summary>
     public bool HasKanban { get; set; }
 
+    public IReadOnlyList<SavedView> SavedViews { get; set; } = [];
+    public int? ActiveViewId { get; set; }
+
     public string? FilterValue(string fieldName) =>
         Filters.FirstOrDefault(f => string.Equals(f.Field, fieldName, StringComparison.OrdinalIgnoreCase))?.Value;
 
@@ -142,6 +145,12 @@ public class RecordFormViewModel
 
         foreach (var block in Blocks.OrderBy(b => b.SortOrder).ThenBy(b => b.Id))
         {
+            if (block.Kind == BlockKind.LineItems)
+            {
+                yield return (block, Array.Empty<FieldDef>());
+                continue;
+            }
+
             var blockFields = visible
                 .Where(f => f.BlockId == block.Id)
                 .OrderBy(f => f.SortOrder)
@@ -159,6 +168,11 @@ public class RecordFormViewModel
         if (ungrouped.Count > 0)
             yield return (null, ungrouped);
     }
+
+    /// <summary>سطرهای موجود بلاک آیتم برای ویرایش.</summary>
+    public IReadOnlyList<Dictionary<string, string?>> LineItems { get; set; } = [];
+    public IReadOnlyList<FieldDef> LineFields { get; set; } = [];
+    public IReadOnlyList<(int Id, string Title, decimal SalePrice, decimal TaxPercent)> ProductOptions { get; set; } = [];
 }
 
 public class RecycleBinViewModel
@@ -187,6 +201,9 @@ public class RecordDetailViewModel
     public IReadOnlyList<Attachment> Attachments { get; set; } = [];
     public IReadOnlyList<Tag> Tags { get; set; } = [];
 
+    /// <summary>قالب‌های چاپ فعال که با نقش کاربر اشتراک شده‌اند.</summary>
+    public IReadOnlyList<PrintTemplateOption> PrintTemplates { get; set; } = [];
+
     public string? DisplayValue(FieldDef field)
     {
         Values.TryGetValue(field.Name, out var value);
@@ -202,6 +219,14 @@ public class RecordDetailViewModel
         {
             var pick = field.PicklistValues.FirstOrDefault(p => p.Value == value);
             return pick?.Label ?? value;
+        }
+
+        if (field.Type == FieldType.MultiPicklist)
+        {
+            var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var labels = parts.Select(p =>
+                field.PicklistValues.FirstOrDefault(x => x.Value == p)?.Label ?? p);
+            return string.Join("، ", labels);
         }
 
         if (field.Type == FieldType.Checkbox)
@@ -325,8 +350,22 @@ public class RelatedRecordGroup
     public string TabKey { get; set; } = string.Empty;
     /// <summary>نام فیلد Lookup روی ماژول مرتبط که به رکورد جاری اشاره می‌کند.</summary>
     public string? LinkFieldName { get; set; }
+    public int? RelationId { get; set; }
+    public bool IsManyToMany { get; set; }
     public int ParentRecordId { get; set; }
     public IReadOnlyList<RelatedRecordItem> Records { get; set; } = [];
     /// <summary>رکوردهای قابل‌اتصال (هنوز به این والد لینک نشده‌اند).</summary>
     public IReadOnlyList<(int Id, string Title)> LinkCandidates { get; set; } = [];
+}
+
+/// <summary>گزینه قالب چاپ برای انتخاب در صفحه جزئیات رکورد.</summary>
+public class PrintTemplateOption
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public bool IsDefault { get; set; }
+    public bool AllowPdf { get; set; } = true;
+    public bool AllowWord { get; set; } = true;
+    public string PageSize { get; set; } = "A4";
+    public bool Landscape { get; set; }
 }

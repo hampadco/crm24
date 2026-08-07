@@ -30,6 +30,28 @@ public class CustomizeController : AppControllerBase
         return View(modules);
     }
 
+    [HttpPost("/App/customize/modules/create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateModule(
+        string name, string singular, string plural, string? icon, string? menuGroup)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        try
+        {
+            var module = await _metadata.CreateModuleAsync(
+                name, singular, plural, icon ?? "bx-grid-alt", menuGroup ?? "tools");
+            TempData["Success"] = $"ماژول «{module.PluralLabel}» ایجاد شد.";
+            return RedirectToAction(nameof(Studio), new { moduleName = module.Name });
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+
     [HttpGet("/App/customize/{moduleName}")]
     public async Task<IActionResult> Studio(string moduleName, string? tab = null, string? dep = null)
     {
@@ -57,7 +79,7 @@ public class CustomizeController : AppControllerBase
         ViewBag.Tab = activeTab;
         ViewBag.DepMode = string.Equals(dep, "block", StringComparison.OrdinalIgnoreCase) ? "block" : "field";
 
-        if (activeTab is "relations" or "duplicates" or "layout" or "dependencies")
+        if (activeTab is "relations" or "duplicates" or "layout" or "dependencies" or "settings")
         {
             var allModules = await _metadata.GetActiveModulesAsync();
             ViewBag.AllModules = allModules;
@@ -75,6 +97,37 @@ public class CustomizeController : AppControllerBase
 
         ViewData["Title"] = $"صفحه‌بندی ماژول {module.PluralLabel}";
         return View();
+    }
+
+    [HttpPost("/App/customize/{moduleName}/settings")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveSettings(
+        string moduleName,
+        string singularLabel,
+        string pluralLabel,
+        string? icon,
+        string? menuGroup,
+        bool showInMenu)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        try
+        {
+            await _metadata.UpdateModuleSettingsAsync(
+                module.Id, singularLabel, pluralLabel, icon ?? module.Icon, menuGroup ?? module.MenuGroup, showInMenu);
+            TempData["Success"] = "تنظیمات ماژول ذخیره شد.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToAction(nameof(Studio), new { moduleName, tab = "settings" });
     }
 
     [HttpPost("/App/customize/{moduleName}/blocks")]

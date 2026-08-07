@@ -64,8 +64,77 @@
     </div>
 
     <partial name="_Alerts" />
+
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <label class="form-label mb-0 small text-muted">نما:</label>
+        <select class="form-select form-select-sm" style="width:auto;min-width:10rem"
+                onchange="if(this.value) location.href='/App/m/@Model.Module.Name?view='+this.value; else location.href='/App/m/@Model.Module.Name';">
+            <option value="">همه رکوردها</option>
+            @foreach (var v in Model.SavedViews)
+            {
+                if (Model.ActiveViewId == v.Id)
+                {
+                    <option value="@v.Id" selected>@v.Name</option>
+                }
+                else
+                {
+                    <option value="@v.Id">@v.Name</option>
+                }
+            }
+        </select>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#saveViewModal">
+            <i class="bx bx-bookmark me-1"></i> ذخیره نما
+        </button>
+        @if (Model.ActiveViewId is int activeVid)
+        {
+            <form method="post" action="/App/m/@Model.Module.Name/views/@activeVid/delete" class="m-0"
+                  onsubmit="return confirm('این نما حذف شود؟');">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bx bx-trash me-1"></i> حذف نما
+                </button>
+            </form>
+        }
+    </div>
+
     <partial name="_CrmDataTable" model="Model" />
     <partial name="_ColumnManagerModal" model="Model" />
+</div>
+
+<div class="modal fade" id="saveViewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" action="/App/m/@Model.Module.Name/views" class="modal-content">
+            @Html.AntiForgeryToken()
+            @{
+                var filtersJson = System.Text.Json.JsonSerializer.Serialize(Model.Filters);
+                var columnIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.SelectedColumnIds);
+            }
+            <input type="hidden" name="filtersJson" value="@filtersJson" />
+            <input type="hidden" name="columnIdsJson" value="@columnIdsJson" />
+            <input type="hidden" name="sortField" value="@Model.SortField" />
+            <input type="hidden" name="sortDir" value="@Model.SortDir" />
+            <input type="hidden" name="viewMode" value="list" />
+            <div class="modal-header">
+                <h5 class="modal-title">ذخیره نمای جاری</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">نام نما</label>
+                    <input type="text" name="name" class="form-control" required maxlength="100" />
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="isShared" value="true" id="viewShared" />
+                    <label class="form-check-label" for="viewShared">اشتراک با همه کاربران Tenant</label>
+                </div>
+                <p class="form-text mt-2 mb-0">فیلترها، ستون‌ها و مرتب‌سازی فعلی ذخیره می‌شوند.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">ذخیره</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div class="modal fade" id="importModal" tabindex="-1">

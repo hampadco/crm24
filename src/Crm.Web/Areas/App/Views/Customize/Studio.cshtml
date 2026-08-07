@@ -91,9 +91,75 @@
         <a class="crm-studio-tab @(tab == "relations" ? "active" : "")" href="/App/customize/@module.Name?tab=relations" role="tab">ارتباط ماژول‌ها</a>
         <a class="crm-studio-tab @(tab == "duplicates" ? "active" : "")" href="/App/customize/@module.Name?tab=duplicates" role="tab">مدیریت تکرار رکوردها</a>
         <a class="crm-studio-tab @(tab == "dependencies" ? "active" : "")" href="/App/customize/@module.Name?tab=dependencies" role="tab">بلاک / فیلدهای وابسته</a>
+        <a class="crm-studio-tab @(tab == "settings" ? "active" : "")" href="/App/customize/@module.Name?tab=settings" role="tab">تنظیمات</a>
     </div>
 
-@if (tab == "relations")
+@if (tab == "settings")
+{
+    var menuGroups = new (string Value, string Label)[]
+    {
+        ("marketing", "بازاریابی"),
+        ("sales", "فروش"),
+        ("support", "پشتیبانی"),
+        ("inventory", "انبار"),
+        ("projects", "پروژه‌ها"),
+        ("tools", "ابزارها")
+    };
+    <div class="card border-0 shadow-sm mt-3">
+        <div class="card-body p-4">
+            <h5 class="mb-3">تنظیمات ماژول</h5>
+            <form method="post" action="/App/customize/@module.Name/settings" class="row g-3" style="max-width:40rem">
+                @Html.AntiForgeryToken()
+                <div class="col-md-6">
+                    <label class="form-label">برچسب مفرد</label>
+                    <input type="text" name="singularLabel" class="form-control" value="@module.SingularLabel" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">برچسب جمع</label>
+                    <input type="text" name="pluralLabel" class="form-control" value="@module.PluralLabel" required />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">آیکون (Boxicons)</label>
+                    <input type="text" name="icon" class="form-control" dir="ltr" value="@module.Icon" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">گروه منو</label>
+                    <select name="menuGroup" class="form-select">
+                        @foreach (var g in menuGroups)
+                        {
+                            if (string.Equals(module.MenuGroup, g.Value, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <option value="@g.Value" selected>@g.Label</option>
+                            }
+                            else
+                            {
+                                <option value="@g.Value">@g.Label</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="showInMenu" value="true" id="showInMenu"
+                               @(module.ShowInMenu ? "checked" : null)
+                               @(module.IsChildModule ? "disabled" : null) />
+                        <label class="form-check-label" for="showInMenu">نمایش در منوی اصلی</label>
+                    </div>
+                    @if (module.IsChildModule)
+                    {
+                        <div class="form-text">ماژول‌های فرزند در منو نمایش داده نمی‌شوند.</div>
+                    }
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-studio-primary">
+                        <i class="bx bx-save me-1"></i> ذخیره تنظیمات
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else if (tab == "relations")
 {
     string KindFa(RelationKind k) => k switch
     {

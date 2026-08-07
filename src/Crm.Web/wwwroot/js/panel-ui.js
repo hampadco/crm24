@@ -106,9 +106,12 @@
             var $el = $(this);
             if ($el.hasClass('select2-hidden-accessible')) return;
             var allowClear = $el.data('allow-clear') === true || $el.data('allow-clear') === 'true';
+            var dropdownParentAttr = $el.data('dropdown-parent');
             // داخل کارت فرم overflow ممکن است دراپ‌داون را ببرد — والد body
             var parent = $el.closest('.crm-rf-form').length ? $(document.body) : $el.parent();
-            if (!$el.parent().hasClass('position-relative') && parent[0] !== document.body) {
+            if (dropdownParentAttr) {
+                parent = $(dropdownParentAttr);
+            } else if (!$el.parent().hasClass('position-relative') && parent[0] !== document.body) {
                 $el.wrap('<div class="position-relative"></div>');
                 parent = $el.parent();
             }

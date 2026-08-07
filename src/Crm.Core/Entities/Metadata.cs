@@ -19,6 +19,23 @@ public enum FieldType
     Percent = 14
 }
 
+/// <summary>نوع بلاک چیدمان — عادی یا گرید آیتم‌های سند.</summary>
+public enum BlockKind
+{
+    Normal = 0,
+    LineItems = 1
+}
+
+/// <summary>نوع سند فروش/خرید برای ماژول‌های سنددار.</summary>
+public enum DocumentKind
+{
+    None = 0,
+    SalesQuote = 1,
+    SalesOrder = 2,
+    SalesInvoice = 3,
+    PurchaseOrder = 4
+}
+
 /// <summary>تعریف ماژول (موجودیت) — هسته معماری Metadata-First.</summary>
 public class ModuleDef : TenantEntity
 {
@@ -40,6 +57,21 @@ public class ModuleDef : TenantEntity
 
     /// <summary>گروه منو: marketing | sales | support | inventory | projects | tools</summary>
     public string MenuGroup { get; set; } = "tools";
+
+    /// <summary>ماژول فرزند (خطوط سند، پرداخت، اقساط) — از منو و سهمیه رکورد مستثناست.</summary>
+    public bool IsChildModule { get; set; }
+
+    /// <summary>نوع سند؛ None برای ماژول‌های عادی.</summary>
+    public DocumentKind DocumentKind { get; set; }
+
+    /// <summary>پیشوند شماره سند (مثلاً Q-).</summary>
+    public string? NumberPrefix { get; set; }
+
+    /// <summary>شماره بعدی برای اسناد این ماژول.</summary>
+    public int NextNumber { get; set; } = 1001;
+
+    /// <summary>نام ماژول مقصد تبدیل (quotes → sales_orders → invoices).</summary>
+    public string? ConvertsToModule { get; set; }
 
     /// <summary>سوییچ اصلی بررسی رکورد تکراری برای این ماژول.</summary>
     public bool DuplicateCheckEnabled { get; set; }
@@ -69,6 +101,11 @@ public class FieldBlock : TenantEntity
     public string Label { get; set; } = string.Empty;
     public int SortOrder { get; set; }
     public bool IsCollapsed { get; set; }
+    public BlockKind Kind { get; set; } = BlockKind.Normal;
+    /// <summary>برای LineItems: نام ماژول فرزند که سطرها در آن ذخیره می‌شوند.</summary>
+    public string? LineModuleName { get; set; }
+    /// <summary>برای LineItems: نام فیلد Lookup روی فرزند که به والد اشاره می‌کند.</summary>
+    public string? LineLinkField { get; set; }
     /// <summary>json dependency: { "field":"stage","op":"eq","value":"Closed Won" }</summary>
     public string? VisibilityRuleJson { get; set; }
     public ICollection<FieldDef> Fields { get; set; } = new List<FieldDef>();
@@ -152,4 +189,26 @@ public class RelationDef : TenantEntity
     public bool IsManyToMany { get; set; }
     /// <summary>نام فیلد Lookup روی سمت «چند» که به طرف مقابل اشاره می‌کند.</summary>
     public string? LinkFieldName { get; set; }
+}
+
+/// <summary>پیوند چندبه‌چند بین دو رکورد برای یک RelationDef.</summary>
+public class RecordLink : TenantEntity
+{
+    public int RelationId { get; set; }
+    public int LeftRecordId { get; set; }
+    public int RightRecordId { get; set; }
+}
+
+/// <summary>نمای ذخیره‌شده لیست رکوردها.</summary>
+public class SavedView : TenantEntity
+{
+    public int ModuleId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int? OwnerUserId { get; set; }
+    public bool IsShared { get; set; }
+    public string? FiltersJson { get; set; }
+    public string? ColumnIdsJson { get; set; }
+    public string? SortField { get; set; }
+    public string? SortDir { get; set; }
+    public string ViewMode { get; set; } = "list";
 }

@@ -1,0 +1,56 @@
+@{
+    Layout = null;
+    var title = (string)(ViewBag.PrintTitle ?? "چاپ");
+    var pageCss = (string?)ViewBag.PageCss ?? "";
+    var watermark = (string?)ViewBag.WatermarkHtml ?? "";
+    var dir = (string?)ViewBag.TextDirection ?? "rtl";
+    var header = (string?)ViewBag.HeaderHtml ?? "";
+    var body = (string?)ViewBag.BodyHtml ?? "";
+    var footer = (string?)ViewBag.FooterHtml ?? "";
+}
+<!DOCTYPE html>
+<html lang="fa" dir="@dir">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@title</title>
+    <style>
+        @Html.Raw(pageCss)
+
+        .print-toolbar {
+            margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .print-toolbar button {
+            padding: 6px 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #f7f7f8;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        @@media print {
+            .print-toolbar { display: none !important; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="print-toolbar no-print">
+        <button type="button" onclick="window.print()">چاپ</button>
+        <button type="button" onclick="window.close()">بستن</button>
+    </div>
+    @Html.Raw(watermark)
+    @if (!string.IsNullOrWhiteSpace(header))
+    {
+        <div class="print-header">@Html.Raw(header)</div>
+    }
+    <div class="print-body">@Html.Raw(body)</div>
+    @if (!string.IsNullOrWhiteSpace(footer))
+    {
+        <div class="print-footer">@Html.Raw(footer)</div>
+    }
+</body>
+</html>

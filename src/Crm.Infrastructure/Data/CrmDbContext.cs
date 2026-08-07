@@ -27,6 +27,10 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<FieldBlock> FieldBlocks => Set<FieldBlock>();
     public DbSet<PicklistValue> PicklistValues => Set<PicklistValue>();
     public DbSet<RelationDef> Relations => Set<RelationDef>();
+    public DbSet<RecordLink> RecordLinks => Set<RecordLink>();
+    public DbSet<SavedView> SavedViews => Set<SavedView>();
+    public DbSet<ApprovalRule> ApprovalRules => Set<ApprovalRule>();
+    public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
     public DbSet<DynamicRecord> Records => Set<DynamicRecord>();
 
     public DbSet<Role> CrmRoles => Set<Role>();
@@ -78,6 +82,8 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<SurveyQuestion> SurveyQuestions => Set<SurveyQuestion>();
     public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
     public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
+    public DbSet<PrintTemplate> PrintTemplates => Set<PrintTemplate>();
+    public DbSet<PrintTemplateRole> PrintTemplateRoles => Set<PrintTemplateRole>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
@@ -145,6 +151,36 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         builder.Entity<PicklistValue>(e =>
         {
             e.HasOne(p => p.Field).WithMany(f => f.PicklistValues).HasForeignKey(p => p.FieldId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RelationDef>(e =>
+        {
+            e.HasIndex(r => new { r.TenantId, r.SourceModuleId, r.TargetModuleId });
+        });
+
+        builder.Entity<RecordLink>(e =>
+        {
+            e.HasIndex(l => new { l.TenantId, l.RelationId, l.LeftRecordId, l.RightRecordId }).IsUnique();
+            e.HasIndex(l => new { l.TenantId, l.RelationId, l.LeftRecordId });
+            e.HasIndex(l => new { l.TenantId, l.RelationId, l.RightRecordId });
+        });
+
+        builder.Entity<SavedView>(e =>
+        {
+            e.HasIndex(v => new { v.TenantId, v.ModuleId, v.OwnerUserId });
+            e.Property(v => v.FiltersJson).HasColumnType("jsonb");
+            e.Property(v => v.ColumnIdsJson).HasColumnType("jsonb");
+        });
+
+        builder.Entity<ApprovalRule>(e =>
+        {
+            e.HasIndex(r => new { r.TenantId, r.ModuleId });
+        });
+
+        builder.Entity<ApprovalRequest>(e =>
+        {
+            e.HasIndex(r => new { r.TenantId, r.ModuleName, r.RecordId, r.Status });
+            e.HasIndex(r => new { r.TenantId, r.RuleId, r.RecordId });
         });
 
         builder.Entity<DynamicRecord>(e =>
@@ -378,6 +414,19 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         {
             e.Property(r => r.AnswersJson).HasColumnType("jsonb");
             e.HasOne(r => r.Survey).WithMany(s => s.Responses).HasForeignKey(r => r.SurveyId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PrintTemplate>(e =>
+        {
+            e.HasIndex(t => new { t.TenantId, t.ModuleId, t.Name });
+            e.HasOne<ModuleDef>().WithMany().HasForeignKey(t => t.ModuleId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PrintTemplateRole>(e =>
+        {
+            e.HasIndex(r => new { r.TenantId, r.PrintTemplateId, r.RoleId }).IsUnique();
+            e.HasOne<PrintTemplate>().WithMany().HasForeignKey(r => r.PrintTemplateId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Role>().WithMany().HasForeignKey(r => r.RoleId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<AuditLog>(e =>

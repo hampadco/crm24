@@ -80,6 +80,11 @@
 }
 
 <div class="crm-list-page">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a href="/App/finance/quotes" class="btn btn-sm @(kindSlug == "quotes" ? "btn-primary" : "btn-outline-primary")">پیش‌فاکتور</a>
+        <a href="/App/finance/orders" class="btn btn-sm @(kindSlug == "orders" ? "btn-primary" : "btn-outline-primary")">سفارش فروش</a>
+        <a href="/App/finance/invoices" class="btn btn-sm @(kindSlug == "invoices" ? "btn-primary" : "btn-outline-primary")">فاکتور</a>
+    </div>
     <div class="crm-list-page-head d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <h4 class="mb-0 fw-bold">
             @(kindLabel)ها

@@ -1,0 +1,880 @@
+/* ── طراح قالب چاپ: استپر، تنظیمات و ویرایشگر ───────────────────── */
+
+.pt-stepper {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin-bottom: 1rem;
+    background: var(--bs-card-bg, #fff);
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: .6rem;
+    overflow: hidden;
+}
+
+.pt-step {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .8rem 1.1rem;
+    flex: 1;
+    text-decoration: none;
+    color: inherit;
+    transition: background .15s ease;
+}
+
+a.pt-step:hover { background: rgba(105, 108, 255, .06); }
+
+.pt-step-no {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .06);
+    color: #6c757d;
+    font-weight: 700;
+    flex: 0 0 auto;
+}
+
+.pt-step.active .pt-step-no { background: var(--bs-primary, #696cff); color: #fff; }
+.pt-step.done .pt-step-no { background: rgba(40, 199, 111, .16); color: #28c76f; }
+
+.pt-step-text { display: flex; flex-direction: column; line-height: 1.35; }
+.pt-step-text small { color: #8592a3; font-size: .75rem; }
+.pt-step-line { width: 1px; background: rgba(0, 0, 0, .08); }
+
+.pt-card-header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 600;
+    background: rgba(0, 0, 0, .015);
+    border-bottom: 1px solid rgba(0, 0, 0, .07);
+}
+
+.pt-card-header i { color: var(--bs-primary, #696cff); font-size: 1.1rem; }
+
+.pt-disabled { opacity: .45; pointer-events: none; }
+
+.pt-font-preview {
+    border: 1px dashed rgba(0, 0, 0, .18);
+    border-radius: .4rem;
+    padding: .8rem 1rem;
+    background: #fcfcfd;
+    text-align: center;
+}
+
+/* ── پیش‌نمایش حاشیه ────────────────────────────────────────────── */
+
+.pt-margin-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr 110px;
+    grid-template-rows: auto 1fr auto;
+    gap: .6rem;
+    align-items: center;
+    justify-items: center;
+}
+
+.pt-margin-field { width: 100%; text-align: center; }
+.pt-margin-field .form-label { font-size: .78rem; margin-bottom: .2rem; }
+.pt-margin-field.top { grid-column: 2; grid-row: 1; max-width: 120px; }
+.pt-margin-field.start { grid-column: 1; grid-row: 2; }
+.pt-margin-field.end { grid-column: 3; grid-row: 2; }
+.pt-margin-field.bottom { grid-column: 2; grid-row: 3; max-width: 120px; }
+
+.pt-margin-page {
+    grid-column: 2;
+    grid-row: 2;
+    width: 130px;
+    height: 180px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    display: flex;
+    transition: all .15s ease;
+}
+
+.pt-margin-page.landscape { width: 180px; height: 130px; }
+
+.pt-margin-page span {
+    flex: 1;
+    border: 1px dashed var(--bs-primary, #696cff);
+    background: rgba(105, 108, 255, .05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .7rem;
+    color: #8592a3;
+}
+
+.pt-role-list { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+.pt-role-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    border: 1px solid rgba(0, 0, 0, .12);
+    border-radius: 2rem;
+    padding: .3rem .75rem;
+    cursor: pointer;
+    font-size: .85rem;
+    user-select: none;
+}
+
+.pt-role-chip:has(input:checked) {
+    border-color: var(--bs-primary, #696cff);
+    background: rgba(105, 108, 255, .1);
+    color: var(--bs-primary, #696cff);
+}
+
+.pt-sticky-actions {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    padding: .75rem 0;
+    background: linear-gradient(to top, var(--bs-body-bg, #f5f5f9) 70%, transparent);
+    z-index: 5;
+}
+
+/* ── ویرایشگر ───────────────────────────────────────────────────── */
+
+/*
+ * overflow-x روی html/body و container-fluid (panel-layout-fix) باعث می‌شود
+ * position:sticky نسبت به viewport نشکند و نوار طراحی زیر هدر ثابت برود.
+ * در صفحه طراحی این overflow را آزاد می‌کنیم؛ اسکرول افقی فقط داخل بوم است.
+ */
+html.crm-print-design,
+html.crm-print-design body {
+    overflow-x: visible !important;
+}
+html.crm-print-design .layout-wrapper,
+html.crm-print-design .layout-container,
+html.crm-print-design .layout-page,
+html.crm-print-design .content-wrapper,
+html.crm-print-design .content-wrapper > .container-fluid {
+    overflow-x: visible !important;
+}
+
+.pt-designer { display: flex; flex-direction: column; gap: .75rem; }
+
+/* فقط نوار ابزار CKEditor زیر هدر سایت می‌چسبد؛ بقیه کنترل‌ها اسکرول می‌شوند */
+.pt-ck-toolbar-host {
+    position: sticky;
+    top: var(--pt-sticky-top, 3.875rem);
+    z-index: 1040;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .09);
+    border-top: 0;
+    border-radius: 0 0 .5rem .5rem;
+    overflow: hidden;
+    min-height: 0;
+    box-sizing: border-box;
+    box-shadow: 0 8px 16px -12px rgba(15, 23, 42, .35);
+}
+
+.pt-ck-toolbar-host.is-fixed {
+    position: fixed;
+    top: var(--pt-sticky-top, 3.875rem);
+    left: var(--pt-sticky-left, 0);
+    width: var(--pt-sticky-width, 100%);
+    z-index: 1040;
+    border-radius: 0;
+    border-inline: 0;
+}
+
+.pt-ck-toolbar-spacer {
+    display: none;
+    width: 100%;
+    pointer-events: none;
+}
+
+.pt-ck-toolbar-spacer.is-active {
+    display: block;
+}
+
+.pt-designer-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: .55rem .75rem;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, .09);
+    border-radius: .5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+}
+
+.pt-align-group {
+    display: inline-flex;
+    align-items: center;
+    gap: .2rem;
+    padding: .15rem .35rem .15rem .55rem;
+    background: rgba(105, 108, 255, .08);
+    border: 1px solid rgba(105, 108, 255, .22);
+    border-radius: .45rem;
+}
+
+.pt-align-label {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--bs-primary, #696cff);
+    margin-inline-end: .15rem;
+    white-space: nowrap;
+}
+
+.pt-design-chrome {
+    border: 1px solid rgba(0, 0, 0, .09);
+    border-radius: .5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+}
+
+.pt-ck-toolbar-host.is-empty { display: none; }
+
+.pt-ck-toolbar-host .ck-editor__top,
+.pt-ck-toolbar-host .ck.ck-toolbar {
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+.pt-ck-toolbar-host .ck.ck-toolbar {
+    background: #fbfbfc;
+    flex-wrap: wrap !important;
+}
+
+/*
+ * ClassicEditor موقع فوکوس StickyPanel را با position:fixed;top:0 فعال می‌کند
+ * و چون نوار را بیرون آورده‌ایم، ناپدید/پشت هدر می‌شود. stickiness را خودمان می‌کنیم.
+ */
+.pt-ck-toolbar-host .ck-sticky-panel__content,
+.pt-ck-toolbar-host .ck-sticky-panel__content_sticky,
+.pt-ck-toolbar-host .ck-sticky-panel__content_stuck {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    z-index: auto !important;
+}
+
+.pt-ck-toolbar-host .ck-sticky-panel__placeholder {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+.pt-part-tabs { display: inline-flex; background: rgba(0, 0, 0, .05); border-radius: .4rem; padding: .2rem; }
+
+.pt-part-tab {
+    border: 0;
+    background: transparent;
+    padding: .35rem 1.1rem;
+    border-radius: .3rem;
+    font-size: .88rem;
+    color: #5d6778;
+    cursor: pointer;
+}
+
+.pt-part-tab.active { background: #fff; color: var(--bs-primary, #696cff); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .1); }
+
+.pt-editor-wrap {
+    border: 1px solid rgba(0, 0, 0, .09);
+    border-radius: .5rem;
+    background: #d7dbe2;
+    padding: 1.25rem 1rem 2rem;
+    overflow: visible;
+}
+
+.pt-editor-wrap.page-width {
+    display: flex;
+    justify-content: center;
+}
+
+/* کاغذ واحد — عرض و ارتفاع صفحه مثل چاپ */
+.pt-document {
+    position: relative;
+    width: var(--pt-page-width, 794px);
+    max-width: 100%;
+    min-height: var(--pt-page-height, 1123px);
+    background: #fff;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, .12);
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.pt-printable {
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+    padding: var(--pt-margin-top, 12mm) var(--pt-margin-right, 12mm) var(--pt-margin-bottom, 12mm) var(--pt-margin-left, 12mm);
+    overflow-x: hidden;
+    max-width: 100%;
+    min-height: var(--pt-page-height, 1123px);
+}
+
+/* خط‌چین مرز صفحات */
+.pt-page-guides {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.pt-page-break-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed rgba(37, 99, 235, .55);
+    height: 0;
+}
+
+.pt-page-break-line span {
+    position: absolute;
+    top: -0.85rem;
+    inset-inline-start: .5rem;
+    font-size: .68rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: rgba(255, 255, 255, .92);
+    padding: 0 .35rem;
+    border-radius: .25rem;
+    border: 1px solid rgba(37, 99, 235, .25);
+}
+
+.pt-page-label {
+    position: absolute;
+    inset-inline-end: .5rem;
+    font-size: .65rem;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, .85);
+    padding: 0 .3rem;
+    border-radius: .2rem;
+}
+
+/* تکرار بصری سرفصل/پاورقی در صفحات بعدی */
+.pt-ghosts {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pt-ghost-band {
+    position: absolute;
+    left: var(--pt-margin-left, 12mm);
+    right: var(--pt-margin-right, 12mm);
+    opacity: .42;
+    filter: grayscale(.15);
+    overflow: hidden;
+}
+
+.pt-ghost-band.is-header { top: var(--pt-margin-top, 12mm); }
+.pt-ghost-band.is-footer { bottom: auto; }
+
+.pt-ghost-band .pt-ghost-tag {
+    font-size: .62rem;
+    color: #64748b;
+    margin-bottom: .15rem;
+}
+
+/* نوارهای سرفصل / بدنه / پاورقی */
+.pt-band {
+    position: relative;
+    margin: 0 0 .35rem;
+    border-radius: .2rem;
+    transition: box-shadow .15s ease, background .15s ease;
+}
+
+/* پاورقی واقعی از جریان خارج و به پایین آخرین صفحه پین می‌شود */
+.pt-band-footer.is-pinned {
+    position: absolute;
+    z-index: 4;
+    margin: 0;
+    left: var(--pt-margin-left, 12mm);
+    right: var(--pt-margin-right, 12mm);
+    width: auto;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.pt-band-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    font-size: .68rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: .01em;
+    margin-bottom: .15rem;
+    user-select: none;
+}
+
+.pt-band-hint {
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity .15s ease;
+}
+
+.pt-band.is-readonly {
+    cursor: pointer;
+    padding: .15rem .2rem;
+    margin-inline: -.2rem;
+}
+
+.pt-band.is-readonly:hover {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(105, 108, 255, .35);
+}
+
+.pt-band.is-readonly:hover .pt-band-hint { opacity: 1; }
+
+.pt-band.is-active {
+    padding: .2rem .25rem .35rem;
+    margin-inline: -.25rem;
+    /* بدون رنگ‌مایه — وگرنه رنگ سلول‌ها در طراحی آبی دیده می‌شود */
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px rgba(105, 108, 255, .55);
+}
+
+.pt-band.is-active .pt-band-label { color: var(--bs-primary, #696cff); }
+.pt-band.is-active .pt-band-hint { display: none; }
+
+/*
+ * CKEditor روی سلول فوکوس/انتخاب، لایهٔ آبی rgba(158,207,250,.3) می‌کشد
+ * و رنگ واقعی سلول را ماسک می‌کند (در حالی که در PDF درست است).
+ */
+.pt-designer {
+    --ck-table-selected-cell-background: transparent;
+    --ck-color-selector-focused-cell-background: transparent;
+}
+
+.pt-designer .ck.ck-editor__editable .table table td.ck-editor__editable_selected:after,
+.pt-designer .ck.ck-editor__editable .table table th.ck-editor__editable_selected:after {
+    background-color: transparent !important;
+    box-shadow: inset 0 0 0 2px #3b82f6;
+}
+
+.pt-designer .ck-widget.table td.ck-editor__nested-editable.ck-editor__nested-editable_focused,
+.pt-designer .ck-widget.table th.ck-editor__nested-editable.ck-editor__nested-editable_focused,
+.pt-designer .ck-widget.table td.ck-editor__nested-editable:focus,
+.pt-designer .ck-widget.table th.ck-editor__nested-editable:focus {
+    /* فقط کادر انتخاب — background را دست نزن تا رنگ سلول پاک نشود */
+    outline: 2px solid #3b82f6;
+    outline-offset: -2px;
+}
+
+/* رنگ سلول با !important تا لایهٔ فوکوس CKEditor آن را نپوشاند */
+.pt-designer .ck-content td[data-pt-cell-bg],
+.pt-designer .ck-content th[data-pt-cell-bg] {
+    background-color: var(--pt-cell-bg) !important;
+    background-image: none !important;
+}
+
+.pt-band-preview {
+    min-height: 1.2em;
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+.pt-chrome-empty {
+    display: block;
+    color: #cbd5e1;
+    font-size: .85rem;
+    font-style: italic;
+    padding: .35rem 0;
+}
+
+.pt-band-header .pt-band-preview,
+.pt-band-footer .pt-band-preview {
+    margin-bottom: 2px;
+}
+
+.pt-band-body.is-active .pt-band-editor { min-height: 160px; }
+
+.pt-editor-src {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .82rem;
+    white-space: pre;
+}
+
+/* نوار ابزار داخل بوم مخفی است — به شِل چسبان منتقل می‌شود */
+.pt-designer .ck.ck-editor { box-shadow: none; border: 0; overflow: visible; }
+.pt-designer .pt-band-editor > .ck.ck-editor > .ck-editor__top { display: none; }
+
+.pt-designer .ck-editor__editable {
+    min-height: 72px !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    line-height: 1.7;
+    border-radius: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    max-width: 100%;
+    background: transparent !important;
+}
+
+.pt-band-body.is-active .ck-editor__editable {
+    min-height: 220px !important;
+}
+
+.pt-band-header.is-active .ck-editor__editable,
+.pt-band-footer.is-active .ck-editor__editable {
+    min-height: 96px !important;
+}
+
+/* تراز پاراگراف در ادیتور و پیش‌نمایش */
+.pt-designer .ck-content [style*="text-align:right"],
+.pt-designer .ck-content [style*="text-align: right"],
+.pt-designer .ck-content .ck-align-right,
+.pt-designer .ck-content .text-right,
+.pt-designer .pt-chrome-preview [style*="text-align:right"],
+.pt-designer .pt-chrome-preview [style*="text-align: right"],
+.pt-designer .pt-chrome-preview .ck-align-right,
+.pt-designer .pt-chrome-preview .text-right { text-align: right !important; }
+.pt-designer .ck-content [style*="text-align:center"],
+.pt-designer .ck-content [style*="text-align: center"],
+.pt-designer .ck-content .ck-align-center,
+.pt-designer .ck-content .text-center,
+.pt-designer .pt-chrome-preview [style*="text-align:center"],
+.pt-designer .pt-chrome-preview [style*="text-align: center"],
+.pt-designer .pt-chrome-preview .ck-align-center,
+.pt-designer .pt-chrome-preview .text-center { text-align: center !important; }
+.pt-designer .ck-content [style*="text-align:left"],
+.pt-designer .ck-content [style*="text-align: left"],
+.pt-designer .ck-content .ck-align-left,
+.pt-designer .ck-content .text-left,
+.pt-designer .pt-chrome-preview [style*="text-align:left"],
+.pt-designer .pt-chrome-preview [style*="text-align: left"],
+.pt-designer .pt-chrome-preview .ck-align-left,
+.pt-designer .pt-chrome-preview .text-left { text-align: left !important; }
+.pt-designer .ck-content [style*="text-align:justify"],
+.pt-designer .ck-content [style*="text-align: justify"],
+.pt-designer .ck-content .ck-align-justify,
+.pt-designer .ck-content .text-justify,
+.pt-designer .pt-chrome-preview [style*="text-align:justify"],
+.pt-designer .pt-chrome-preview [style*="text-align: justify"],
+.pt-designer .pt-chrome-preview .ck-align-justify,
+.pt-designer .pt-chrome-preview .text-justify { text-align: justify !important; }
+
+/* جدول ساده — محدود به عرض قابل‌چاپ */
+.pt-designer .ck-content figure.table,
+.pt-designer .ck-content .ck-widget.table,
+.pt-designer .pt-chrome-preview figure.table,
+.pt-designer .pt-chrome-preview table {
+    position: relative;
+    float: none !important;
+    clear: both;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.pt-designer .ck-content figure.table > table,
+.pt-designer .ck-content .ck-widget.table > table,
+.pt-designer .pt-chrome-preview figure.table > table,
+.pt-designer .pt-chrome-preview table {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* نیم‌عرض (جمع مبالغ) */
+.pt-designer .ck-content figure.table[style*="width:50%"],
+.pt-designer .ck-content figure.table[style*="width: 50%"],
+.pt-designer .ck-content figure.table[style*="width:52%"],
+.pt-designer .ck-content figure.table[style*="width: 52%"],
+.pt-designer .pt-chrome-preview figure.table[style*="width:50%"],
+.pt-designer .pt-chrome-preview figure.table[style*="width: 50%"],
+.pt-designer .pt-chrome-preview figure.table[style*="width:52%"],
+.pt-designer .pt-chrome-preview figure.table[style*="width: 52%"],
+.pt-designer .pt-chrome-preview table[style*="width:50%"],
+.pt-designer .pt-chrome-preview table[style*="width: 50%"],
+.pt-designer .pt-chrome-preview table[style*="width:52%"],
+.pt-designer .pt-chrome-preview table[style*="width: 52%"] {
+    width: 50% !important;
+    max-width: 50% !important;
+    margin-inline-end: auto !important;
+    margin-inline-start: 0 !important;
+}
+
+/* مخفی کردن بقایای TableColumnResize اگر هنوز در DOM باشد */
+.pt-designer .ck-content .ck-table-column-resizer,
+.pt-designer .ck-content .ck-table-resized_column-resizer {
+    display: none !important;
+}
+
+.pt-designer .ck-source-editing-area textarea { min-height: 220px; font-size: .82rem; }
+
+.pt-hint {
+    font-size: .8rem;
+    color: #8592a3;
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+}
+
+/* ── مودال انتخاب فیلد و بلاک ───────────────────────────────────── */
+
+.pt-picker { display: flex; gap: 0; min-height: 340px; max-height: 58vh; }
+
+.pt-picker-nav {
+    flex: 0 0 190px;
+    border-inline-end: 1px solid rgba(0, 0, 0, .08);
+    padding: .5rem;
+    overflow: auto;
+}
+
+.pt-picker-nav button {
+    display: block;
+    width: 100%;
+    text-align: start;
+    border: 0;
+    background: transparent;
+    padding: .5rem .7rem;
+    border-radius: .4rem;
+    font-size: .87rem;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+.pt-picker-nav button:hover { background: rgba(0, 0, 0, .04); }
+.pt-picker-nav button.active { background: rgba(105, 108, 255, .12); color: var(--bs-primary, #696cff); font-weight: 600; }
+
+.pt-picker-body { flex: 1; padding: .75rem 1rem; overflow: auto; }
+
+.pt-token-list { display: flex; flex-direction: column; gap: .3rem; }
+
+.pt-token-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: .4rem;
+    padding: .4rem .6rem;
+    cursor: pointer;
+    background: #fff;
+}
+
+.pt-token-row:hover { border-color: var(--bs-primary, #696cff); background: rgba(105, 108, 255, .04); }
+.pt-token-row.selected { border-color: var(--bs-primary, #696cff); background: rgba(105, 108, 255, .1); }
+.pt-token-row code { font-size: .76rem; color: #6b7280; direction: ltr; }
+
+.pt-block-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .6rem; }
+
+.pt-block-card {
+    border: 1px solid rgba(0, 0, 0, .1);
+    border-radius: .5rem;
+    padding: .7rem .8rem;
+    cursor: pointer;
+    background: #fff;
+}
+
+.pt-block-card:hover { border-color: var(--bs-primary, #696cff); }
+.pt-block-card.selected { border-color: var(--bs-primary, #696cff); background: rgba(105, 108, 255, .07); }
+.pt-block-card strong { display: block; font-size: .9rem; }
+.pt-block-card small { color: #8592a3; font-size: .76rem; }
+
+.pt-block-preview {
+    margin-top: .75rem;
+    border: 1px dashed rgba(0, 0, 0, .18);
+    border-radius: .45rem;
+    padding: .75rem;
+    background: #fcfcfd;
+    max-height: 230px;
+    overflow: auto;
+    font-size: .8rem;
+}
+
+.pt-block-preview table { width: 100%; border-collapse: collapse; }
+.pt-block-preview th, .pt-block-preview td { border: 1px solid #ccc; padding: 3px 6px; }
+
+/* ── منوی راست‌کلیک طراح (شبیه ورد) ─────────────────────────────── */
+
+.pt-ctx-menu {
+    position: fixed;
+    z-index: 1080;
+    min-width: 210px;
+    max-width: min(280px, calc(100vw - 16px));
+    max-height: min(70vh, 520px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: .25rem 0 .35rem;
+    margin: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, .12);
+    border-radius: .45rem;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, .16);
+    direction: rtl;
+    text-align: right;
+    user-select: none;
+}
+
+.pt-ctx-menu[hidden] { display: none !important; }
+
+.pt-ctx-item {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: .32rem .75rem;
+    font-size: .82rem;
+    color: #334155;
+    cursor: pointer;
+    text-align: right;
+}
+
+.pt-ctx-item i {
+    font-size: 1rem;
+    color: #64748b;
+    width: 1.1rem;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.pt-ctx-item:hover:not(:disabled),
+.pt-ctx-item:focus-visible:not(:disabled) {
+    background: rgba(105, 108, 255, .08);
+    color: #1e293b;
+    outline: none;
+}
+
+.pt-ctx-item:disabled {
+    opacity: .42;
+    cursor: default;
+}
+
+.pt-ctx-icon-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .2rem;
+    padding: .15rem .65rem .3rem;
+}
+
+.pt-ctx-icon-btn {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid transparent;
+    border-radius: .35rem;
+    background: transparent;
+    color: #475569;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.pt-ctx-icon-btn i { font-size: 1.1rem; line-height: 1; }
+
+.pt-ctx-icon-btn:hover:not(:disabled),
+.pt-ctx-icon-btn:focus-visible:not(:disabled) {
+    background: rgba(105, 108, 255, .1);
+    border-color: rgba(105, 108, 255, .25);
+    color: #1e293b;
+    outline: none;
+}
+
+.pt-ctx-icon-btn:disabled {
+    opacity: .35;
+    cursor: default;
+}
+
+.pt-ctx-sep {
+    height: 1px;
+    margin: .2rem 0;
+    background: rgba(15, 23, 42, .08);
+    border: 0;
+}
+
+.pt-ctx-label {
+    display: block;
+    padding: .2rem .75rem .08rem;
+    font-size: .68rem;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: .02em;
+}
+
+.pt-ctx-item.is-accent {
+    color: var(--bs-primary, #696cff);
+    font-weight: 600;
+}
+
+.pt-ctx-item.is-accent i { color: var(--bs-primary, #696cff); }
+
+.pt-ctx-footer {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, #fff 72%, rgba(255, 255, 255, .88));
+    padding-top: .2rem;
+    border-top: 1px solid rgba(15, 23, 42, .06);
+    margin-top: .1rem;
+}
+
+.pt-ctx-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+    padding: .2rem .75rem .3rem;
+}
+
+.pt-ctx-swatch {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: .25rem;
+    border: 1px solid rgba(15, 23, 42, .18);
+    padding: 0;
+    cursor: pointer;
+    background: #fff;
+}
+
+.pt-ctx-swatch:hover { transform: scale(1.08); }
+
+.pt-ctx-swatch.is-clear {
+    background:
+        linear-gradient(45deg, #e2e8f0 25%, transparent 25%) -2px 0 / 8px 8px,
+        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%) -2px 0 / 8px 8px,
+        #fff;
+}
+
+.pt-designer .ck-content figure.table table td[style*="background-color"],
+.pt-designer .ck-content figure.table table th[style*="background-color"],
+.pt-designer .ck-content .table table td[style*="background-color"],
+.pt-designer .ck-content .table table th[style*="background-color"],
+.pt-designer .pt-chrome-preview td[style*="background-color"],
+.pt-designer .pt-chrome-preview th[style*="background-color"] {
+    background-image: none;
+}
+
+.pt-ctx-tip {
+    display: block;
+    padding: .08rem .75rem .25rem;
+    font-size: .65rem;
+    color: #94a3b8;
+    line-height: 1.35;
+}
+
+@media (max-width: 767.98px) {
+    .pt-picker { flex-direction: column; max-height: none; }
+    .pt-picker-nav { flex: none; border-inline-end: 0; border-bottom: 1px solid rgba(0, 0, 0, .08); display: flex; gap: .3rem; overflow-x: auto; }
+    .pt-picker-nav button { white-space: nowrap; width: auto; }
+    .pt-stepper { flex-direction: column; }
+    .pt-step-line { width: auto; height: 1px; }
+}

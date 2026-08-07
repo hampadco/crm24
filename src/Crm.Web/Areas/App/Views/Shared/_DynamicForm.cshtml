@@ -1,9 +1,15 @@
 @using Crm.Core.Entities
 @model Crm.Web.Areas.App.Models.RecordFormViewModel
 
-@* فرم داینامیک: بلاک‌ها به‌صورت کارت؛ فیلدها گرید چندستونه *@
+@* فرم داینامیک: بلاک‌ها به‌صورت کارت؛ فیلدها گرید چندستونه؛ بلاک آیتم جدا *@
 @foreach (var (block, groupFields) in Model.GroupedFields())
 {
+    if (block?.Kind == BlockKind.LineItems)
+    {
+        @await Html.PartialAsync("_DynamicFormLineItems", Model, new ViewDataDictionary(ViewData) { ["LineBlock"] = block })
+        continue;
+    }
+
     var blockLabel = block?.Label ?? "اطلاعات";
     var hasRule = block is not null && !string.IsNullOrWhiteSpace(block.VisibilityRuleJson);
 

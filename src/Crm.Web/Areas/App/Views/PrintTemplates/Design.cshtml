@@ -1,0 +1,279 @@
+@using System.Text.Json
+@using Crm.Core.Entities
+@using Crm.Infrastructure.Services
+@using Crm.Web.Areas.App.Controllers
+@model PrintTemplate
+@{
+    var module = ViewBag.Module as ModuleDef;
+    var catalog = (PrintTemplatesController.PrintCatalog)ViewBag.Catalog;
+    ViewBag.StepTemplateId = Model.Id;
+
+    var jsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var catalogJson = JsonSerializer.Serialize(catalog, jsonOptions);
+
+    var (pageW, pageH) = PrintPageSizes.Dimensions(Model.PageSize, Model.Landscape);
+    var pageWidthPx = (int)Math.Round(pageW * 96.0 / 25.4);
+    var pageHeightPx = (int)Math.Round(pageH * 96.0 / 25.4);
+    var dir = Model.TextDirection == "ltr" ? "ltr" : "rtl";
+    var font = PrintFonts.IsKnown(Model.FontFamily) ? Model.FontFamily : "shabnam";
+    var fontSize = Model.FontSize <= 0 ? 12 : Model.FontSize;
+
+    var pageSizesJson = JsonSerializer.Serialize(
+        PrintPageSizes.All.ToDictionary(s => s.Name, s => new[] { s.WidthMm, s.HeightMm }));
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-print-designer.css" asp-append-version="true" />
+    <style>
+        @Html.Raw($"@font-face{{font-family:'pt-editor-font';src:url('/panel-assets/vendor/fonts/farsi-fonts-fa-num/{font}-400.woff2') format('woff2');font-display:swap;}}")
+        .pt-designer .ck-content,
+        .pt-designer .pt-chrome-preview {
+            font-family: 'pt-editor-font', Tahoma, sans-serif;
+            font-size: @(fontSize)pt;
+            line-height: 1.7;
+            color: #222;
+            direction: @dir;
+        }
+        /* همان قوانین محتوای چاپ — مشترک با Preview/PDF */
+        @Html.Raw(TemplateRenderer.BuildContentCss(dir, ".pt-designer .ck-content"))
+        @Html.Raw(TemplateRenderer.BuildContentCss(dir, ".pt-designer .pt-chrome-preview"))
+    </style>
+    <script>document.documentElement.classList.add('crm-print-design');</script>
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h4 class="mb-0">
+        <i class="bx bx-printer text-primary me-1"></i> @ViewData["Title"]
+        @if (module is not null)
+        {
+            <span class="badge bg-label-secondary ms-1">@module.PluralLabel</span>
+        }
+    </h4>
+    <div class="d-flex gap-2">
+        <a asp-action="Preview" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-primary btn-sm">
+            <i class="bx bx-show me-1"></i> پیش‌نمایش
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm"><i class="bx bx-arrow-back me-1"></i> فهرست</a>
+    </div>
+</div>
+
+<partial name="_Stepper" />
+<partial name="_Alerts" />
+
+<form asp-action="SaveDesign" asp-route-id="@Model.Id" method="post" id="ptDesignForm">
+    @Html.AntiForgeryToken()
+
+    <div class="pt-designer" id="ptDesigner"
+         data-dir="@dir"
+         data-page-size="@Model.PageSize"
+         data-landscape="@(Model.Landscape ? "1" : "0")"
+         data-page-sizes='@Html.Raw(pageSizesJson)'
+         style="--pt-page-width:@(pageWidthPx)px;--pt-page-height:@(pageHeightPx)px;--pt-margin-top:@(Model.MarginTop)mm;--pt-margin-right:@(Model.MarginRight)mm;--pt-margin-bottom:@(Model.MarginBottom)mm;--pt-margin-left:@(Model.MarginLeft)mm;--pt-sticky-top:3.875rem">
+
+        <div class="pt-designer-bar">
+            <div class="pt-part-tabs">
+                <button type="button" class="pt-part-tab" data-part="header">سرفصل</button>
+                <button type="button" class="pt-part-tab active" data-part="body">بدنه</button>
+                <button type="button" class="pt-part-tab" data-part="footer">پاورقی</button>
+            </div>
+
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ptBlockModal">
+                <i class="bx bx-layer-plus me-1"></i> افزودن بلاک
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#ptFieldModal">
+                <i class="bx bx-purchase-tag-alt me-1"></i> افزودن فیلد / تابع
+            </button>
+
+            <div class="pt-align-group" role="group" aria-label="تراز متن">
+                <span class="pt-align-label">تراز</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-align="right" title="راست‌چین"><i class="bx bx-align-right"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-align="center" title="وسط‌چین"><i class="bx bx-align-middle"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-align="left" title="چپ‌چین"><i class="bx bx-align-left"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-align="justify" title="هم‌تراز"><i class="bx bx-align-justify"></i></button>
+            </div>
+
+            <div class="ms-auto">
+                <span class="badge bg-label-secondary" id="ptPageSizeLabel">@Model.PageSize</span>
+            </div>
+        </div>
+
+        <div class="pt-design-chrome card mb-0">
+            <div class="card-body py-2 px-3">
+                <div class="row g-2 align-items-end">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label mb-1 small">جهت متن صفحه</label>
+                        <select name="textDirection" id="ptDesignTextDirection" class="form-select form-select-sm">
+                            @if (dir == "rtl")
+                            {
+                                <option value="rtl" selected>راست به چپ (RTL)</option>
+                                <option value="ltr">چپ به راست (LTR)</option>
+                            }
+                            else
+                            {
+                                <option value="rtl">راست به چپ (RTL)</option>
+                                <option value="ltr" selected>چپ به راست (LTR)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label mb-1 small">جهت صفحه</label>
+                        <select name="landscape" id="ptDesignLandscape" class="form-select form-select-sm">
+                            @if (!Model.Landscape)
+                            {
+                                <option value="false" selected>عمودی</option>
+                                <option value="true">افقی</option>
+                            }
+                            else
+                            {
+                                <option value="false">عمودی</option>
+                                <option value="true" selected>افقی</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-3 col-md-2">
+                        <label class="form-label mb-1 small">حاشیه بالا</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="marginTop" id="ptMarginTop" min="0" max="60" value="@Model.MarginTop" class="form-control" />
+                            <span class="input-group-text">mm</span>
+                        </div>
+                    </div>
+                    <div class="col-3 col-md-2">
+                        <label class="form-label mb-1 small">حاشیه راست</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="marginRight" id="ptMarginRight" min="0" max="60" value="@Model.MarginRight" class="form-control" />
+                            <span class="input-group-text">mm</span>
+                        </div>
+                    </div>
+                    <div class="col-3 col-md-2">
+                        <label class="form-label mb-1 small">حاشیه پایین</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="marginBottom" id="ptMarginBottom" min="0" max="60" value="@Model.MarginBottom" class="form-control" />
+                            <span class="input-group-text">mm</span>
+                        </div>
+                    </div>
+                    <div class="col-3 col-md-2">
+                        <label class="form-label mb-1 small">حاشیه چپ</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="marginLeft" id="ptMarginLeft" min="0" max="60" value="@Model.MarginLeft" class="form-control" />
+                            <span class="input-group-text">mm</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-muted small mt-2">
+                    بوم مثل ورد است: سرفصل و پاورقی در همهٔ صفحات دیده می‌شوند ولی فقط بخش فعال قابل ویرایش است.
+                    اندازه کاغذ از تنظیمات قالب است (@Model.PageSize). حاشیه و جهت همین‌جا زنده روی بوم اعمال می‌شوند.
+                    فونت پایه: <strong>@PrintFonts.Label(font)</strong> / @(fontSize)pt.
+                </div>
+            </div>
+        </div>
+
+        <div id="ptCkToolbarHost" class="pt-ck-toolbar-host is-empty" aria-label="نوار ابزار ویرایشگر"></div>
+
+        <div class="pt-editor-wrap page-width">
+            <div class="pt-document" id="ptDocument">
+                <div class="pt-page-guides" id="ptPageGuides" aria-hidden="true"></div>
+                <div class="pt-ghosts" id="ptGhosts" aria-hidden="true"></div>
+                <div class="pt-printable" id="ptPrintable">
+                    @{
+                        var bands = new (string Part, string Name, string Label, string? Html)[]
+                        {
+                            ("header", "headerHtml", "سرفصل", Model.HeaderHtml),
+                            ("body", "bodyHtml", "بدنه", Model.BodyHtml),
+                            ("footer", "footerHtml", "پاورقی", Model.FooterHtml)
+                        };
+                    }
+                    @foreach (var band in bands)
+                    {
+                        <div class="pt-band pt-band-@band.Part" data-part="@band.Part">
+                            <div class="pt-band-label">
+                                <span>@band.Label</span>
+                                <span class="pt-band-hint">برای ویرایش کلیک کنید</span>
+                            </div>
+                            <div class="pt-band-preview ck-content pt-chrome-preview" data-part="@band.Part"></div>
+                            <div class="pt-band-editor">
+                                <textarea name="@band.Name" data-part="@band.Part" class="form-control pt-editor-src" rows="6" dir="ltr">@band.Html</textarea>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-hint">
+            <i class="bx bx-bulb"></i>
+            خط‌چین‌ها مرز صفحات A4 هستند. سرفصل و پاورقی در صفحات بعدی تکرار می‌شوند؛ بدنه فقط یک‌بار جریان دارد.
+            توکن‌ها هنگام چاپ جایگزین می‌شوند. برای تکرار سطرها از <code>data-repeat="LINEITEMS"</code> استفاده کنید.
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره و پایان</button>
+            <button type="submit" name="next" value="stay" class="btn btn-outline-primary">ذخیره و ادامه ویرایش</button>
+            <a asp-action="Settings" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+                <i class="bx bx-cog me-1"></i> بازگشت به تنظیمات
+            </a>
+            <button type="submit" formaction="@Url.Action("ResetDesign", new { id = Model.Id })"
+                    class="btn btn-outline-danger ms-auto"
+                    onclick="return confirm('محتوای فعلی قالب با طرح آمادهٔ پیش‌فرض جایگزین شود؟');">
+                <i class="bx bx-reset me-1"></i> بازنشانی به طرح آماده
+            </button>
+        </div>
+    </div>
+</form>
+
+<script type="application/json" id="ptCatalog">@Html.Raw(catalogJson)</script>
+
+<div class="modal fade" id="ptFieldModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">افزودن فیلد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="px-3 pt-3">
+                    <input type="search" id="ptFieldSearch" class="form-control form-control-sm" placeholder="جستجوی فیلد یا توکن…" />
+                </div>
+                <div class="pt-picker">
+                    <div class="pt-picker-nav"></div>
+                    <div class="pt-picker-body"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" id="ptCopyField">
+                    <i class="bx bx-copy me-1"></i> کپی در کلیپ‌بورد
+                </button>
+                <button type="button" class="btn btn-primary" id="ptInsertField">
+                    <i class="bx bx-plus me-1"></i> درج در قالب
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="ptBlockModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">افزودن بلاک</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="pt-picker">
+                    <div class="pt-picker-nav"></div>
+                    <div class="pt-picker-body"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="ptInsertBlock">
+                    <i class="bx bx-plus me-1"></i> افزودن بلاک
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/ckeditor5/ckeditor.js" asp-append-version="true"></script>
+    <script src="~/lib/ckeditor5/translations-fa.js" asp-append-version="true"></script>
+    <script src="~/js/crm-print-designer.js" asp-append-version="true"></script>
+}

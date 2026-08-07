@@ -19,6 +19,10 @@ public class RecordsController : AppControllerBase
     private readonly RecordAccessService _access;
     private readonly RecordImportExportService _importExport;
     private readonly ListColumnService _listColumns;
+    private readonly TemplateRenderer _templates;
+    private readonly WordExportService _wordExport;
+    private readonly LineItemsService _lineItems;
+    private readonly SalesDocumentService _docs;
     private readonly CrmDbContext _db;
 
     public RecordsController(
@@ -27,6 +31,10 @@ public class RecordsController : AppControllerBase
         RecordAccessService access,
         RecordImportExportService importExport,
         ListColumnService listColumns,
+        TemplateRenderer templates,
+        WordExportService wordExport,
+        LineItemsService lineItems,
+        SalesDocumentService docs,
         CrmDbContext db)
     {
         _metadata = metadata;
@@ -34,12 +42,16 @@ public class RecordsController : AppControllerBase
         _access = access;
         _importExport = importExport;
         _listColumns = listColumns;
+        _templates = templates;
+        _wordExport = wordExport;
+        _lineItems = lineItems;
+        _docs = docs;
         _db = db;
     }
 
     [HttpGet("/App/m/{moduleName}")]
     public async Task<IActionResult> Index(
-        string moduleName, string? q, int page = 1, string? sort = null, string? dir = null)
+        string moduleName, string? q, int page = 1, string? sort = null, string? dir = null, int? view = null)
     {
         var module = await _metadata.GetModuleByNameAsync(moduleName);
         if (module is null)
@@ -48,11 +60,60 @@ public class RecordsController : AppControllerBase
         if (!await _access.CanViewModuleAsync(module.Id))
             return Forbid("Identity.Application");
 
+        var tenant = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>();
+        var savedViews = await _db.SavedViews.AsNoTracking()
+            .Where(v => v.ModuleId == module.Id
+                        && (v.IsShared || v.OwnerUserId == tenant.UserId))
+            .OrderBy(v => v.Name)
+            .ToListAsync();
+
+        SavedView? activeView = null;
+        if (view is int viewId)
+            activeView = savedViews.FirstOrDefault(v => v.Id == viewId);
+
         var fields = await _metadata.GetFieldsAsync(module.Id);
         var allVisible = fields.Where(f => f.IsVisible).ToList();
         var listFields = (await _listColumns.GetListFieldsAsync(module.Id)).ToList();
         var blocks = await _metadata.GetBlocksAsync(module.Id);
+
+        // ستون‌های ذخیره در نما
+        if (activeView is not null && !string.IsNullOrWhiteSpace(activeView.ColumnIdsJson))
+        {
+            try
+            {
+                var ids = System.Text.Json.JsonSerializer.Deserialize<List<int>>(activeView.ColumnIdsJson!) ?? [];
+                if (ids.Count > 0)
+                {
+                    var byId = allVisible.ToDictionary(f => f.Id);
+                    listFields = ids.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
+                }
+            }
+            catch (System.Text.Json.JsonException) { /* ignore bad json */ }
+        }
+
         var filters = ParseColumnFilters(Request.Query, listFields);
+
+        // فیلترهای نما اگر در query فیلتر دستی نباشد
+        if (activeView is not null && filters.Count == 0 && !string.IsNullOrWhiteSpace(activeView.FiltersJson))
+        {
+            try
+            {
+                var fromView = System.Text.Json.JsonSerializer.Deserialize<List<ColumnFilter>>(
+                                   activeView.FiltersJson!,
+                                   new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                               ?? [];
+                filters = fromView;
+            }
+            catch (System.Text.Json.JsonException) { /* ignore */ }
+        }
+
+        if (activeView is not null)
+        {
+            if (string.IsNullOrWhiteSpace(sort) && !string.IsNullOrWhiteSpace(activeView.SortField))
+                sort = activeView.SortField;
+            if (string.IsNullOrWhiteSpace(dir) && !string.IsNullOrWhiteSpace(activeView.SortDir))
+                dir = activeView.SortDir;
+        }
 
         const int pageSize = 20;
         var listQuery = new RecordListQuery
@@ -88,7 +149,9 @@ public class RecordsController : AppControllerBase
             CanEdit = await _access.CanEditAsync(module.Id),
             CanDelete = await _access.CanDeleteAsync(module.Id),
             LookupTitles = await ResolveLookupTitlesAsync(fields, recordData.Values),
-            HasKanban = fields.Any(f => f.Name == "stage" && f.Type == FieldType.Picklist)
+            HasKanban = fields.Any(f => f.Name == "stage" && f.Type == FieldType.Picklist),
+            SavedViews = savedViews,
+            ActiveViewId = activeView?.Id
         };
 
         ViewData["Title"] = module.PluralLabel;
@@ -100,9 +163,78 @@ public class RecordsController : AppControllerBase
             .Where(kv => kv.Key != "page")
             .ToDictionary(kv => kv.Key, kv => (string?)kv.Value);
         pagingRoutes["moduleName"] = module.Name;
+        if (activeView is not null)
+            pagingRoutes["view"] = activeView.Id.ToString();
         ViewBag.PagingRoutes = pagingRoutes;
 
         return View(model);
+    }
+
+    [HttpPost("/App/m/{moduleName}/views")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SaveView(
+        string moduleName,
+        string name,
+        bool isShared,
+        string? filtersJson,
+        string? columnIdsJson,
+        string? sortField,
+        string? sortDir,
+        string? viewMode)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            TempData["Error"] = "نام نما الزامی است.";
+            return RedirectToAction(nameof(Index), new { moduleName });
+        }
+
+        var tenant = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>();
+        var view = new SavedView
+        {
+            ModuleId = module.Id,
+            Name = name.Trim(),
+            OwnerUserId = tenant.UserId,
+            IsShared = isShared,
+            FiltersJson = string.IsNullOrWhiteSpace(filtersJson) ? "[]" : filtersJson.Trim(),
+            ColumnIdsJson = string.IsNullOrWhiteSpace(columnIdsJson) ? "[]" : columnIdsJson.Trim(),
+            SortField = string.IsNullOrWhiteSpace(sortField) ? null : sortField.Trim(),
+            SortDir = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase) ? "asc" : "desc",
+            ViewMode = string.IsNullOrWhiteSpace(viewMode) ? "list" : viewMode.Trim()
+        };
+        _db.SavedViews.Add(view);
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "نما ذخیره شد.";
+        return RedirectToAction(nameof(Index), new { moduleName, view = view.Id });
+    }
+
+    [HttpPost("/App/m/{moduleName}/views/{id:int}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteView(string moduleName, int id)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        var tenant = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>();
+        var view = await _db.SavedViews.FirstOrDefaultAsync(v => v.Id == id && v.ModuleId == module.Id);
+        if (view is null)
+            return NotFound();
+
+        if (view.OwnerUserId != tenant.UserId && !tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        _db.SavedViews.Remove(view);
+        await _db.SaveChangesAsync();
+        TempData["Success"] = "نما حذف شد.";
+        return RedirectToAction(nameof(Index), new { moduleName });
     }
 
     [HttpPost("/App/m/{moduleName}/columns")]
@@ -238,8 +370,11 @@ public class RecordsController : AppControllerBase
         try
         {
             var record = await _records.CreateAsync(module.Id, values);
-            TempData["Success"] = $"{module.SingularLabel} «{record.Title}» ثبت شد.";
-            return RedirectToAction(nameof(Index), new { moduleName });
+            var tracked = await _db.Records.FirstAsync(r => r.Id == record.Id);
+            await _docs.AssignNumberIfNeededAsync(module, tracked);
+            await _lineItems.SaveFromFormAsync(module.Id, tracked.Id, form);
+            TempData["Success"] = $"{module.SingularLabel} «{tracked.Title}» ثبت شد.";
+            return RedirectToAction(nameof(Details), new { moduleName, id = tracked.Id });
         }
         catch (RecordValidationException ex)
         {
@@ -284,8 +419,9 @@ public class RecordsController : AppControllerBase
         try
         {
             await _records.UpdateAsync(module.Id, id, values);
+            await _lineItems.SaveFromFormAsync(module.Id, id, form);
             TempData["Success"] = "تغییرات ذخیره شد.";
-            return RedirectToAction(nameof(Index), new { moduleName });
+            return RedirectToAction(nameof(Details), new { moduleName, id });
         }
         catch (RecordValidationException ex)
         {
@@ -299,6 +435,103 @@ public class RecordsController : AppControllerBase
             TempData["Error"] = "شما اجازه ویرایش این رکورد را ندارید.";
             return RedirectToAction(nameof(Index), new { moduleName });
         }
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/clone")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Clone(string moduleName, int id)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanCreateAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        try
+        {
+            var clone = await _records.CloneAsync(module.Id, id);
+            TempData["Success"] = $"کپی «{clone.Title}» ایجاد شد.";
+            return RedirectToAction(nameof(Edit), new { moduleName, id = clone.Id });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid("Identity.Application");
+        }
+        catch (InvalidOperationException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/confirm")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmDocument(string moduleName, int id)
+    {
+        try
+        {
+            await _docs.ConfirmAsync(moduleName, id);
+            TempData["Success"] = "سند تأیید شد.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { moduleName, id });
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/convert")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConvertDocument(string moduleName, int id)
+    {
+        try
+        {
+            var created = await _docs.ConvertAsync(moduleName, id);
+            var target = await _db.Modules.AsNoTracking().FirstAsync(m => m.Id == created.ModuleId);
+            TempData["Success"] = $"سند به «{target.SingularLabel}» تبدیل شد.";
+            return RedirectToAction(nameof(Details), new { moduleName = target.Name, id = created.Id });
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Details), new { moduleName, id });
+        }
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/pay")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddPayment(string moduleName, int id, decimal amount, string method = "transfer", string? reference = null, string? note = null)
+    {
+        if (!string.Equals(moduleName, "invoices", StringComparison.OrdinalIgnoreCase))
+            return BadRequest();
+        try
+        {
+            await _docs.AddPaymentAsync(id, amount, method, reference, note);
+            TempData["Success"] = "پرداخت ثبت شد.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { moduleName, id });
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/installments")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateInstallments(string moduleName, int id, int count = 3, DateTime? firstDue = null)
+    {
+        if (!string.Equals(moduleName, "invoices", StringComparison.OrdinalIgnoreCase))
+            return BadRequest();
+        try
+        {
+            await _docs.CreateInstallmentsAsync(id, count, firstDue ?? DateTime.UtcNow.Date);
+            TempData["Success"] = "اقساط ایجاد شد.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction(nameof(Details), new { moduleName, id });
     }
 
     [HttpPost("/App/m/{moduleName}/{id:int}/delete")]
@@ -362,6 +595,162 @@ public class RecordsController : AppControllerBase
         return RedirectToAction(nameof(Index), new { moduleName });
     }
 
+    /// <summary>چاپ رکورد با قالب انتخابی (یا پیش‌فرض ماژول).</summary>
+    [HttpGet("/App/m/{moduleName}/{id:int}/print")]
+    public async Task<IActionResult> Print(string moduleName, int id, int? templateId = null)
+    {
+        var (module, record, template, error) = await ResolvePrintAsync(moduleName, id, templateId);
+        if (error is not null)
+            return error;
+        if (module is null || record is null || template is null)
+            return NotFound();
+
+        if (!template.AllowPdf)
+        {
+            TempData["Error"] = "خروجی چاپ برای این قالب غیرفعال است.";
+            return RedirectToAction(nameof(Details), new { moduleName, id });
+        }
+
+        var (lines, totals) = await BuildPrintLinesAndTotalsAsync(module.Id, record);
+        var parts = await _templates.RenderPartsAsync(template, record, lineItems: lines, totals: totals);
+        ViewBag.PrintTitle = parts.Title;
+        ViewBag.PageCss = TemplateRenderer.BuildPageCss(template, fontBaseUrl: null);
+        ViewBag.WatermarkHtml = TemplateRenderer.BuildWatermarkHtml(template);
+        ViewBag.TextDirection = template.TextDirection == "ltr" ? "ltr" : "rtl";
+        ViewBag.HeaderHtml = parts.Header;
+        ViewBag.BodyHtml = parts.Body;
+        ViewBag.FooterHtml = parts.Footer;
+        return View("Print");
+    }
+
+    /// <summary>خروجی Word (DOCX) از قالب چاپ.</summary>
+    [HttpGet("/App/m/{moduleName}/{id:int}/word")]
+    public async Task<IActionResult> ExportWord(string moduleName, int id, int? templateId = null)
+    {
+        var (module, record, template, error) = await ResolvePrintAsync(moduleName, id, templateId);
+        if (error is not null)
+            return error;
+        if (module is null || record is null || template is null)
+            return NotFound();
+
+        if (!template.AllowWord)
+        {
+            TempData["Error"] = "خروجی Word برای این قالب غیرفعال است.";
+            return RedirectToAction(nameof(Details), new { moduleName, id });
+        }
+
+        var (lines, totals) = await BuildPrintLinesAndTotalsAsync(module.Id, record);
+        var html = await _templates.RenderAsync(template, record, lines, totals);
+        var bytes = _wordExport.HtmlToDocx(html, record.Title);
+        var fallback = record.Title.Length == 0 ? module.Name : record.Title;
+        var safeName = _templates.ResolveFileName(template, record, fallback);
+        return File(bytes,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            $"{safeName}-{DateTime.Now:yyyyMMdd-HHmm}.docx");
+    }
+
+    private async Task<(IReadOnlyList<Dictionary<string, string?>> Lines, Dictionary<string, string?> Totals)>
+        BuildPrintLinesAndTotalsAsync(int moduleId, DynamicRecord record)
+    {
+        var lines = await _lineItems.LoadLinesAsync(moduleId, record.Id);
+        var data = DynamicRecordService.ParseData(record);
+        string Pick(params string[] keys)
+        {
+            foreach (var k in keys)
+            {
+                if (data.TryGetValue(k, out var v) && !string.IsNullOrWhiteSpace(v))
+                    return v!;
+            }
+            return "";
+        }
+
+        var totals = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["subTotal"] = Pick("subTotal", "sub_total"),
+            ["taxTotal"] = Pick("taxTotal", "tax_total"),
+            ["grandTotal"] = Pick("grandTotal", "grand_total"),
+            ["discountAmount"] = Pick("discountAmount", "discount_amount"),
+            ["discount"] = Pick("discountAmount", "discount_amount", "discount")
+        };
+        return (lines, totals);
+    }
+
+    private async Task<(ModuleDef? Module, DynamicRecord? Record, PrintTemplate? Template, IActionResult? Error)>
+        ResolvePrintAsync(string moduleName, int id, int? templateId)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return (null, null, null, NotFound());
+
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return (null, null, null, Forbid("Identity.Application"));
+
+        var record = await _records.GetAsync(module.Id, id);
+        if (record is null)
+            return (null, null, null, NotFound());
+
+        var templatesQuery = AccessiblePrintTemplatesQuery(module.Id);
+
+        PrintTemplate? template;
+        if (templateId is int tid)
+        {
+            template = await templatesQuery.FirstOrDefaultAsync(t => t.Id == tid);
+        }
+        else
+        {
+            template = await templatesQuery
+                .OrderByDescending(t => t.IsDefault)
+                .ThenBy(t => t.Id)
+                .FirstOrDefaultAsync();
+        }
+
+        if (template is null)
+        {
+            TempData["Error"] = "قالب چاپی برای این ماژول تعریف نشده است.";
+            return (module, record, null,
+                RedirectToAction(nameof(Details), new { moduleName, id }));
+        }
+
+        return (module, record, template, null);
+    }
+
+    /// <summary>قالب‌های فعال ماژول که با نقش جاری اشتراک شده‌اند (ادمین Tenant همه را می‌بیند).</summary>
+    private IQueryable<PrintTemplate> AccessiblePrintTemplatesQuery(int moduleId)
+    {
+        var query = _db.PrintTemplates.AsNoTracking()
+            .Where(t => t.ModuleId == moduleId && t.IsActive);
+
+        var tenant = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>();
+        if (!tenant.IsTenantAdmin)
+        {
+            var roleId = tenant.RoleId;
+            query = query.Where(t =>
+                t.ShareWithAllRoles
+                || (roleId != null && _db.PrintTemplateRoles.Any(r =>
+                    r.PrintTemplateId == t.Id && r.RoleId == roleId)));
+        }
+
+        return query;
+    }
+
+    private async Task<List<PrintTemplateOption>> ListAccessiblePrintTemplatesAsync(int moduleId)
+    {
+        return await AccessiblePrintTemplatesQuery(moduleId)
+            .OrderByDescending(t => t.IsDefault)
+            .ThenBy(t => t.Name)
+            .Select(t => new PrintTemplateOption
+            {
+                Id = t.Id,
+                Name = t.Name,
+                IsDefault = t.IsDefault,
+                AllowPdf = t.AllowPdf,
+                AllowWord = t.AllowWord,
+                PageSize = t.PageSize,
+                Landscape = t.Landscape
+            })
+            .ToListAsync();
+    }
+
     [HttpGet("/App/m/{moduleName}/{id:int}")]
     public async Task<IActionResult> Details(string moduleName, int id)
     {
@@ -417,7 +806,8 @@ public class RecordsController : AppControllerBase
                 .Where(t => t.ModuleName == module.Name && t.RecordId == id)
                 .Include(t => t.Tag)
                 .Select(t => t.Tag)
-                .ToListAsync()
+                .ToListAsync(),
+            PrintTemplates = await ListAccessiblePrintTemplatesAsync(module.Id)
         };
 
         var inbound = await LoadInboundRelatedAsync(module, id);
@@ -578,11 +968,35 @@ public class RecordsController : AppControllerBase
         foreach (var g in groups)
         {
             g.ParentRecordId = parentRecordId;
+            var linked = g.Records.Select(r => r.RecordId).ToHashSet();
+
+            if (g.IsManyToMany && g.RelationId is int relId)
+            {
+                g.LinkCandidates = await LoadM2MCandidatesAsync(g.ModuleName, linked);
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(g.LinkFieldName))
                 continue;
-            var linked = g.Records.Select(r => r.RecordId).ToHashSet();
             g.LinkCandidates = await LoadLinkCandidatesAsync(g.ModuleName, g.LinkFieldName, parentRecordId, linked);
         }
+    }
+
+    private async Task<List<(int Id, string Title)>> LoadM2MCandidatesAsync(
+        string relatedModuleName, HashSet<int> alreadyLinked)
+    {
+        var relatedModule = await _metadata.GetModuleByNameAsync(relatedModuleName);
+        if (relatedModule is null)
+            return [];
+
+        var rows = await _db.Records.AsNoTracking()
+            .Where(r => r.ModuleId == relatedModule.Id && !alreadyLinked.Contains(r.Id))
+            .OrderBy(r => r.Title)
+            .Take(80)
+            .Select(r => new { r.Id, r.Title })
+            .ToListAsync();
+
+        return rows.Select(r => (r.Id, r.Title)).ToList();
     }
 
     private async Task<List<RelatedRecordGroup>> BuildRelationGroupsAsync(
@@ -672,8 +1086,64 @@ public class RecordsController : AppControllerBase
                 if (!moduleMap.TryGetValue(otherId, out var other))
                     continue;
 
+                var isM2M = rel.IsManyToMany || rel.Kind == RelationKind.ManyToMany;
                 List<RelatedRecordItem> matched;
                 string? linkField = rel.LinkFieldName;
+
+                if (isM2M)
+                {
+                    var linkRows = await _db.RecordLinks.AsNoTracking()
+                        .Where(l => l.RelationId == rel.Id
+                                    && (l.LeftRecordId == recordId || l.RightRecordId == recordId))
+                        .ToListAsync();
+                    var otherRecordIds = linkRows
+                        .Select(l => l.LeftRecordId == recordId ? l.RightRecordId : l.LeftRecordId)
+                        .Distinct()
+                        .ToList();
+
+                    matched = [];
+                    if (otherRecordIds.Count > 0)
+                    {
+                        var rows = await _db.Records.AsNoTracking()
+                            .Where(r => r.ModuleId == other.Id && otherRecordIds.Contains(r.Id))
+                            .Select(r => new { r.Id, r.Title })
+                            .ToListAsync();
+                        matched = rows.Select(row => new RelatedRecordItem
+                        {
+                            ModuleName = other.Name,
+                            ModuleLabel = other.SingularLabel,
+                            RecordId = row.Id,
+                            Title = row.Title,
+                            FieldLabel = rel.Label
+                        }).ToList();
+                    }
+
+                    var alreadyM2M = groups.FirstOrDefault(g =>
+                        g.RelationId == rel.Id
+                        || (g.IsManyToMany
+                            && string.Equals(g.ModuleName, other.Name, StringComparison.OrdinalIgnoreCase)));
+                    if (alreadyM2M is not null)
+                    {
+                        alreadyM2M.Label = string.IsNullOrWhiteSpace(rel.Label) ? other.PluralLabel : rel.Label;
+                        alreadyM2M.RelationId = rel.Id;
+                        alreadyM2M.IsManyToMany = true;
+                        if (matched.Count > 0)
+                            alreadyM2M.Records = matched;
+                        continue;
+                    }
+
+                    groups.Add(new RelatedRecordGroup
+                    {
+                        Label = string.IsNullOrWhiteSpace(rel.Label) ? other.PluralLabel : rel.Label,
+                        ModuleName = other.Name,
+                        TabKey = $"rel-m2m-{rel.Id}",
+                        RelationId = rel.Id,
+                        IsManyToMany = true,
+                        ParentRecordId = recordId,
+                        Records = matched
+                    });
+                    continue;
+                }
 
                 // LinkFieldName: Lookup روی ماژول مقصد که به مبدأ اشاره می‌کند
                 if (!string.IsNullOrWhiteSpace(rel.LinkFieldName)
@@ -720,7 +1190,8 @@ public class RecordsController : AppControllerBase
                 }
 
                 var already = groups.FirstOrDefault(g =>
-                    string.Equals(g.ModuleName, other.Name, StringComparison.OrdinalIgnoreCase));
+                    !g.IsManyToMany
+                    && string.Equals(g.ModuleName, other.Name, StringComparison.OrdinalIgnoreCase));
                 if (already is not null)
                 {
                     if (!string.IsNullOrWhiteSpace(rel.Label))
@@ -763,17 +1234,62 @@ public class RecordsController : AppControllerBase
     [HttpPost("/App/m/{moduleName}/{id:int}/link-related")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> LinkRelated(
-        string moduleName, int id, string relatedModule, string linkField, int relatedRecordId)
+        string moduleName,
+        int id,
+        string relatedModule,
+        int relatedRecordId,
+        string? linkField = null,
+        int? relationId = null)
     {
         var module = await _metadata.GetModuleByNameAsync(moduleName);
         var related = await _metadata.GetModuleByNameAsync(relatedModule);
         if (module is null || related is null)
             return NotFound();
 
+        // Many-to-many via RecordLink
+        if (relationId is int rid)
+        {
+            if (!await _access.CanEditAsync(module.Id))
+                return Forbid("Identity.Application");
+
+            var rel = await _db.Relations.AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == rid
+                    && (r.SourceModuleId == module.Id || r.TargetModuleId == module.Id)
+                    && (r.SourceModuleId == related.Id || r.TargetModuleId == related.Id));
+            if (rel is null || (!rel.IsManyToMany && rel.Kind != RelationKind.ManyToMany))
+            {
+                TempData["Error"] = "رابطه چندبه‌چند معتبر نیست.";
+                return Redirect($"/App/m/{module.Name}/{id}");
+            }
+
+            var parent = await _records.GetAsync(module.Id, id);
+            var child = await _records.GetAsync(related.Id, relatedRecordId);
+            if (parent is null || child is null)
+                return NotFound();
+
+            var left = Math.Min(id, relatedRecordId);
+            var right = Math.Max(id, relatedRecordId);
+            var exists = await _db.RecordLinks.AnyAsync(l =>
+                l.RelationId == rid && l.LeftRecordId == left && l.RightRecordId == right);
+            if (!exists)
+            {
+                _db.RecordLinks.Add(new RecordLink
+                {
+                    RelationId = rid,
+                    LeftRecordId = left,
+                    RightRecordId = right
+                });
+                await _db.SaveChangesAsync();
+            }
+
+            TempData["Success"] = $"«{child.Title}» متصل شد.";
+            return Redirect($"/App/m/{module.Name}/{id}#rel-m2m-{rid}");
+        }
+
         if (!await _access.CanEditAsync(related.Id))
             return Forbid("Identity.Application");
 
-        if (!IsSafeJsonKey(linkField))
+        if (string.IsNullOrWhiteSpace(linkField) || !IsSafeJsonKey(linkField))
         {
             TempData["Error"] = "فیلد ارتباط نامعتبر است.";
             return Redirect($"/App/m/{module.Name}/{id}");
@@ -790,17 +1306,52 @@ public class RecordsController : AppControllerBase
             return Redirect($"/App/m/{module.Name}/{id}");
         }
 
-        var parent = await _records.GetAsync(module.Id, id);
-        var child = await _records.GetAsync(related.Id, relatedRecordId);
-        if (parent is null || child is null)
+        var parentRec = await _records.GetAsync(module.Id, id);
+        var childRec = await _records.GetAsync(related.Id, relatedRecordId);
+        if (parentRec is null || childRec is null)
             return NotFound();
 
-        var data = DynamicRecordService.ParseData(child);
+        var data = DynamicRecordService.ParseData(childRec);
         data[linkField] = id.ToString();
         await _records.UpdateAsync(related.Id, relatedRecordId, data);
 
-        TempData["Success"] = $"«{child.Title}» به این {module.SingularLabel} متصل شد.";
+        TempData["Success"] = $"«{childRec.Title}» به این {module.SingularLabel} متصل شد.";
         return Redirect($"/App/m/{module.Name}/{id}#rel-{related.Name}");
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/unlink-related")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UnlinkRelated(
+        string moduleName, int id, int relationId, int relatedRecordId)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanEditAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var rel = await _db.Relations.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == relationId
+                && (r.SourceModuleId == module.Id || r.TargetModuleId == module.Id));
+        if (rel is null)
+        {
+            TempData["Error"] = "رابطه یافت نشد.";
+            return Redirect($"/App/m/{module.Name}/{id}");
+        }
+
+        var left = Math.Min(id, relatedRecordId);
+        var right = Math.Max(id, relatedRecordId);
+        var link = await _db.RecordLinks.FirstOrDefaultAsync(l =>
+            l.RelationId == relationId && l.LeftRecordId == left && l.RightRecordId == right);
+        if (link is not null)
+        {
+            _db.RecordLinks.Remove(link);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "اتصال حذف شد.";
+        }
+
+        return Redirect($"/App/m/{module.Name}/{id}#rel-m2m-{relationId}");
     }
 
     [HttpGet("/App/m/{moduleName}/export")]
@@ -1036,6 +1587,18 @@ public class RecordsController : AppControllerBase
             lookupOptions[field.Name] = items.Select(r => (r.Id, r.Title)).ToList();
         }
 
+        var (_, _, lineFields) = await _lineItems.GetLineBlockAsync(module.Id);
+        var lineItems = recordId is int rid
+            ? await _lineItems.LoadLinesAsync(module.Id, rid)
+            : [];
+
+        var products = await _db.Products.AsNoTracking()
+            .Where(p => p.IsActive)
+            .OrderBy(p => p.Name)
+            .Take(500)
+            .Select(p => new ValueTuple<int, string, decimal, decimal>(p.Id, p.Name, p.SalePrice, p.TaxPercent))
+            .ToListAsync();
+
         return new RecordFormViewModel
         {
             Module = module,
@@ -1044,7 +1607,10 @@ public class RecordsController : AppControllerBase
             FieldAccessMap = await _access.GetFieldAccessMapAsync(module.Id),
             RecordId = recordId,
             Values = values ?? new Dictionary<string, string?>(),
-            LookupOptions = lookupOptions
+            LookupOptions = lookupOptions,
+            LineFields = lineFields,
+            LineItems = lineItems,
+            ProductOptions = products
         };
     }
 
@@ -1053,7 +1619,15 @@ public class RecordsController : AppControllerBase
     {
         var values = new Dictionary<string, string?>();
         foreach (var key in form.Keys.Where(k => k.StartsWith("f_")))
-            values[key[2..]] = form[key].ToString();
+        {
+            var fieldName = key[2..];
+            var entries = form[key];
+            // MultiPicklist: چند مقدار با یک نام → کاما-جدا
+            if (entries.Count > 1)
+                values[fieldName] = string.Join(",", entries.Where(v => !string.IsNullOrWhiteSpace(v)));
+            else
+                values[fieldName] = entries.ToString();
+        }
         return values;
     }
 }

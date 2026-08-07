@@ -78,7 +78,24 @@ public class DynamicRecordService
         if (!string.IsNullOrWhiteSpace(listQuery.Search))
         {
             var term = listQuery.Search.Trim();
-            query = query.Where(r => EF.Functions.ILike(r.Title, $"%{term}%"));
+            var like = $"%{EscapeLike(term)}%";
+            // جستجوی سراسری: عنوان + کل jsonb (ایندکس GIN روی CustomData کمک می‌کند)
+            var tenantId = _tenant.TenantId;
+            var matched = await _db.Database.SqlQuery<IdRow>($"""
+                SELECT r."Id" AS "Id"
+                FROM "Records" r
+                WHERE r."ModuleId" = {moduleId}
+                  AND r."TenantId" = {tenantId}
+                  AND r."IsDeleted" = FALSE
+                  AND (
+                    r."Title" ILIKE {like} ESCAPE '\'
+                    OR COALESCE(r."CustomData"::text, '') ILIKE {like} ESCAPE '\'
+                  )
+                """).ToListAsync();
+            var searchIds = matched.Select(x => x.Id).ToHashSet();
+            if (searchIds.Count == 0)
+                return ([], 0);
+            query = query.Where(r => searchIds.Contains(r.Id));
         }
 
         var filters = listQuery.Filters
@@ -99,6 +116,11 @@ public class DynamicRecordService
 
         if (useJsonSort)
         {
+            var fields = await _metadata.GetFieldsAsync(moduleId);
+            var sortFieldDef = fields.FirstOrDefault(f =>
+                string.Equals(f.Name, sortField, StringComparison.OrdinalIgnoreCase));
+            var sortKind = ClassifySortType(sortFieldDef?.Type);
+
             var total = includeTotal ? await query.CountAsync() : 0;
             if (total == 0)
                 return ([], 0);
@@ -106,11 +128,47 @@ public class DynamicRecordService
             var skip = (page - 1) * pageSize;
             List<IdRow> pageIds;
 
-            if (filteredIds is { Count: > 0 })
+            async Task<List<IdRow>> SortPageAsync(int[] idArray)
             {
-                // فقط روی مجموعهٔ فیلترشده مرتب کن — بدون بارگذاری دوبارهٔ همهٔ IDها از query
-                var idArray = filteredIds.ToArray();
-                pageIds = asc
+                if (sortKind == "numeric")
+                {
+                    return asc
+                        ? await _db.Database.SqlQuery<IdRow>($"""
+                            SELECT r."Id" AS "Id"
+                            FROM "Records" r
+                            WHERE r."Id" = ANY({idArray})
+                            ORDER BY NULLIF(r."CustomData" ->> {sortField}, '')::numeric ASC NULLS LAST, r."Id" ASC
+                            OFFSET {skip} LIMIT {pageSize}
+                            """).ToListAsync()
+                        : await _db.Database.SqlQuery<IdRow>($"""
+                            SELECT r."Id" AS "Id"
+                            FROM "Records" r
+                            WHERE r."Id" = ANY({idArray})
+                            ORDER BY NULLIF(r."CustomData" ->> {sortField}, '')::numeric DESC NULLS LAST, r."Id" DESC
+                            OFFSET {skip} LIMIT {pageSize}
+                            """).ToListAsync();
+                }
+
+                if (sortKind == "date")
+                {
+                    return asc
+                        ? await _db.Database.SqlQuery<IdRow>($"""
+                            SELECT r."Id" AS "Id"
+                            FROM "Records" r
+                            WHERE r."Id" = ANY({idArray})
+                            ORDER BY NULLIF(r."CustomData" ->> {sortField}, '')::timestamptz ASC NULLS LAST, r."Id" ASC
+                            OFFSET {skip} LIMIT {pageSize}
+                            """).ToListAsync()
+                        : await _db.Database.SqlQuery<IdRow>($"""
+                            SELECT r."Id" AS "Id"
+                            FROM "Records" r
+                            WHERE r."Id" = ANY({idArray})
+                            ORDER BY NULLIF(r."CustomData" ->> {sortField}, '')::timestamptz DESC NULLS LAST, r."Id" DESC
+                            OFFSET {skip} LIMIT {pageSize}
+                            """).ToListAsync();
+                }
+
+                return asc
                     ? await _db.Database.SqlQuery<IdRow>($"""
                         SELECT r."Id" AS "Id"
                         FROM "Records" r
@@ -126,29 +184,19 @@ public class DynamicRecordService
                         OFFSET {skip} LIMIT {pageSize}
                         """).ToListAsync();
             }
+
+            if (filteredIds is { Count: > 0 })
+            {
+                pageIds = await SortPageAsync(filteredIds.ToArray());
+            }
             else
             {
-                // بدون فیلتر ستونی: Count جدا؛ سپس فقط Idها برای ANY (سبک‌تر از entity کامل)
                 var idArray = await query.Select(r => r.Id).ToArrayAsync();
                 if (idArray.Length == 0)
                     return ([], 0);
                 if (!includeTotal)
                     total = idArray.Length;
-                pageIds = asc
-                    ? await _db.Database.SqlQuery<IdRow>($"""
-                        SELECT r."Id" AS "Id"
-                        FROM "Records" r
-                        WHERE r."Id" = ANY({idArray})
-                        ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') ASC, r."Id" ASC
-                        OFFSET {skip} LIMIT {pageSize}
-                        """).ToListAsync()
-                    : await _db.Database.SqlQuery<IdRow>($"""
-                        SELECT r."Id" AS "Id"
-                        FROM "Records" r
-                        WHERE r."Id" = ANY({idArray})
-                        ORDER BY COALESCE(r."CustomData" ->> {sortField}, '') DESC, r."Id" DESC
-                        OFFSET {skip} LIMIT {pageSize}
-                        """).ToListAsync();
+                pageIds = await SortPageAsync(idArray);
             }
 
             var orderedIds = pageIds.Select(x => x.Id).ToList();
@@ -376,6 +424,13 @@ public class DynamicRecordService
     private static bool IsTitleField(string field) =>
         string.Equals(field, "title", StringComparison.OrdinalIgnoreCase);
 
+    private static string ClassifySortType(FieldType? type) => type switch
+    {
+        FieldType.Number or FieldType.Decimal or FieldType.Currency or FieldType.Percent => "numeric",
+        FieldType.Date or FieldType.DateTime => "date",
+        _ => "text"
+    };
+
     private static bool IsSafeFieldName(string? name) =>
         !string.IsNullOrWhiteSpace(name) &&
         name.Length <= 64 &&
@@ -444,6 +499,7 @@ public class DynamicRecordService
         var fields = await _metadata.GetFieldsAsync(moduleId);
 
         var data = ValidateAndBuildData(fields, values);
+        await ValidateLookupsAsync(fields, data);
         await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: null);
 
         var record = new DynamicRecord
@@ -475,6 +531,7 @@ public class DynamicRecordService
 
         var fields = await _metadata.GetFieldsAsync(moduleId);
         var data = ValidateAndBuildData(fields, values);
+        await ValidateLookupsAsync(fields, data);
         await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: id);
 
         var oldData = JsonSerializer.Deserialize<Dictionary<string, string?>>(record.CustomData) ?? new();
@@ -490,6 +547,37 @@ public class DynamicRecordService
 
         if (changes.Count > 0)
             EnqueueWorkflows(moduleId, id, WorkflowTrigger.RecordUpdated);
+    }
+
+    /// <summary>کپی رکورد؛ عنوان با پسوند «(کپی)» و بدون تغییر مالک.</summary>
+    public async Task<DynamicRecord> CloneAsync(int moduleId, int id)
+    {
+        var module = await _db.Modules.AsNoTracking().FirstAsync(m => m.Id == moduleId);
+        if (!await _access.CanCreateAsync(moduleId))
+            throw new UnauthorizedAccessException();
+
+        var source = await GetAsync(moduleId, id)
+            ?? throw new InvalidOperationException("Record not found.");
+
+        var fields = await _metadata.GetFieldsAsync(moduleId);
+        var data = ParseData(source);
+
+        // ریست فیلدهای سند
+        foreach (var key in new[] { "number", "status", "sourceRecordId" })
+        {
+            if (data.ContainsKey(key))
+                data[key] = key == "status" ? "Draft" : null;
+        }
+
+        var titleField = fields.FirstOrDefault(f =>
+            f.Name is "name" or "title" or "subject");
+        if (titleField is not null && data.TryGetValue(titleField.Name, out var titleVal)
+            && !string.IsNullOrWhiteSpace(titleVal))
+        {
+            data[titleField.Name] = titleVal.Trim() + " (کپی)";
+        }
+
+        return await CreateAsync(moduleId, data);
     }
 
     /// <summary>بروزرسانی یک فیلد (برای drag & drop کاریز) بدون اعتبارسنجی کامل فرم.</summary>
@@ -670,6 +758,18 @@ public class DynamicRecordService
                                                  !field.PicklistValues.Any(p => p.Value == value):
                         errors[field.Name] = $"مقدار «{field.Label}» از میان گزینه‌های مجاز نیست.";
                         continue;
+                    case FieldType.MultiPicklist when field.PicklistValues.Count > 0:
+                    {
+                        var parts = value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        var allowed = field.PicklistValues.Select(p => p.Value).ToHashSet(StringComparer.Ordinal);
+                        if (parts.Any(p => !allowed.Contains(p)))
+                        {
+                            errors[field.Name] = $"مقدار «{field.Label}» از میان گزینه‌های مجاز نیست.";
+                            continue;
+                        }
+                        value = string.Join(",", parts);
+                        break;
+                    }
                 }
 
                 ApplyValidationRules(field, value, values, errors);
@@ -680,10 +780,52 @@ public class DynamicRecordService
             data[field.Name] = value;
         }
 
+        FormulaEvaluator.ApplyFormulas(fields, data);
+
         if (errors.Count > 0)
             throw new RecordValidationException(errors);
 
         return data;
+    }
+
+    private async Task ValidateLookupsAsync(
+        IReadOnlyList<FieldDef> fields, Dictionary<string, string?> data)
+    {
+        var errors = new Dictionary<string, string>();
+        var tenantId = _tenant.TenantId;
+
+        foreach (var field in fields.Where(f => f.Type == FieldType.Lookup))
+        {
+            if (!data.TryGetValue(field.Name, out var raw) || string.IsNullOrWhiteSpace(raw))
+                continue;
+
+            if (!int.TryParse(raw, out var lookupId) || lookupId <= 0)
+            {
+                errors[field.Name] = $"مقدار «{field.Label}» نامعتبر است.";
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(field.LookupModule))
+                continue;
+
+            var targetModule = await _metadata.GetModuleByNameAsync(field.LookupModule);
+            if (targetModule is null)
+            {
+                errors[field.Name] = $"ماژول مقصد «{field.LookupModule}» یافت نشد.";
+                continue;
+            }
+
+            var exists = await _db.Records.AsNoTracking()
+                .AnyAsync(r => r.Id == lookupId
+                               && r.ModuleId == targetModule.Id
+                               && r.TenantId == tenantId
+                               && !r.IsDeleted);
+            if (!exists)
+                errors[field.Name] = $"رکورد انتخاب‌شده برای «{field.Label}» معتبر نیست.";
+        }
+
+        if (errors.Count > 0)
+            throw new RecordValidationException(errors);
     }
 
     private static bool ValidateDecimalDigits(FieldDef field, string value, out string? error)

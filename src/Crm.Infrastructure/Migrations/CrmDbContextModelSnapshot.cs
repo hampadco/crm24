@@ -85,6 +85,129 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("ApiKeys");
                 });
 
+            modelBuilder.Entity("Crm.Core.Entities.ApprovalRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DecidedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ModuleName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RecordId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RequestedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RuleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RuleId", "RecordId");
+
+                    b.HasIndex("TenantId", "ModuleName", "RecordId", "Status");
+
+                    b.ToTable("ApprovalRequests");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.ApprovalRule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApproverRoleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ConditionField")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConditionOp")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConditionValue")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ModuleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ModuleId");
+
+                    b.ToTable("ApprovalRules");
+                });
+
             modelBuilder.Entity("Crm.Core.Entities.Attachment", b =>
                 {
                     b.Property<int>("Id")
@@ -561,8 +684,17 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Label")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LineLinkField")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LineModuleName")
                         .HasColumnType("text");
 
                     b.Property<int>("ModuleId")
@@ -928,6 +1060,9 @@ namespace Crm.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ConvertsToModule")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -938,6 +1073,9 @@ namespace Crm.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DocumentKind")
                         .HasColumnType("integer");
 
                     b.Property<bool>("DuplicateCheckEnabled")
@@ -964,6 +1102,9 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsChildModule")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -976,6 +1117,12 @@ namespace Crm.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("NextNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NumberPrefix")
                         .HasColumnType("text");
 
                     b.Property<string>("PluralLabel")
@@ -1506,6 +1653,202 @@ namespace Crm.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("PriceBookEntries");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.PrintTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AllowPdf")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowWord")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("BodyHtml")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CustomCss")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileNamePattern")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FontFamily")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("FontSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FooterHtml")
+                        .HasColumnType("text");
+
+                    b.Property<string>("HeaderHtml")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsHtmlEditor")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Landscape")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MarginBottom")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MarginLeft")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MarginRight")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MarginTop")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ModuleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PageSize")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("RepeatHeaderEachPage")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ServiceProvider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ShareWithAllRoles")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowPageNumbers")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TextDirection")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WatermarkColor")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("WatermarkEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("WatermarkFontSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WatermarkImagePath")
+                        .HasColumnType("text");
+
+                    b.Property<int>("WatermarkOpacity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WatermarkRotation")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WatermarkText")
+                        .HasColumnType("text");
+
+                    b.Property<string>("WatermarkType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModuleId");
+
+                    b.HasIndex("TenantId", "ModuleId", "Name");
+
+                    b.ToTable("PrintTemplates");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.PrintTemplateRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PrintTemplateId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrintTemplateId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("TenantId", "PrintTemplateId", "RoleId")
+                        .IsUnique();
+
+                    b.ToTable("PrintTemplateRoles");
                 });
 
             modelBuilder.Entity("Crm.Core.Entities.Product", b =>
@@ -2060,6 +2403,59 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("PurchaseOrderLines");
                 });
 
+            modelBuilder.Entity("Crm.Core.Entities.RecordLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LeftRecordId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RelationId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RightRecordId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "RelationId", "LeftRecordId");
+
+                    b.HasIndex("TenantId", "RelationId", "RightRecordId");
+
+                    b.HasIndex("TenantId", "RelationId", "LeftRecordId", "RightRecordId")
+                        .IsUnique();
+
+                    b.ToTable("RecordLinks");
+                });
+
             modelBuilder.Entity("Crm.Core.Entities.RelationDef", b =>
                 {
                     b.Property<int>("Id")
@@ -2115,6 +2511,8 @@ namespace Crm.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "SourceModuleId", "TargetModuleId");
 
                     b.ToTable("Relations");
                 });
@@ -2396,6 +2794,9 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<int?>("OrganizationRecordId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PrintTitle")
+                        .HasColumnType("text");
+
                     b.Property<int?>("SourceDocumentId")
                         .HasColumnType("integer");
 
@@ -2555,6 +2956,74 @@ namespace Crm.Infrastructure.Migrations
                     b.HasIndex("TenantId", "ModuleId");
 
                     b.ToTable("SavedListViews");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.SavedView", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ColumnIdsJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FiltersJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsShared")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ModuleId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("OwnerUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SortDir")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SortField")
+                        .HasColumnType("text");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ViewMode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ModuleId", "OwnerUserId");
+
+                    b.ToTable("SavedViews");
                 });
 
             modelBuilder.Entity("Crm.Core.Entities.ServiceContract", b =>
@@ -3062,6 +3531,9 @@ namespace Crm.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LogoPath")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4077,6 +4549,30 @@ namespace Crm.Infrastructure.Migrations
                     b.Navigation("PriceBook");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.PrintTemplate", b =>
+                {
+                    b.HasOne("Crm.Core.Entities.ModuleDef", null)
+                        .WithMany()
+                        .HasForeignKey("ModuleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.PrintTemplateRole", b =>
+                {
+                    b.HasOne("Crm.Core.Entities.PrintTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("PrintTemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Crm.Core.Entities.Role", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Crm.Core.Entities.ProfileFieldPermission", b =>

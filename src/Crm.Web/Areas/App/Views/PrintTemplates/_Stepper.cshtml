@@ -1,0 +1,35 @@
+@{
+    var step = (int)(ViewBag.Step ?? 1);
+    var templateId = ViewBag.StepTemplateId as int? ?? 0;
+}
+
+<div class="pt-stepper">
+    <div class="pt-step @(step == 1 ? "active" : "done")">
+        <span class="pt-step-no">۱</span>
+        <span class="pt-step-text">
+            <strong>تنظیمات قالب</strong>
+            <small>صفحه، فونت، حاشیه، واترمارک و فایل</small>
+        </span>
+    </div>
+    <div class="pt-step-line"></div>
+    @if (step == 2 || templateId > 0)
+    {
+        <a class="pt-step @(step == 2 ? "active" : "")" asp-action="Design" asp-route-id="@templateId">
+            <span class="pt-step-no">۲</span>
+            <span class="pt-step-text">
+                <strong>طراحی محتوا</strong>
+                <small>سرفصل، بدنه و پاورقی</small>
+            </span>
+        </a>
+    }
+    else
+    {
+        <div class="pt-step">
+            <span class="pt-step-no">۲</span>
+            <span class="pt-step-text">
+                <strong>طراحی محتوا</strong>
+                <small>سرفصل، بدنه و پاورقی</small>
+            </span>
+        </div>
+    }
+</div>

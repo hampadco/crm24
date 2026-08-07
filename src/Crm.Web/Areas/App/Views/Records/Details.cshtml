@@ -96,6 +96,52 @@
                     <i class="bx bx-edit me-1"></i> ویرایش
                 </a>
             }
+            <button type="button" class="btn btn-outline-secondary btn-sm"
+                    data-bs-toggle="modal" data-bs-target="#printExportModal"
+                    @(Model.PrintTemplates.Count == 0 ? "disabled" : null)
+                    title="@(Model.PrintTemplates.Count == 0 ? "قالب چاپی تعریف نشده است" : "چاپ و خروجی")">
+                <i class="bx bx-printer me-1"></i> چاپ PDF
+            </button>
+            <form asp-action="Clone" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
+                  method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    <i class="bx bx-copy me-1"></i> کپی
+                </button>
+            </form>
+            @if (Model.Module.DocumentKind != DocumentKind.None)
+            {
+                var st = Model.Values.GetValueOrDefault("status") ?? "";
+                if (string.Equals(st, "Draft", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
+                {
+                    <form asp-action="ConfirmDocument" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
+                          method="post" class="d-inline" data-confirm="سند تأیید شود؟">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="bx bx-check me-1"></i> تأیید سند
+                        </button>
+                    </form>
+                }
+                if (!string.IsNullOrWhiteSpace(Model.Module.ConvertsToModule)
+                    && !string.Equals(st, "Converted", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(st, "Canceled", StringComparison.OrdinalIgnoreCase)
+                    && Model.CanEdit)
+                {
+                    <form asp-action="ConvertDocument" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
+                          method="post" class="d-inline" data-confirm="سند به مرحله بعد تبدیل شود؟">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-warning btn-sm">
+                            <i class="bx bx-transfer me-1"></i> تبدیل
+                        </button>
+                    </form>
+                }
+            }
+            @if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
+            {
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#payModal">
+                    <i class="bx bx-money me-1"></i> ثبت پرداخت
+                </button>
+            }
             @if (Model.CanDelete)
             {
                 <form asp-action="Delete" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
@@ -575,7 +621,32 @@
                         </div>
                     </div>
 
-                    @if (!string.IsNullOrWhiteSpace(group.LinkFieldName))
+                    @if (group.IsManyToMany && group.RelationId is int m2mRelId)
+                    {
+                        <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/link-related"
+                              class="crm-rd-link-form mb-3">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="relatedModule" value="@group.ModuleName" />
+                            <input type="hidden" name="relationId" value="@m2mRelId" />
+                            <div class="d-flex flex-wrap gap-2 align-items-end">
+                                <div class="flex-grow-1" style="min-width:12rem">
+                                    <label class="form-label small mb-1">اتصال رکورد موجود</label>
+                                    <select name="relatedRecordId" class="form-select form-select-sm crm-select2"
+                                            data-placeholder="جستجو و انتخاب…" data-allow-clear="true" required>
+                                        <option value="">— انتخاب کنید —</option>
+                                        @foreach (var cand in group.LinkCandidates)
+                                        {
+                                            <option value="@cand.Id">@cand.Title</option>
+                                        }
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                    <i class="bx bx-link me-1"></i> اتصال
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(group.LinkFieldName))
                     {
                         <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/link-related"
                               class="crm-rd-link-form mb-3">
@@ -610,11 +681,25 @@
                         <div class="crm-rd-rel-list">
                             @foreach (var item in group.Records)
                             {
-                                <a class="crm-rd-rel-row" href="/App/m/@item.ModuleName/@item.RecordId">
-                                    <span class="crm-rd-rel-row-title">@item.Title</span>
-                                    <span class="text-muted small">@item.ModuleLabel</span>
-                                    <i class="bx bx-chevron-left"></i>
-                                </a>
+                                <div class="crm-rd-rel-row d-flex align-items-center gap-2">
+                                    <a class="flex-grow-1 text-decoration-none text-body d-flex align-items-center gap-2"
+                                       href="/App/m/@item.ModuleName/@item.RecordId">
+                                        <span class="crm-rd-rel-row-title">@item.Title</span>
+                                        <span class="text-muted small">@item.ModuleLabel</span>
+                                        <i class="bx bx-chevron-left ms-auto"></i>
+                                    </a>
+                                    @if (group.IsManyToMany && group.RelationId is int unlinkRel)
+                                    {
+                                        <form method="post" action="/App/m/@Model.Module.Name/@Model.Record.Id/unlink-related" class="m-0">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="relationId" value="@unlinkRel" />
+                                            <input type="hidden" name="relatedRecordId" value="@item.RecordId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="قطع اتصال">
+                                                <i class="bx bx-unlink"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
                             }
                         </div>
                     }
@@ -672,6 +757,115 @@
     </div>
 </div>
 
+@if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
+{
+    <div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="post" asp-action="AddPayment" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id" class="modal-content">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">ثبت پرداخت</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">مبلغ</label>
+                        <input type="text" inputmode="decimal" name="amount" class="form-control" dir="ltr" required
+                               value="@(Model.Values.GetValueOrDefault("grandTotal") ?? Model.Values.GetValueOrDefault("amount"))" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">روش</label>
+                        <select name="method" class="form-select">
+                            <option value="transfer">حواله</option>
+                            <option value="cash">نقد</option>
+                            <option value="card">کارت</option>
+                            <option value="cheque">چک</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">شماره پیگیری</label>
+                        <input type="text" name="reference" class="form-control" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">یادداشت</label>
+                        <textarea name="note" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <button type="submit" class="btn btn-primary">ثبت</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.PrintTemplates.Count > 0)
+{
+    var defaultTpl = Model.PrintTemplates.FirstOrDefault(t => t.IsDefault) ?? Model.PrintTemplates[0];
+    <div class="modal fade" id="printExportModal" tabindex="-1" aria-labelledby="printExportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content crm-print-export">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title" id="printExportModalLabel">
+                            <i class="bx bx-printer text-primary me-1"></i> خروجی چاپ
+                        </h5>
+                        <div class="text-muted small mt-1">قالب موردنظر را انتخاب کنید، سپس خروجی بگیرید.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <label class="form-label fw-semibold" for="printTemplateSelect">قالب</label>
+                    <select id="printTemplateSelect" class="form-select crm-select2"
+                            data-placeholder="جستجو و انتخاب قالب…"
+                            data-dropdown-parent="#printExportModal"
+                            data-allow-clear="false">
+                        @foreach (var tpl in Model.PrintTemplates)
+                        {
+                            var pageLabel = tpl.Landscape ? $"{tpl.PageSize} افقی" : $"{tpl.PageSize} عمودی";
+                            var label = tpl.IsDefault ? $"{tpl.Name} (پیش‌فرض)" : tpl.Name;
+                            if (tpl.Id == defaultTpl.Id)
+                            {
+                                <option value="@tpl.Id" selected
+                                        data-allow-pdf="@(tpl.AllowPdf ? "1" : "0")"
+                                        data-allow-word="@(tpl.AllowWord ? "1" : "0")"
+                                        data-page="@pageLabel"
+                                        data-default="@(tpl.IsDefault ? "1" : "0")">@label</option>
+                            }
+                            else
+                            {
+                                <option value="@tpl.Id"
+                                        data-allow-pdf="@(tpl.AllowPdf ? "1" : "0")"
+                                        data-allow-word="@(tpl.AllowWord ? "1" : "0")"
+                                        data-page="@pageLabel"
+                                        data-default="@(tpl.IsDefault ? "1" : "0")">@label</option>
+                            }
+                        }
+                    </select>
+                    <div class="crm-print-export-meta mt-2" id="printTemplateMeta">
+                        <span class="badge bg-label-secondary" id="printTemplatePage"></span>
+                        <span class="badge bg-label-primary d-none" id="printTemplateDefault">پیش‌فرض</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                    <div class="ms-auto d-flex flex-wrap gap-2">
+                        <a id="printWordBtn" class="btn btn-outline-primary"
+                           href="@Url.Action("ExportWord", new { moduleName = Model.Module.Name, id = Model.Record.Id, templateId = defaultTpl.Id })">
+                            <i class="bx bx-file me-1"></i> ذخیره Word
+                        </a>
+                        <a id="printPdfBtn" class="btn btn-primary" target="_blank"
+                           href="@Url.Action("Print", new { moduleName = Model.Module.Name, id = Model.Record.Id, templateId = defaultTpl.Id })">
+                            <i class="bx bx-printer me-1"></i> ذخیره PDF
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
 <script>
 (function () {
@@ -680,38 +874,105 @@
 
     var nav = root.querySelector('[data-crm-rd-nav]');
     var panels = root.querySelectorAll('[data-crm-rd-panel]');
-    if (!nav) return;
+    if (nav) {
+        function showPanel(id, pushHash) {
+            panels.forEach(function (p) {
+                p.classList.toggle('is-active', p.getAttribute('data-crm-rd-panel') === id);
+            });
+            nav.querySelectorAll('[data-crm-rd-target]').forEach(function (btn) {
+                btn.classList.toggle('active', btn.getAttribute('data-crm-rd-target') === id);
+            });
+            if (pushHash) history.replaceState(null, '', '#' + id);
+            var active = root.querySelector('[data-crm-rd-panel="' + id + '"]');
+            if (active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
-    function showPanel(id, pushHash) {
-        panels.forEach(function (p) {
-            p.classList.toggle('is-active', p.getAttribute('data-crm-rd-panel') === id);
+        nav.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-crm-rd-target]');
+            if (!btn) return;
+            e.preventDefault();
+            showPanel(btn.getAttribute('data-crm-rd-target'), true);
         });
-        nav.querySelectorAll('[data-crm-rd-target]').forEach(function (btn) {
-            btn.classList.toggle('active', btn.getAttribute('data-crm-rd-target') === id);
+
+        root.addEventListener('click', function (e) {
+            var jump = e.target.closest('[data-crm-rd-jump]');
+            if (!jump) return;
+            e.preventDefault();
+            showPanel(jump.getAttribute('data-crm-rd-jump'), true);
         });
-        if (pushHash) history.replaceState(null, '', '#' + id);
-        var active = root.querySelector('[data-crm-rd-panel="' + id + '"]');
-        if (active) active.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        var hash = (location.hash || '').replace(/^#/, '');
+        if (hash && root.querySelector('[data-crm-rd-panel="' + hash + '"]')) {
+            showPanel(hash, false);
+        }
     }
 
-    nav.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-crm-rd-target]');
-        if (!btn) return;
-        e.preventDefault();
-        showPanel(btn.getAttribute('data-crm-rd-target'), true);
-    });
+    // ── مودال انتخاب قالب چاپ ───────────────────────────────────
+    var modal = document.getElementById('printExportModal');
+    var select = document.getElementById('printTemplateSelect');
+    if (!modal || !select) return;
 
-    root.addEventListener('click', function (e) {
-        var jump = e.target.closest('[data-crm-rd-jump]');
-        if (!jump) return;
-        e.preventDefault();
-        showPanel(jump.getAttribute('data-crm-rd-jump'), true);
-    });
+    var pdfBtn = document.getElementById('printPdfBtn');
+    var wordBtn = document.getElementById('printWordBtn');
+    var pageBadge = document.getElementById('printTemplatePage');
+    var defaultBadge = document.getElementById('printTemplateDefault');
+    var moduleName = '@Model.Module.Name';
+    var recordId = '@Model.Record.Id';
 
-    var hash = (location.hash || '').replace(/^#/, '');
-    if (hash && root.querySelector('[data-crm-rd-panel="' + hash + '"]')) {
-        showPanel(hash, false);
+    function selectedOption() {
+        if (window.jQuery && jQuery(select).data('select2')) {
+            var data = jQuery(select).select2('data');
+            if (data && data[0] && data[0].element) return data[0].element;
+        }
+        return select.options[select.selectedIndex] || null;
     }
+
+    function syncExportButtons() {
+        var opt = selectedOption();
+        if (!opt) return;
+        var id = opt.value;
+        var allowPdf = opt.getAttribute('data-allow-pdf') === '1';
+        var allowWord = opt.getAttribute('data-allow-word') === '1';
+        var page = opt.getAttribute('data-page') || '';
+        var isDefault = opt.getAttribute('data-default') === '1';
+
+        if (pageBadge) pageBadge.textContent = page;
+        if (defaultBadge) defaultBadge.classList.toggle('d-none', !isDefault);
+
+        if (pdfBtn) {
+            pdfBtn.href = '/App/m/' + encodeURIComponent(moduleName) + '/' + recordId + '/print?templateId=' + encodeURIComponent(id);
+            pdfBtn.classList.toggle('disabled', !allowPdf);
+            pdfBtn.setAttribute('aria-disabled', allowPdf ? 'false' : 'true');
+            if (!allowPdf) pdfBtn.addEventListener('click', blockDisabled, { once: false });
+        }
+        if (wordBtn) {
+            wordBtn.href = '/App/m/' + encodeURIComponent(moduleName) + '/' + recordId + '/word?templateId=' + encodeURIComponent(id);
+            wordBtn.classList.toggle('disabled', !allowWord);
+            wordBtn.setAttribute('aria-disabled', allowWord ? 'false' : 'true');
+        }
+    }
+
+    function blockDisabled(e) {
+        if (this.classList.contains('disabled')) e.preventDefault();
+    }
+
+    if (pdfBtn) pdfBtn.addEventListener('click', blockDisabled);
+    if (wordBtn) wordBtn.addEventListener('click', blockDisabled);
+
+    select.addEventListener('change', syncExportButtons);
+    if (window.jQuery) {
+        jQuery(select).on('change.select2', syncExportButtons);
+    }
+
+    modal.addEventListener('shown.bs.modal', function () {
+        if (window.initCrmSelect2) window.initCrmSelect2(modal);
+        syncExportButtons();
+        if (window.jQuery && jQuery(select).data('select2')) {
+            jQuery(select).select2('focus');
+        }
+    });
+
+    syncExportButtons();
 })();
 </script>
 }

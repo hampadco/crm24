@@ -17,6 +17,7 @@ public class SalesDocFormModel
     public int? OrganizationRecordId { get; set; }
     public decimal DiscountPercent { get; set; }
     public string? Note { get; set; }
+    public string? PrintTitle { get; set; }
     public DateTime? ValidUntil { get; set; }
     public List<LineInput> Lines { get; set; } = [];
 
@@ -220,6 +221,7 @@ public class FinanceController : AppControllerBase
             OrganizationRecordId = document.OrganizationRecordId,
             DiscountPercent = document.DiscountPercent,
             Note = document.Note,
+            PrintTitle = document.PrintTitle,
             Lines = document.Lines.OrderBy(l => l.SortOrder).Select(l => new LineInput
             {
                 ProductId = l.ProductId,
@@ -254,12 +256,14 @@ public class FinanceController : AppControllerBase
             {
                 var document = await _finance.CreateAsync(
                     model.Kind, model.CustomerName, model.ContactRecordId, model.OrganizationRecordId,
-                    model.DiscountPercent, model.Note, model.ValidUntil?.ToUniversalTime(), model.Lines);
+                    model.DiscountPercent, model.Note, model.ValidUntil?.ToUniversalTime(), model.Lines,
+                    model.PrintTitle);
                 TempData["Success"] = $"{KindLabel(model.Kind)} شماره {document.Number} ثبت شد.";
                 return RedirectToAction(nameof(Details), new { id = document.Id });
             }
 
-            await _finance.UpdateAsync(model.Id, model.CustomerName, model.DiscountPercent, model.Note, model.Lines);
+            await _finance.UpdateAsync(
+                model.Id, model.CustomerName, model.DiscountPercent, model.Note, model.Lines, model.PrintTitle);
             TempData["Success"] = "سند بروزرسانی شد.";
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
@@ -291,7 +295,12 @@ public class FinanceController : AppControllerBase
 
         var tenant = await _db.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == document.TenantId);
         ViewBag.TenantName = tenant?.Name ?? "";
-        ViewData["Title"] = $"چاپ {KindLabel(document.Kind)} {document.Number}";
+        ViewBag.TenantLogoPath = tenant?.LogoPath;
+        var printTitle = string.IsNullOrWhiteSpace(document.PrintTitle)
+            ? KindLabel(document.Kind)
+            : document.PrintTitle!.Trim();
+        ViewBag.PrintTitle = printTitle;
+        ViewData["Title"] = $"چاپ {printTitle} {document.Number}";
         return View(document);
     }
 

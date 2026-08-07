@@ -23,6 +23,11 @@
                 <p class="subtitle">چیدمان فیلدها، بلاک‌ها و فیلدهای سفارشی هر ماژول را مدیریت کنید.</p>
             </div>
         </div>
+        <div class="crm-studio-actions">
+            <button type="button" class="btn btn-studio-primary" data-bs-toggle="modal" data-bs-target="#createModuleModal">
+                <i class="bx bx-plus me-1"></i> ماژول جدید
+            </button>
+        </div>
     </div>
 
     <partial name="_Alerts" />
@@ -41,5 +46,56 @@
                 <i class="bx bx-chevron-left chevron"></i>
             </a>
         }
+    </div>
+</div>
+
+<div class="modal fade" id="createModuleModal" tabindex="-1" aria-labelledby="createModuleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" action="/App/customize/modules/create" class="modal-content">
+            @Html.AntiForgeryToken()
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModuleModalLabel">ایجاد ماژول جدید</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">نام سیستمی <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control" dir="ltr" placeholder="projects_custom" required
+                           pattern="[a-z][a-z0-9_]*" title="فقط حروف کوچک لاتین، عدد و زیرخط" />
+                    <div class="form-text">فقط حروف کوچک لاتین، عدد و _ — مثلاً custom_assets</div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">برچسب مفرد <span class="text-danger">*</span></label>
+                        <input type="text" name="singular" class="form-control" required placeholder="دارایی" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">برچسب جمع <span class="text-danger">*</span></label>
+                        <input type="text" name="plural" class="form-control" required placeholder="دارایی‌ها" />
+                    </div>
+                </div>
+                <div class="row g-3 mt-0">
+                    <div class="col-md-6">
+                        <label class="form-label">آیکون</label>
+                        <input type="text" name="icon" class="form-control" dir="ltr" value="bx-grid-alt" placeholder="bx-package" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">گروه منو</label>
+                        <select name="menuGroup" class="form-select">
+                            <option value="marketing">بازاریابی</option>
+                            <option value="sales">فروش</option>
+                            <option value="support">پشتیبانی</option>
+                            <option value="inventory">انبار</option>
+                            <option value="projects">پروژه‌ها</option>
+                            <option value="tools" selected>ابزارها</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">ایجاد ماژول</button>
+            </div>
+        </form>
     </div>
 </div>

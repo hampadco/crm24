@@ -21,6 +21,9 @@ public class Tenant
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? TrialEndsAtUtc { get; set; }
 
-    /// <summary>تنظیمات پایه (واحد پولی، ...) به‌صورت jsonb.</summary>
+    /// <summary>تنظیمات پایه (واحد پولی، integrations، ...) به‌صورت jsonb.</summary>
     public string Settings { get; set; } = "{}";
+
+    /// <summary>مسیر نسبی لوگوی شرکت برای سربرگ چاپ (مثلاً /uploads/tenants/1/logo.png).</summary>
+    public string? LogoPath { get; set; }
 }

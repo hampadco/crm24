@@ -56,6 +56,10 @@ builder.Services.AddScoped<BusinessModuleSeeder>();
 builder.Services.AddScoped<DemoTenantSeeder>();
 builder.Services.AddScoped<LeadConversionService>();
 builder.Services.AddScoped<FinanceService>();
+builder.Services.AddScoped<LineItemsService>();
+builder.Services.AddScoped<SalesDocumentService>();
+builder.Services.AddScoped<TemplateRenderer>();
+builder.Services.AddScoped<WordExportService>();
 builder.Services.AddScoped<WorkflowEngine>();
 builder.Services.AddScoped<SupportService>();
 builder.Services.AddScoped<PurchasingService>();
@@ -219,9 +223,15 @@ app.MapGet("/App/projects", () => Results.Redirect("/App/m/projects"));
 app.MapGet("/App/leaves", () => Results.Redirect("/App/m/leaves"));
 app.MapGet("/App/commissions", () => Results.Redirect("/App/m/commissions"));
 app.MapGet("/App/purchase-orders", () => Results.Redirect("/App/m/purchase_orders"));
+app.MapGet("/App/finance", () => Results.Redirect("/App/m/quotes"));
 app.MapGet("/App/finance/quotes", () => Results.Redirect("/App/m/quotes"));
 app.MapGet("/App/finance/orders", () => Results.Redirect("/App/m/sales_orders"));
 app.MapGet("/App/finance/invoices", () => Results.Redirect("/App/m/invoices"));
+app.MapGet("/App/finance/doc/{id:int}", (int id) => Results.Redirect($"/App/m/invoices/{id}"));
+app.MapGet("/App/finance/doc/{id:int}/print", (int id) => Results.Redirect($"/App/m/invoices/{id}/print"));
+app.MapGet("/App/finance/quote/create", () => Results.Redirect("/App/m/quotes/create"));
+app.MapGet("/App/finance/order/create", () => Results.Redirect("/App/m/sales_orders/create"));
+app.MapGet("/App/finance/invoice/create", () => Results.Redirect("/App/m/invoices/create"));
 
 app.MapControllerRoute(
     name: "articles-detail",

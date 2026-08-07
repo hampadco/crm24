@@ -57,6 +57,23 @@
                 </select>
                 break;
 
+            case FieldType.MultiPicklist:
+                {
+                    var selected = (value ?? "")
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    <select id="@name" name="@name" class="@selectClass crm-select2"
+                            multiple
+                            data-placeholder="جستجو و انتخاب…"
+                            disabled="@readOnly">
+                        @foreach (var pick in field.PicklistValues.OrderBy(p => p.SortOrder))
+                        {
+                            <option value="@pick.Value" selected="@(selected.Contains(pick.Value))">@pick.Label</option>
+                        }
+                    </select>
+                }
+                break;
+
             case FieldType.Lookup:
                 <select id="@name" name="@name" class="@selectClass crm-select2"
                         data-placeholder="جستجو و انتخاب…"

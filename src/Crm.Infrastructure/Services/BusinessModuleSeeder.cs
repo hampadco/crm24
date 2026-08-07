@@ -33,7 +33,9 @@ public class BusinessModuleSeeder
             {
                 "tickets", "products", "vendors", "campaigns", "quotes", "sales_orders", "invoices",
                 "purchase_orders", "contracts", "warranties", "projects", "project_tasks", "project_phases",
-                "leaves", "commissions", "documents", "services", "pricebooks", "payments", "warehouses", "product_sales"
+                "leaves", "commissions", "documents", "services", "pricebooks", "payments", "installments",
+                "warehouses", "product_sales",
+                "quote_lines", "sales_order_lines", "invoice_lines", "purchase_order_lines"
             };
             var have = await _db.Modules.CountAsync(m => m.TenantId == tenantId && expected.Contains(m.Name));
             var mutated = false;
@@ -65,6 +67,14 @@ public class BusinessModuleSeeder
         {
             await EnsureFinanceOpportunityLinksAsync(tenantId);
             _cache.Set(financeKey, true, TimeSpan.FromHours(24));
+        }
+
+        // ارتقای فیلد/بلاک/ماژول خطوط اسناد فروش
+        var docsKey = $"business-doc-modules-v2:{tenantId}";
+        if (!_cache.TryGetValue(docsKey, out bool docsOk) || !docsOk)
+        {
+            await EnsureDocumentModulesAsync(tenantId);
+            _cache.Set(docsKey, true, TimeSpan.FromHours(24));
         }
     }
 
@@ -122,48 +132,86 @@ public class BusinessModuleSeeder
         [
             F("name", "عنوان", FieldType.Text, required: true),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
+            F("contact", "مخاطب", FieldType.Lookup, lookupModule: "contacts"),
             F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
+            F("number", "شماره", FieldType.Text, showInList: true),
+            F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
-            F("status", "وضعیت", FieldType.Picklist, defaultValue: "draft",
-                picklist: [P("draft", "پیش‌نویس"), P("sent", "ارسال‌شده"), P("accepted", "پذیرفته"), P("rejected", "رد شده")]),
+            F("subTotal", "جمع جزء", FieldType.Currency, showInList: false),
+            F("discountPercent", "تخفیف ٪", FieldType.Percent, showInList: false),
+            F("discountAmount", "مبلغ تخفیف", FieldType.Currency, showInList: false),
+            F("taxTotal", "مالیات", FieldType.Currency, showInList: false),
+            F("grandTotal", "جمع کل", FieldType.Currency),
+            F("status", "وضعیت", FieldType.Picklist, defaultValue: "Draft",
+                picklist: [P("Draft", "پیش‌نویس"), P("Confirmed", "تأیید شده"), P("Converted", "تبدیل‌شده"), P("Canceled", "لغو")]),
+            F("printTitle", "عنوان چاپی", FieldType.Text, showInList: false),
             F("validUntil", "اعتبار تا", FieldType.Date),
+            F("sourceRecordId", "سند مبدأ", FieldType.Text, showInList: false),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], documentKind: DocumentKind.SalesQuote, numberPrefix: "Q-", convertsTo: "sales_orders");
 
         await EnsureAsync(tenantId, "sales_orders", "سفارش فروش", "سفارش‌های فروش", "bx-cart", "sales", ++sort,
         [
             F("name", "شماره/عنوان سفارش", FieldType.Text, required: true),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
+            F("contact", "مخاطب", FieldType.Lookup, lookupModule: "contacts"),
             F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
+            F("number", "شماره", FieldType.Text),
+            F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
-            F("status", "وضعیت", FieldType.Picklist, defaultValue: "new",
-                picklist: [P("new", "جدید"), P("processing", "در حال پردازش"), P("shipped", "ارسال‌شده"), P("done", "تکمیل"), P("cancelled", "لغو")]),
+            F("subTotal", "جمع جزء", FieldType.Currency, showInList: false),
+            F("discountPercent", "تخفیف ٪", FieldType.Percent, showInList: false),
+            F("discountAmount", "مبلغ تخفیف", FieldType.Currency, showInList: false),
+            F("taxTotal", "مالیات", FieldType.Currency, showInList: false),
+            F("grandTotal", "جمع کل", FieldType.Currency),
+            F("status", "وضعیت", FieldType.Picklist, defaultValue: "Draft",
+                picklist: [P("Draft", "پیش‌نویس"), P("Confirmed", "تأیید شده"), P("Converted", "تبدیل‌شده"), P("Canceled", "لغو")]),
+            F("printTitle", "عنوان چاپی", FieldType.Text, showInList: false),
             F("orderDate", "تاریخ سفارش", FieldType.Date),
+            F("sourceRecordId", "سند مبدأ", FieldType.Text, showInList: false),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], documentKind: DocumentKind.SalesOrder, numberPrefix: "SO-", convertsTo: "invoices");
 
         await EnsureAsync(tenantId, "invoices", "فاکتور", "فاکتورها", "bx-receipt", "sales", ++sort,
         [
             F("name", "شماره فاکتور", FieldType.Text, required: true, unique: true),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
+            F("contact", "مخاطب", FieldType.Lookup, lookupModule: "contacts"),
             F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
+            F("number", "شماره", FieldType.Text),
+            F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
-            F("status", "وضعیت", FieldType.Picklist, defaultValue: "unpaid",
-                picklist: [P("unpaid", "پرداخت‌نشده"), P("partial", "نیمه‌پرداخت"), P("paid", "پرداخت‌شده"), P("void", "باطل")]),
+            F("subTotal", "جمع جزء", FieldType.Currency, showInList: false),
+            F("discountPercent", "تخفیف ٪", FieldType.Percent, showInList: false),
+            F("discountAmount", "مبلغ تخفیف", FieldType.Currency, showInList: false),
+            F("taxTotal", "مالیات", FieldType.Currency, showInList: false),
+            F("grandTotal", "جمع کل", FieldType.Currency),
+            F("status", "وضعیت", FieldType.Picklist, defaultValue: "Draft",
+                picklist: [P("Draft", "پیش‌نویس"), P("Confirmed", "تأیید شده"), P("PartiallyPaid", "نیمه‌پرداخت"), P("Paid", "پرداخت‌شده"), P("Canceled", "لغو")]),
+            F("printTitle", "عنوان چاپی", FieldType.Text, showInList: false),
             F("dueDate", "سررسید", FieldType.Date),
+            F("sourceRecordId", "سند مبدأ", FieldType.Text, showInList: false),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], documentKind: DocumentKind.SalesInvoice, numberPrefix: "INV-");
 
         await EnsureAsync(tenantId, "purchase_orders", "سفارش خرید", "سفارش‌های خرید", "bx-cart-download", "inventory", ++sort,
         [
             F("name", "عنوان سفارش", FieldType.Text, required: true),
             F("vendor", "تأمین‌کننده", FieldType.Lookup, lookupModule: "vendors"),
+            F("number", "شماره", FieldType.Text),
+            F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
-            F("status", "وضعیت", FieldType.Picklist, defaultValue: "draft",
-                picklist: [P("draft", "پیش‌نویس"), P("ordered", "سفارش‌شده"), P("received", "دریافت‌شده"), P("cancelled", "لغو")]),
+            F("subTotal", "جمع جزء", FieldType.Currency, showInList: false),
+            F("discountPercent", "تخفیف ٪", FieldType.Percent, showInList: false),
+            F("discountAmount", "مبلغ تخفیف", FieldType.Currency, showInList: false),
+            F("taxTotal", "مالیات", FieldType.Currency, showInList: false),
+            F("grandTotal", "جمع کل", FieldType.Currency),
+            F("status", "وضعیت", FieldType.Picklist, defaultValue: "Draft",
+                picklist: [P("Draft", "پیش‌نویس"), P("Ordered", "سفارش‌شده"), P("Received", "دریافت‌شده"), P("Canceled", "لغو")]),
+            F("printTitle", "عنوان چاپی", FieldType.Text, showInList: false),
             F("orderDate", "تاریخ", FieldType.Date),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], documentKind: DocumentKind.PurchaseOrder, numberPrefix: "PO-");
 
         await EnsureAsync(tenantId, "contracts", "قرارداد خدمات", "قراردادهای خدمات", "bx-file-blank", "support", ++sort,
         [
@@ -271,13 +319,25 @@ public class BusinessModuleSeeder
         await EnsureAsync(tenantId, "payments", "پرداخت", "پرداخت‌ها", "bx-money", "sales", ++sort,
         [
             F("name", "عنوان پرداخت", FieldType.Text, required: true),
+            F("invoice", "فاکتور", FieldType.Lookup, lookupModule: "invoices"),
             F("amount", "مبلغ", FieldType.Currency, required: true),
             F("method", "روش", FieldType.Picklist,
                 picklist: [P("cash", "نقد"), P("card", "کارت"), P("transfer", "حواله"), P("cheque", "چک")]),
-            F("paidAt", "تاریخ پرداخت", FieldType.Date),
+            F("paidAt", "تاریخ پرداخت", FieldType.Date, defaultValue: "__TODAY__"),
+            F("reference", "شماره پیگیری", FieldType.Text, showInList: false),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], isChild: true, showInMenu: false);
+
+        await EnsureAsync(tenantId, "installments", "قسط", "اقساط", "bx-calendar-check", "sales", ++sort,
+        [
+            F("name", "عنوان قسط", FieldType.Text, required: true),
+            F("invoice", "فاکتور", FieldType.Lookup, lookupModule: "invoices"),
+            F("amount", "مبلغ", FieldType.Currency, required: true),
+            F("dueDate", "سررسید", FieldType.Date, required: true),
+            F("isPaid", "پرداخت‌شده", FieldType.Checkbox, defaultValue: "false"),
+            F("paidAt", "تاریخ پرداخت", FieldType.Date, showInList: false)
+        ], isChild: true, showInMenu: false);
 
         await EnsureAsync(tenantId, "warehouses", "انبار", "انبارها", "bx-building-house", "inventory", ++sort,
         [
@@ -288,6 +348,7 @@ public class BusinessModuleSeeder
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
         ]);
 
+        // product_sales از منو مخفی — خطوط فاکتور جایگزین آن است
         await EnsureAsync(tenantId, "product_sales", "پرونده فروش", "پرونده‌های فروش محصول", "bx-purchase-tag", "sales", ++sort,
         [
             F("name", "عنوان پرونده", FieldType.Text, required: true),
@@ -297,7 +358,7 @@ public class BusinessModuleSeeder
                 picklist: [P("open", "باز"), P("won", "برنده"), P("lost", "بازنده")]),
             F("amount", "مبلغ", FieldType.Currency),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], showInMenu: false);
 
         _ = (adminProfileId, userProfileId);
     }
@@ -502,13 +563,25 @@ public class BusinessModuleSeeder
     private async Task EnsureAsync(
         int tenantId,
         string name, string singular, string plural, string icon, string menuGroup, int sortOrder,
-        FieldSpec[] specs)
+        FieldSpec[] specs,
+        DocumentKind documentKind = DocumentKind.None,
+        string? numberPrefix = null,
+        string? convertsTo = null,
+        bool isChild = false,
+        bool showInMenu = true)
     {
         if (await _db.Modules.AnyAsync(m => m.TenantId == tenantId && m.Name == name))
         {
             var existing = await _db.Modules.FirstAsync(m => m.TenantId == tenantId && m.Name == name);
-            existing.ShowInMenu = true;
+            existing.ShowInMenu = showInMenu && !isChild;
             existing.MenuGroup = menuGroup;
+            existing.IsChildModule = isChild;
+            if (documentKind != DocumentKind.None)
+            {
+                existing.DocumentKind = documentKind;
+                existing.NumberPrefix ??= numberPrefix;
+                existing.ConvertsToModule ??= convertsTo;
+            }
             if (existing.SortOrder == 0) existing.SortOrder = sortOrder;
             await _db.SaveChangesAsync();
             return;
@@ -523,9 +596,14 @@ public class BusinessModuleSeeder
             Icon = icon,
             IsSystem = true,
             IsActive = true,
-            ShowInMenu = true,
+            ShowInMenu = showInMenu && !isChild,
             MenuGroup = menuGroup,
             SortOrder = sortOrder,
+            IsChildModule = isChild,
+            DocumentKind = documentKind,
+            NumberPrefix = numberPrefix,
+            ConvertsToModule = convertsTo,
+            NextNumber = 1001,
             DuplicateCheckEnabled = specs.Any(s => s.Unique),
             DuplicateMatchMode = "or",
             DuplicateIgnoreEmpty = true,
@@ -583,6 +661,173 @@ public class BusinessModuleSeeder
             }
         }
         await _db.SaveChangesAsync();
+    }
+
+    /// <summary>ماژول‌های خط سند + بلاک LineItems + فیلدهای گمشده روی هدرهای موجود.</summary>
+    private async Task EnsureDocumentModulesAsync(int tenantId)
+    {
+        var lineFields = new FieldSpec[]
+        {
+            F("title", "عنوان", FieldType.Text, required: true),
+            F("product", "محصول", FieldType.Lookup, lookupModule: "products"),
+            F("quantity", "تعداد", FieldType.Decimal, required: true, defaultValue: "1"),
+            F("unitPrice", "قیمت واحد", FieldType.Currency, required: true),
+            F("discountPercent", "تخفیف ٪", FieldType.Percent, defaultValue: "0"),
+            F("taxPercent", "مالیات ٪", FieldType.Percent, defaultValue: "0"),
+            F("lineTotal", "جمع سطر", FieldType.Currency),
+            F("sortOrder", "ترتیب", FieldType.Number, showInList: false, defaultValue: "0")
+        };
+
+        var lineDefs = new (string LineModule, string ParentModule, string Singular, string Plural, string LinkField)[]
+        {
+            ("quote_lines", "quotes", "سطر پیش‌فاکتور", "سطرهای پیش‌فاکتور", "quote"),
+            ("sales_order_lines", "sales_orders", "سطر سفارش", "سطرهای سفارش فروش", "sales_order"),
+            ("invoice_lines", "invoices", "سطر فاکتور", "سطرهای فاکتور", "invoice"),
+            ("purchase_order_lines", "purchase_orders", "سطر سفارش خرید", "سطرهای سفارش خرید", "purchase_order")
+        };
+
+        var sort = 900;
+        foreach (var (lineModule, parentModule, singular, plural, linkField) in lineDefs)
+        {
+            var specs = lineFields
+                .Concat([F(linkField, "سند والد", FieldType.Lookup, lookupModule: parentModule, showInList: false)])
+                .ToArray();
+
+            await EnsureAsync(tenantId, lineModule, singular, plural, "bx-list-ul", "sales", ++sort,
+                specs, isChild: true, showInMenu: false);
+
+            await EnsureLineItemsBlockAsync(tenantId, parentModule, lineModule, linkField);
+            await EnsureMissingDocumentHeaderFieldsAsync(tenantId, parentModule);
+        }
+
+        // مخفی کردن ماژول‌های یتیم/جایگزین‌شده برای tenantهای قدیمی
+        foreach (var orphan in new[] { "product_sales", "payments" })
+        {
+            var mod = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == orphan);
+            if (mod is not null && mod.ShowInMenu)
+            {
+                mod.ShowInMenu = false;
+                if (orphan == "payments")
+                    mod.IsChildModule = true;
+                await _db.SaveChangesAsync();
+            }
+        }
+
+        // تنظیم DocumentKind روی ماژول‌های موجود
+        await EnsureDocumentKindAsync(tenantId, "quotes", DocumentKind.SalesQuote, "Q-", "sales_orders");
+        await EnsureDocumentKindAsync(tenantId, "sales_orders", DocumentKind.SalesOrder, "SO-", "invoices");
+        await EnsureDocumentKindAsync(tenantId, "invoices", DocumentKind.SalesInvoice, "INV-", null);
+        await EnsureDocumentKindAsync(tenantId, "purchase_orders", DocumentKind.PurchaseOrder, "PO-", null);
+
+        _cache.Remove($"modules:{tenantId}");
+
+        var touched = lineDefs.Select(d => d.LineModule)
+            .Concat(lineDefs.Select(d => d.ParentModule))
+            .ToList();
+        var touchedIds = await _db.Modules
+            .Where(m => m.TenantId == tenantId && touched.Contains(m.Name))
+            .Select(m => m.Id)
+            .ToListAsync();
+        foreach (var id in touchedIds)
+        {
+            _cache.Remove($"fields:{tenantId}:{id}");
+            _cache.Remove($"blocks:{tenantId}:{id}");
+        }
+    }
+
+    private async Task EnsureDocumentKindAsync(
+        int tenantId, string name, DocumentKind kind, string prefix, string? convertsTo)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == name);
+        if (module is null) return;
+        module.DocumentKind = kind;
+        module.NumberPrefix ??= prefix;
+        if (module.NextNumber < 1001) module.NextNumber = 1001;
+        module.ConvertsToModule ??= convertsTo;
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task EnsureLineItemsBlockAsync(
+        int tenantId, string parentModuleName, string lineModuleName, string linkField)
+    {
+        var parent = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == parentModuleName);
+        if (parent is null) return;
+
+        var existing = await _db.FieldBlocks.FirstOrDefaultAsync(b =>
+            b.ModuleId == parent.Id && b.Name == "line_items");
+        if (existing is not null)
+        {
+            existing.Kind = BlockKind.LineItems;
+            existing.LineModuleName = lineModuleName;
+            existing.LineLinkField = linkField;
+            await _db.SaveChangesAsync();
+            return;
+        }
+
+        var maxSort = await _db.FieldBlocks.Where(b => b.ModuleId == parent.Id)
+            .MaxAsync(b => (int?)b.SortOrder) ?? 0;
+
+        _db.FieldBlocks.Add(new FieldBlock
+        {
+            TenantId = tenantId,
+            ModuleId = parent.Id,
+            Name = "line_items",
+            Label = "اطلاعات آیتم",
+            SortOrder = maxSort + 1,
+            Kind = BlockKind.LineItems,
+            LineModuleName = lineModuleName,
+            LineLinkField = linkField
+        });
+        await _db.SaveChangesAsync();
+    }
+
+    private async Task EnsureMissingDocumentHeaderFieldsAsync(int tenantId, string moduleName)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == moduleName);
+        if (module is null) return;
+
+        var needed = new (string Name, string Label, FieldType Type, string? Lookup)[]
+        {
+            ("number", "شماره", FieldType.Text, null),
+            ("contact", "مخاطب", FieldType.Lookup, "contacts"),
+            ("issueDate", "تاریخ", FieldType.Date, null),
+            ("subTotal", "جمع جزء", FieldType.Currency, null),
+            ("discountPercent", "تخفیف ٪", FieldType.Percent, null),
+            ("discountAmount", "مبلغ تخفیف", FieldType.Currency, null),
+            ("taxTotal", "مالیات", FieldType.Currency, null),
+            ("grandTotal", "جمع کل", FieldType.Currency, null),
+            ("printTitle", "عنوان چاپی", FieldType.Text, null),
+            ("sourceRecordId", "سند مبدأ", FieldType.Text, null)
+        };
+
+        var blockId = await _db.FieldBlocks.Where(b => b.ModuleId == module.Id)
+            .OrderBy(b => b.SortOrder).Select(b => (int?)b.Id).FirstOrDefaultAsync();
+        var maxSort = await _db.Fields.Where(f => f.ModuleId == module.Id).MaxAsync(f => (int?)f.SortOrder) ?? 0;
+        var existingNames = await _db.Fields.Where(f => f.ModuleId == module.Id).Select(f => f.Name).ToListAsync();
+        var added = false;
+
+        foreach (var (name, label, type, lookup) in needed)
+        {
+            if (existingNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+                continue;
+            _db.Fields.Add(new FieldDef
+            {
+                TenantId = tenantId,
+                ModuleId = module.Id,
+                BlockId = blockId,
+                Name = name,
+                Label = label,
+                Type = type,
+                LookupModule = lookup,
+                IsCustom = false,
+                ShowInList = name is "number" or "grandTotal" or "contact",
+                SortOrder = ++maxSort
+            });
+            added = true;
+        }
+
+        if (added)
+            await _db.SaveChangesAsync();
     }
 
     /// <summary>Lookup فرصت روی مالی + RelationDef فرصت→پیش‌فاکتور/فاکتور/سفارش.</summary>

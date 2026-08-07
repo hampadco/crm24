@@ -43,20 +43,6 @@ public class RecordAccessService
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.RoleId == roleId && p.ModuleId == moduleId);
 
-        // سازگاری موقت: اگر هنوز روی نقش migrate نشده، از Profile قدیمی بخوان
-        if (perm is null && _tenant.ProfileId is int profileId)
-        {
-            var legacy = await _db.ProfileModulePermissions.AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ProfileId == profileId && p.ModuleId == moduleId);
-            return legacy is not null && check(new RoleModulePermission
-            {
-                CanView = legacy.CanView,
-                CanCreate = legacy.CanCreate,
-                CanEdit = legacy.CanEdit,
-                CanDelete = legacy.CanDelete
-            });
-        }
-
         return perm is not null && check(perm);
     }
 
@@ -119,20 +105,10 @@ public class RecordAccessService
             .Select(f => f.Id)
             .ToListAsync();
 
-        var map = await _db.RoleFieldPermissions
+        return await _db.RoleFieldPermissions
             .AsNoTracking()
             .Where(p => p.RoleId == roleId && fieldIds.Contains(p.FieldId))
             .ToDictionaryAsync(p => p.FieldId, p => p.Access);
-
-        if (map.Count == 0 && _tenant.ProfileId is int profileId)
-        {
-            map = await _db.ProfileFieldPermissions
-                .AsNoTracking()
-                .Where(p => p.ProfileId == profileId && fieldIds.Contains(p.FieldId))
-                .ToDictionaryAsync(p => p.FieldId, p => p.Access);
-        }
-
-        return map;
     }
 
     private async Task<HashSet<int>> GetSelfAndSubordinateUserIdsAsync(int userId)
