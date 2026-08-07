@@ -14,6 +14,16 @@
     scroll-snap-align: start;
 }
 
+.kanban-card-actions {
+    border-top: 1px solid rgba(0, 0, 0, .06);
+    padding-top: .35rem;
+}
+
+.kanban-card .btn-xs {
+    font-size: .72rem;
+    line-height: 1.4;
+}
+
 /* ===== گانت پروژه ===== */
 .gantt-label {
     width: 160px;

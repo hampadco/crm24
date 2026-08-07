@@ -149,7 +149,7 @@ public class RecordsController : AppControllerBase
             CanEdit = await _access.CanEditAsync(module.Id),
             CanDelete = await _access.CanDeleteAsync(module.Id),
             LookupTitles = await ResolveLookupTitlesAsync(fields, recordData.Values),
-            HasKanban = fields.Any(f => f.Name == "stage" && f.Type == FieldType.Picklist),
+            HasKanban = KanbanController.ModuleSupportsKanban(fields),
             SavedViews = savedViews,
             ActiveViewId = activeView?.Id
         };
@@ -560,7 +560,7 @@ public class RecordsController : AppControllerBase
 
     [HttpPost("/App/m/{moduleName}/bulk-delete")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> BulkDelete(string moduleName, int[]? ids)
+    public async Task<IActionResult> BulkDelete(string moduleName, int[]? ids, string? returnUrl = null)
     {
         var module = await _metadata.GetModuleByNameAsync(moduleName);
         if (module is null)
@@ -592,6 +592,8 @@ public class RecordsController : AppControllerBase
         TempData["Success"] = deleted > 0
             ? $"{deleted} رکورد به سطل بازیابی منتقل شد."
             : "هیچ رکوردی حذف نشد.";
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
         return RedirectToAction(nameof(Index), new { moduleName });
     }
 
@@ -856,6 +858,164 @@ public class RecordsController : AppControllerBase
 
         TempData["Success"] = "یادداشت ثبت شد.";
         return Redirect($"/App/m/{module.Name}/{id}#notes");
+    }
+
+    [HttpPost("/App/m/{moduleName}/bulk-notes")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> BulkAddNotes(string moduleName, int[]? ids, string text, string? returnUrl = null)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        if (ids is null || ids.Length == 0)
+        {
+            TempData["Error"] = "موردی انتخاب نشده است.";
+            return LocalOrList(moduleName, returnUrl);
+        }
+
+        var body = (text ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            TempData["Error"] = "متن یادداشت خالی است.";
+            return LocalOrList(moduleName, returnUrl);
+        }
+
+        if (body.Length > 4000)
+            body = body[..4000];
+
+        var added = 0;
+        foreach (var id in ids.Distinct().Take(200))
+        {
+            var record = await _records.GetAsync(module.Id, id);
+            if (record is null)
+                continue;
+            _db.Notes.Add(new Note
+            {
+                ModuleName = module.Name,
+                RecordId = id,
+                Body = body
+            });
+            added++;
+        }
+
+        if (added > 0)
+            await _db.SaveChangesAsync();
+
+        TempData["Success"] = added > 0
+            ? $"یادداشت برای {added} رکورد ثبت شد."
+            : "هیچ یادداشتی ثبت نشد.";
+        return LocalOrList(moduleName, returnUrl);
+    }
+
+    [HttpPost("/App/m/{moduleName}/tags/assign")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignTags(string moduleName, int[]? ids, string tagName, string? color = null, string? returnUrl = null)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanEditAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var name = (tagName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(name) || ids is null || ids.Length == 0)
+        {
+            TempData["Error"] = "برچسب یا رکورد مشخص نیست.";
+            return LocalOrList(moduleName, returnUrl);
+        }
+
+        if (name.Length > 64)
+            name = name[..64];
+
+        var tag = await _db.Tags.FirstOrDefaultAsync(t => t.Name == name);
+        if (tag is null)
+        {
+            tag = new Tag
+            {
+                Name = name,
+                Color = string.IsNullOrWhiteSpace(color) ? "#696cff" : color.Trim()
+            };
+            _db.Tags.Add(tag);
+            await _db.SaveChangesAsync();
+        }
+        else if (!string.IsNullOrWhiteSpace(color) && tag.Color != color)
+        {
+            tag.Color = color.Trim();
+        }
+
+        var linked = 0;
+        foreach (var id in ids.Distinct().Take(200))
+        {
+            var record = await _records.GetAsync(module.Id, id);
+            if (record is null)
+                continue;
+
+            var exists = await _db.TagLinks.AnyAsync(l =>
+                l.TagId == tag.Id && l.ModuleName == module.Name && l.RecordId == id);
+            if (exists)
+                continue;
+
+            _db.TagLinks.Add(new TagLink
+            {
+                TagId = tag.Id,
+                ModuleName = module.Name,
+                RecordId = id
+            });
+            linked++;
+        }
+
+        if (linked > 0)
+            await _db.SaveChangesAsync();
+
+        TempData["Success"] = linked > 0
+            ? $"برچسب «{tag.Name}» به {linked} رکورد اضافه شد."
+            : "برچسب قبلاً روی رکوردهای انتخابی بود.";
+        return LocalOrList(moduleName, returnUrl);
+    }
+
+    [HttpPost("/App/m/{moduleName}/tags/remove")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveTags(string moduleName, int[]? ids, int tagId, string? returnUrl = null)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+
+        if (!await _access.CanEditAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        if (ids is null || ids.Length == 0 || tagId <= 0)
+        {
+            TempData["Error"] = "برچسب یا رکورد مشخص نیست.";
+            return LocalOrList(moduleName, returnUrl);
+        }
+
+        var idSet = ids.Distinct().Take(200).ToHashSet();
+        var links = await _db.TagLinks
+            .Where(l => l.TagId == tagId && l.ModuleName == module.Name && idSet.Contains(l.RecordId))
+            .ToListAsync();
+        if (links.Count > 0)
+        {
+            _db.TagLinks.RemoveRange(links);
+            await _db.SaveChangesAsync();
+        }
+
+        TempData["Success"] = links.Count > 0
+            ? $"برچسب از {links.Count} رکورد برداشته شد."
+            : "برچسبی برای حذف یافت نشد.";
+        return LocalOrList(moduleName, returnUrl);
+    }
+
+    private IActionResult LocalOrList(string moduleName, string? returnUrl)
+    {
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return Redirect(returnUrl);
+        return RedirectToAction(nameof(Index), new { moduleName });
     }
 
     private static readonly HashSet<string> ActivityModuleNames = new(StringComparer.OrdinalIgnoreCase)

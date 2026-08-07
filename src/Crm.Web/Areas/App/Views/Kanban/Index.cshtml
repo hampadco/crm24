@@ -1,91 +1,364 @@
 @model Crm.Web.Areas.App.Controllers.KanbanViewModel
 @{
     ViewData["PanelTitle"] = Model.Module.PluralLabel;
+    ViewData["KanbanModule"] = Model.Module;
+    ViewData["KanbanCanEdit"] = Model.CanEdit;
+    ViewData["KanbanCanConvertLead"] = Model.CanConvertLead;
+    ViewData["KanbanCanConvertDocument"] = Model.CanConvertDocument;
+    ViewData["KanbanConvertLabel"] = Model.ConvertDocumentLabel;
+    ViewData["KanbanShowTags"] = Model.ShowTags;
+    ViewData["KanbanExpand"] = Model.ExpandCardsByDefault;
+
+    var emptyVal = Crm.Web.Areas.App.Controllers.KanbanController.EmptyColumnValue;
+    var sortLabel = Model.SortOptions.FirstOrDefault(o => o.Field == Model.SortField)?.Label ?? Model.SortField;
+    var oppositeDir = Model.SortDir == "desc" ? "asc" : "desc";
+    string BuildUrl(
+        string? groupBy = null,
+        string? columns = null,
+        string? sort = null,
+        string? dir = null,
+        string? q = null,
+        string? tags = null,
+        bool? showTags = null,
+        bool? expandCards = null,
+        bool resetColumns = false,
+        bool resetTags = false)
+    {
+        var p = new List<string>();
+        void Add(string key, string? val)
+        {
+            if (!string.IsNullOrWhiteSpace(val))
+                p.Add(key + "=" + Uri.EscapeDataString(val));
+        }
+
+        Add("groupBy", groupBy ?? Model.GroupByField.Name);
+        Add("sort", sort ?? Model.SortField);
+        Add("dir", dir ?? Model.SortDir);
+        Add("q", q ?? Model.Search);
+
+        if (!resetColumns)
+        {
+            if (columns is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(columns))
+                    Add("columns", columns);
+            }
+            else
+            {
+                var visiblePick = Model.VisibleColumnValues.Where(v => v != emptyVal).ToList();
+                var totalPick = Model.GroupByField.PicklistValues.Count(pv => pv.IsActive);
+                if (visiblePick.Count > 0 && visiblePick.Count < totalPick)
+                    Add("columns", string.Join(",", visiblePick));
+            }
+        }
+
+        if (!resetTags)
+        {
+            if (tags is not null)
+            {
+                if (!string.IsNullOrWhiteSpace(tags))
+                    Add("tags", tags);
+            }
+            else if (Model.SelectedTagIds.Count > 0)
+            {
+                Add("tags", string.Join(",", Model.SelectedTagIds));
+            }
+        }
+
+        var st = showTags ?? Model.ShowTags;
+        var ex = expandCards ?? Model.ExpandCardsByDefault;
+        Add("showTags", st ? "true" : "false");
+        Add("expandCards", ex ? "true" : "false");
+
+        return "/App/kanban/" + Model.Module.Name + (p.Count > 0 ? "?" + string.Join("&", p) : "");
+    }
+
+    var allPickValues = Model.GroupByField.PicklistValues.Where(p => p.IsActive).OrderBy(p => p.SortOrder).ToList();
+    var visibleCount = Model.VisibleColumnValues.Count(v => v != emptyVal);
+    var returnUrl = Model.CurrentUrl;
 }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <h4 class="mb-0">
-        <i class="bx bx-columns text-primary me-1"></i>
-        کاریز @Model.Module.PluralLabel
-    </h4>
-    <div class="d-flex gap-2">
-        <a href="/App/m/@Model.Module.Name" class="btn btn-outline-secondary">
-            <i class="bx bx-list-ul me-1"></i> نمای لیست
-        </a>
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-kanban.css" asp-append-version="true" />
+}
+
+<div class="crm-kanban-page" id="crmKanban"
+     data-module="@Model.Module.Name"
+     data-field="@Model.GroupByField.Name"
+     data-can-edit="@(Model.CanEdit ? "1" : "0")">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <h4 class="mb-0">
+                <i class="bx bx-columns text-primary me-1"></i>
+                کاریز @Model.Module.PluralLabel
+            </h4>
+            <div class="crm-view-toggle btn-group" role="group">
+                <a href="/App/m/@Model.Module.Name" class="btn btn-sm btn-outline-secondary">
+                    <i class="bx bx-list-ul me-1"></i> لیست
+                </a>
+                <a href="@BuildUrl()" class="btn btn-sm btn-primary">
+                    <i class="bx bx-columns me-1"></i> کاریز
+                </a>
+            </div>
+        </div>
         <a href="/App/m/@Model.Module.Name/create" class="btn btn-primary">
             <i class="bx bx-plus me-1"></i> @Model.Module.SingularLabel جدید
         </a>
     </div>
-</div>
 
-<partial name="_Alerts" />
+    <div class="crm-kanban-toolbar">
+        <form method="get" action="/App/kanban/@Model.Module.Name" class="d-flex gap-1">
+            <input type="hidden" name="groupBy" value="@Model.GroupByField.Name" />
+            <input type="hidden" name="sort" value="@Model.SortField" />
+            <input type="hidden" name="dir" value="@Model.SortDir" />
+            <input type="hidden" name="showTags" value="@(Model.ShowTags ? "true" : "false")" />
+            <input type="hidden" name="expandCards" value="@(Model.ExpandCardsByDefault ? "true" : "false")" />
+            @if (Model.SelectedTagIds.Count > 0)
+            {
+                <input type="hidden" name="tags" value="@string.Join(",", Model.SelectedTagIds)" />
+            }
+            <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm crm-kanban-search"
+                   placeholder="جستجو…" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary" title="جستجو">
+                <i class="bx bx-search"></i>
+            </button>
+        </form>
 
-<form id="afToken">@Html.AntiForgeryToken()</form>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                نمایش بر اساس: @Model.GroupByField.Label
+            </button>
+            <ul class="dropdown-menu shadow-sm">
+                @foreach (var f in Model.GroupByCandidates)
+                {
+                    <li>
+                        <a class="dropdown-item @(f.Name == Model.GroupByField.Name ? "active" : "")"
+                           href="@BuildUrl(groupBy: f.Name, resetColumns: true)">@f.Label</a>
+                    </li>
+                }
+            </ul>
+        </div>
 
-<div class="d-flex gap-3 overflow-auto pb-3 kanban-board" style="min-height: 60vh">
-    @foreach (var (stage, cards) in Model.Columns)
-    {
-        <div class="flex-shrink-0 kanban-col">
-            <div class="card h-100">
-                <div class="card-header py-2 d-flex justify-content-between align-items-center"
-                     style="border-top: 3px solid @(stage.Color ?? "#696cff")">
-                    <span class="fw-semibold">@stage.Label</span>
-                    <span class="badge bg-label-secondary rounded-pill kanban-count">@cards.Count</span>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                @Model.GroupByField.Label (@visibleCount)
+            </button>
+            <div class="dropdown-menu shadow-sm p-2" style="min-width: 220px; max-height: 320px; overflow: auto">
+                <div class="form-check mb-1">
+                    <input class="form-check-input" type="checkbox" id="kanbanColAll"
+                           @(visibleCount >= allPickValues.Count ? "checked" : null) />
+                    <label class="form-check-label" for="kanbanColAll">همه</label>
                 </div>
-                <div class="card-body p-2 kanban-column" data-stage="@stage.Value" style="min-height: 200px">
-                    @foreach (var card in cards)
+                <hr class="my-1" />
+                @foreach (var pv in allPickValues)
+                {
+                    var checkedAttr = Model.VisibleColumnValues.Contains(pv.Value) ? "checked" : null;
+                    <div class="form-check mb-1">
+                        <input class="form-check-input kanban-col-check" type="checkbox"
+                               value="@pv.Value" id="kanbanCol_@pv.Value" @checkedAttr />
+                        <label class="form-check-label" for="kanbanCol_@pv.Value">@pv.Label</label>
+                    </div>
+                }
+                <button type="button" class="btn btn-sm btn-primary w-100 mt-2" id="kanbanApplyColumns">اعمال</button>
+            </div>
+        </div>
+
+        <div class="crm-kanban-sort-bundle btn-group" role="group" aria-label="مرتب‌سازی">
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle crm-kanban-sort-field" type="button" data-bs-toggle="dropdown">
+                    ترتیب بر اساس: @sortLabel
+                </button>
+                <ul class="dropdown-menu shadow-sm" style="max-height: 320px; overflow: auto">
+                    @foreach (var opt in Model.SortOptions)
                     {
-                        <div class="card mb-2 kanban-card shadow-none border" data-id="@card.Id" style="cursor: grab">
-                            <div class="card-body p-3">
-                                <a href="/App/m/@Model.Module.Name/@card.Id" class="fw-semibold d-block mb-1">@card.Title</a>
-                                @if (card.Amount is not null)
-                                {
-                                    <div class="text-success small">@card.Amount</div>
-                                }
-                                @if (card.Subtitle is not null)
-                                {
-                                    <div class="text-muted small">@card.Subtitle</div>
-                                }
-                            </div>
+                        <li>
+                            <a class="dropdown-item @(opt.Field == Model.SortField ? "active" : "")"
+                               href="@BuildUrl(sort: opt.Field)">@opt.Label</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <a href="@BuildUrl(dir: oppositeDir)"
+               class="btn btn-sm btn-outline-secondary crm-kanban-sort-dir"
+               title="@(Model.SortDir == "desc" ? "نزولی — کلیک برای صعودی" : "صعودی — کلیک برای نزولی")"
+               aria-label="تغییر جهت مرتب‌سازی">
+                <i class="bx @(Model.SortDir == "desc" ? "bx-sort-down" : "bx-sort-up")"></i>
+            </a>
+        </div>
+
+        @if (Model.AllTags.Count > 0)
+        {
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                    برچسب@(Model.SelectedTagIds.Count > 0 ? $" ({Model.SelectedTagIds.Count})" : "")
+                </button>
+                <div class="dropdown-menu shadow-sm p-2" style="min-width: 220px; max-height: 320px; overflow: auto">
+                    @foreach (var tag in Model.AllTags)
+                    {
+                        var checkedAttr = Model.SelectedTagIds.Contains(tag.Id) ? "checked" : null;
+                        <div class="form-check mb-1">
+                            <input class="form-check-input kanban-tag-check" type="checkbox"
+                                   value="@tag.Id" id="kanbanTag_@tag.Id" @checkedAttr />
+                            <label class="form-check-label" for="kanbanTag_@tag.Id">@tag.Name</label>
                         </div>
+                    }
+                    <button type="button" class="btn btn-sm btn-primary w-100 mt-2" id="kanbanApplyTags">اعمال</button>
+                </div>
+            </div>
+        }
+
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" title="تنظیمات کاریز">
+                <i class="bx bx-cog"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                    <a class="dropdown-item" href="@BuildUrl(showTags: !Model.ShowTags)">
+                        <i class="bx @(Model.ShowTags ? "bx-check" : "bx-minus") me-1"></i>
+                        نمایش برچسب‌ها
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="@BuildUrl(expandCards: !Model.ExpandCardsByDefault)">
+                        <i class="bx @(Model.ExpandCardsByDefault ? "bx-check" : "bx-minus") me-1"></i>
+                        کارت‌ها به‌صورت باز
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="crm-kanban-bulkbar" id="crmKanbanBulk">
+        <span class="small fw-semibold"><span id="crmKanbanBulkCount">0</span> انتخاب‌شده</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="crmKanbanClearSel">لغو انتخاب</button>
+
+        @if (Model.CanEdit)
+        {
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#crmKanbanNoteModal">
+                ایجاد یادداشت
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    کارهای بیشتر
+                </button>
+                <ul class="dropdown-menu shadow-sm">
+                    <li>
+                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#crmKanbanTagModal">
+                            ایجاد برچسب
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        }
+
+        @if (Model.CanDelete)
+        {
+            <form action="/App/m/@Model.Module.Name/bulk-delete" method="post" class="d-inline"
+                  data-confirm="رکوردهای انتخاب‌شده به سطل بازیابی منتقل شوند؟">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <span data-bulk-ids></span>
+                <button type="submit" class="btn btn-sm btn-outline-danger">حذف</button>
+            </form>
+        }
+    </div>
+
+    <partial name="_Alerts" />
+    <form id="afToken">@Html.AntiForgeryToken()</form>
+
+    <div class="crm-kanban-board">
+        @foreach (var col in Model.Columns)
+        {
+            <div class="crm-kanban-col" style="--kanban-col-color: @(col.Color ?? "#696cff")">
+                <div class="crm-kanban-col-head">
+                    <div class="crm-kanban-col-title">
+                        <input type="checkbox" class="form-check-input" data-col-check title="انتخاب همه ستون" />
+                        <span class="crm-kanban-col-dot"></span>
+                        <span class="text-truncate">@col.Label</span>
+                    </div>
+                    <span class="badge bg-label-secondary rounded-pill" data-col-count>@col.Cards.Count</span>
+                </div>
+                <div class="crm-kanban-col-body" data-value="@col.Value">
+                    @foreach (var card in col.Cards)
+                    {
+                        <partial name="_KanbanCard" model="card" />
                     }
                 </div>
             </div>
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="crmKanbanNoteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" action="/App/m/@Model.Module.Name/bulk-notes">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+            <span data-bulk-ids></span>
+            <div class="modal-header">
+                <h5 class="modal-title">ایجاد یادداشت برای انتخاب‌شده‌ها</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea name="text" class="form-control" rows="4" required maxlength="4000"
+                          placeholder="متن یادداشت…"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">ثبت</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="crmKanbanTagModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" method="post" action="/App/m/@Model.Module.Name/tags/assign">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@returnUrl" />
+            <span data-bulk-ids></span>
+            <div class="modal-header">
+                <h5 class="modal-title">اعمال برچسب</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">نام برچسب</label>
+                    <input type="text" name="tagName" class="form-control" list="kanbanTagList" required maxlength="64" />
+                    <datalist id="kanbanTagList">
+                        @foreach (var tag in Model.AllTags)
+                        {
+                            <option value="@tag.Name"></option>
+                        }
+                    </datalist>
+                </div>
+                <div>
+                    <label class="form-label">رنگ</label>
+                    <input type="color" name="color" class="form-control form-control-color" value="#696cff" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="submit" class="btn btn-primary">اعمال</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="crmKanbanQuickModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">جزئیات سریع</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="crmKanbanQuickBody"></div>
         </div>
-    }
+    </div>
 </div>
 
 @section Scripts {
     <script src="~/panel-assets/vendor/libs/sortablejs/sortable.js"></script>
-    <script>
-        const canEdit = @(Model.CanEdit ? "true" : "false");
-        const token = document.querySelector('#afToken input[name="__RequestVerificationToken"]').value;
-
-        document.querySelectorAll('.kanban-column').forEach(col => {
-            new Sortable(col, {
-                group: 'kanban',
-                animation: 150,
-                disabled: !canEdit,
-                onEnd: async (evt) => {
-                    const recordId = evt.item.dataset.id;
-                    const stage = evt.to.dataset.stage;
-                    if (evt.from === evt.to) return;
-
-                    const body = new URLSearchParams({ recordId, stage, __RequestVerificationToken: token });
-                    const resp = await fetch('/App/kanban/@Model.Module.Name/move', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body
-                    });
-                    if (!resp.ok) {
-                        evt.from.appendChild(evt.item); // برگشت در صورت خطا
-                        return;
-                    }
-                    document.querySelectorAll('.kanban-column').forEach(c => {
-                        c.closest('.card').querySelector('.kanban-count').textContent = c.querySelectorAll('.kanban-card').length;
-                    });
-                }
-            });
-        });
-    </script>
+    <script src="~/js/crm-kanban.js" asp-append-version="true"></script>
 }

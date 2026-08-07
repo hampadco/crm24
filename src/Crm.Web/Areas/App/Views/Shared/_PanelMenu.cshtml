@@ -111,7 +111,6 @@
                 <h3 class="crm-menu-pane-title">داشبورد</h3>
                 <ul class="crm-menu-links">
                     <li><a href="/App/dashboard" class="@(currentPath.StartsWith("/App/dashboard") || currentPath.Equals("/App", StringComparison.OrdinalIgnoreCase) ? "is-active" : "")"><i class="bx bx-home-circle"></i>داشبورد اصلی</a></li>
-                    <li><a href="/App/kanban/opportunities"><i class="bx bx-columns"></i>کاریز فروش</a></li>
                     <li><a href="/App/calendar"><i class="bx bx-calendar"></i>تقویم</a></li>
                     <li><a href="/App/reports"><i class="bx bx-bar-chart-alt-2"></i>گزارش‌ها</a></li>
                 </ul>
@@ -137,7 +136,6 @@
                     {
                         <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
                     }
-                    <li><a href="/App/kanban/opportunities" class="@(currentPath.StartsWith("/App/kanban") ? "is-active" : "")"><i class="bx bx-columns"></i>کاریز فروش</a></li>
                 </ul>
             </div>
 

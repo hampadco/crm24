@@ -105,13 +105,13 @@ public static partial class AppHelpContent
                 new() { Title = "ایجاد", Route = "/App/m/{module}/create", Purpose = "فرم داینامیک؛ ?f_{field}=id برای پیش‌پر رابطه" },
                 new() { Title = "جزئیات", Route = "/App/m/{module}/{id}", Purpose = "خلاصه + زبانه‌های مرتبط + ایجاد/اتصال مرتبط" },
                 new() { Title = "ویرایش", Route = "/App/m/{module}/{id}/edit", Purpose = "ویرایش با سطح دسترسی فیلد" },
-                new() { Title = "کاریز", Route = "/App/kanban/{module}", Purpose = "فقط ماژول‌های دارای فیلد Stage" },
+                new() { Title = "کاریز", Route = "/App/kanban/{module}", Purpose = "نمای ستونی برای ماژول‌های دارای فیلد Picklist؛ انتخاب فیلد گروه‌بندی، ستون‌ها و مرتب‌سازی" },
                 new() { Title = "سطل بازیابی", Route = "/App/recycle-bin", Purpose = "رکوردهای حذف‌شده — آموزش: recycle-bin" }
             ],
             Fields =
             [
                 new() { Label = "عنوان (Title)", Purpose = "شناسه انسانی رکورد در لیست و جستجو", ConnectsTo = "همه صفحات لیست و Lookup سایر ماژول‌ها" },
-                new() { Label = "مرحله (Stage) — فرصت", Purpose = "وضعیت معامله در قیف فروش", ConnectsTo = "کاریز /App/kanban/opportunities — PicklistValues" },
+                new() { Label = "فیلد Picklist (گروه‌بندی)", Purpose = "هر ستون کاریز یک مقدار این فیلد است — stage، status، source و …", ConnectsTo = "کاریز /App/kanban/{module}?groupBy= — FieldDef.PicklistValues" },
                 new() { Label = "مبلغ — فرصت", Purpose = "ارزش معامله", ConnectsTo = "گزارش جمع، داشبورد، تبدیل به پروژه (Budget)" },
                 new() { Label = "سازمان (Lookup)", Purpose = "شرکت والد مخاطب", ConnectsTo = "ماژول organizations — RelationDef سازمان→مخاطبین" },
                 new() { Label = "مخاطب (Lookup) — فرصت", Purpose = "فرد معامله", ConnectsTo = "ماژول contacts — RelationDef مخاطب→فرصت‌ها" },
@@ -138,18 +138,20 @@ public static partial class AppHelpContent
 
         ["kanban"] = new()
         {
-            Pages = [new() { Title = "کاریز", Route = "/App/kanban/opportunities", Purpose = "ستون = مقدار فیلد Stage" }],
+            Pages = [new() { Title = "کاریز", Route = "/App/kanban/{module}", Purpose = "ستون = مقدار فیلد Picklist انتخابی (groupBy)" }],
             Fields =
             [
-                new() { Label = "Stage (Picklist)", Purpose = "هر ستون کاریز یک مقدار این فیلد است", ConnectsTo = "ماژول opportunities — FieldDef.PicklistValues" },
-                new() { Label = "recordId (کارت)", Purpose = "شناسه رکورد برای drag & drop", ConnectsTo = "API /App/kanban/{module}/move → به‌روزرسانی Stage" }
+                new() { Label = "groupBy (Picklist)", Purpose = "فیلد ستون‌بندی کاریز — پیش‌فرض stage یا status", ConnectsTo = "هر ماژول دارای FieldType.Picklist" },
+                new() { Label = "recordId (کارت)", Purpose = "شناسه رکورد برای drag & drop", ConnectsTo = "API /App/kanban/{module}/move → به‌روزرسانی همان فیلد groupBy" }
             ],
             Relations =
             [
+                new() { Target = "لیست ماژول", TargetRoute = "/App/m/{module}", HelpSlug = "modules",
+                    Description = "همان رکوردها — فقط نمای متفاوت؛ تغییر ستون = تغییر فیلد Picklist." },
                 new() { Target = "فرصت‌ها", TargetRoute = "/App/m/opportunities", HelpSlug = "modules",
-                    Description = "همان رکوردها — فقط نمای متفاوت؛ تغییر ستون = تغییر فیلد Stage." },
+                    Description = "میانبر منو: کاریز فروش → /App/kanban/opportunities." },
                 new() { Target = "گزارش", TargetRoute = "/App/reports", HelpSlug = "reports",
-                    Description = "گروه‌بندی گزارش روی Stage معادل خلاصه کاریز است." }
+                    Description = "گروه‌بندی گزارش روی همان فیلد Picklist معادل خلاصه کاریز است." }
             ],
             RelatedTopicSlugs = ["modules", "reports"]
         },

@@ -1,0 +1,86 @@
+@model Crm.Web.Areas.App.Controllers.KanbanCard
+@{
+    var module = ViewData["KanbanModule"] as Crm.Core.Entities.ModuleDef;
+    var moduleName = module?.Name ?? "";
+    var canEdit = ViewData["KanbanCanEdit"] as bool? == true;
+    var canConvertLead = ViewData["KanbanCanConvertLead"] as bool? == true;
+    var canConvertDocument = ViewData["KanbanCanConvertDocument"] as bool? == true;
+    var convertLabel = ViewData["KanbanConvertLabel"] as string ?? "تبدیل";
+    var showTags = ViewData["KanbanShowTags"] as bool? != false;
+    var expand = ViewData["KanbanExpand"] as bool? == true;
+    var openClass = expand ? "is-open" : "";
+}
+
+<div class="crm-kanban-card @openClass" data-id="@Model.Id">
+    <div class="crm-kanban-card-top">
+        <input type="checkbox" class="form-check-input crm-kanban-card-check" value="@Model.Id"
+               aria-label="انتخاب @Model.Title" />
+        <div class="crm-kanban-card-main">
+            <a href="/App/m/@moduleName/@Model.Id"
+               class="crm-kanban-card-title"
+               data-kanban-quick="@Model.Id">@Model.Title</a>
+            @if (!string.IsNullOrWhiteSpace(Model.PrimaryExtra))
+            {
+                <div class="crm-kanban-card-meta">@Model.PrimaryExtra</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.SecondaryExtra)
+                 && !string.Equals(Model.SecondaryExtra, Model.PrimaryExtra, StringComparison.Ordinal))
+            {
+                <div class="crm-kanban-card-meta">@Model.SecondaryExtra</div>
+            }
+            @if (showTags && Model.Tags.Count > 0)
+            {
+                <div class="crm-kanban-card-tags">
+                    @foreach (var tag in Model.Tags)
+                    {
+                        <span class="crm-kanban-tag" style="background:@(tag.Color ?? "#696cff")">@tag.Name</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.PreviewFields.Count > 0)
+    {
+        <div class="crm-kanban-card-preview">
+            @foreach (var f in Model.PreviewFields)
+            {
+                <div class="crm-kanban-preview-row">
+                    <span class="crm-kanban-preview-label">@f.Label</span>
+                    <span class="crm-kanban-preview-value">@f.Value</span>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="crm-kanban-card-actions">
+        <div class="d-flex gap-1 flex-wrap">
+            @if (canEdit)
+            {
+                <a href="/App/m/@moduleName/@Model.Id/edit" class="btn btn-outline-secondary">ویرایش</a>
+            }
+            @if (canConvertLead)
+            {
+                <form action="/App/m/leads/@Model.Id/convert" method="post" class="d-inline"
+                      data-confirm="این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-primary">تبدیل</button>
+                </form>
+            }
+            else if (canConvertDocument)
+            {
+                <form action="/App/m/@moduleName/@Model.Id/convert" method="post" class="d-inline"
+                      data-confirm="این سند تبدیل شود؟">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-outline-primary">@convertLabel</button>
+                </form>
+            }
+        </div>
+        @if (Model.PreviewFields.Count > 0)
+        {
+            <button type="button" class="crm-kanban-expand" data-kanban-expand title="جزئیات کارت" aria-label="باز و بسته">
+                <i class="bx bx-chevron-down"></i>
+            </button>
+        }
+    </div>
+</div>

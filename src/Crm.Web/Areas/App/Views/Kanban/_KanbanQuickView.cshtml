@@ -1,0 +1,70 @@
+@model Crm.Web.Areas.App.Controllers.KanbanQuickViewModel
+@{
+    string Display(Crm.Core.Entities.FieldDef field)
+    {
+        var raw = Model.Values.GetValueOrDefault(field.Name);
+        if (string.IsNullOrWhiteSpace(raw)) return "—";
+        return field.Type switch
+        {
+            Crm.Core.Entities.FieldType.Picklist =>
+                field.PicklistValues.FirstOrDefault(p => p.Value == raw)?.Label ?? raw,
+            Crm.Core.Entities.FieldType.Checkbox =>
+                raw is "1" or "true" or "True" ? "بله" : "خیر",
+            Crm.Core.Entities.FieldType.Currency =>
+                decimal.TryParse(raw, out var m) ? m.ToString("N0") + " تومان" : raw,
+            Crm.Core.Entities.FieldType.Date or Crm.Core.Entities.FieldType.DateTime =>
+                DateTime.TryParse(raw, out var dt)
+                    ? Crm.Web.Services.PersianDateHelper.ToJalaliDate(dt)
+                    : raw,
+            _ => raw
+        };
+    }
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+    <div>
+        <h5 class="mb-1">@Model.Record.Title</h5>
+        @if (Model.Tags.Count > 0)
+        {
+            <div class="crm-kanban-card-tags mt-1">
+                @foreach (var tag in Model.Tags)
+                {
+                    <span class="crm-kanban-tag" style="background:@(tag.Color ?? "#696cff")">@tag.Name</span>
+                }
+            </div>
+        }
+    </div>
+    <div class="d-flex gap-1 flex-wrap">
+        <a href="/App/m/@Model.Module.Name/@Model.Record.Id" class="btn btn-sm btn-outline-secondary">صفحه جزئیات</a>
+        @if (Model.CanEdit)
+        {
+            <a href="/App/m/@Model.Module.Name/@Model.Record.Id/edit" class="btn btn-sm btn-primary">ویرایش کامل</a>
+        }
+        @if (Model.CanConvertLead)
+        {
+            <form action="/App/m/leads/@Model.Record.Id/convert" method="post" class="d-inline"
+                  data-confirm="این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-primary">تبدیل</button>
+            </form>
+        }
+        else if (Model.CanConvertDocument)
+        {
+            <form action="/App/m/@Model.Module.Name/@Model.Record.Id/convert" method="post" class="d-inline"
+                  data-confirm="این سند تبدیل شود؟">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm btn-outline-primary">تبدیل سند</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="crm-kanban-quick-grid">
+    @foreach (var field in Model.Fields)
+    {
+        <div class="crm-kanban-quick-field">
+            <label>@field.Label</label>
+            <div class="value">@Display(field)</div>
+        </div>
+    }
+</div>
