@@ -120,22 +120,6 @@ public class CampaignsController : AppControllerBase
         }
         ViewBag.WonAmount = wonAmount;
 
-        // گزینه‌های افزودن عضو
-        var options = new Dictionary<string, Dictionary<int, string>>();
-        foreach (var moduleName in MemberModules)
-        {
-            var module = await _metadata.GetModuleByNameAsync(moduleName);
-            if (module is null)
-                continue;
-            var existing = campaign.Members
-                .Where(m => m.ModuleName == moduleName).Select(m => m.RecordId).ToHashSet();
-            options[moduleName] = await _db.Records.AsNoTracking()
-                .Where(r => r.ModuleId == module.Id && !existing.Contains(r.Id))
-                .OrderByDescending(r => r.Id).Take(200)
-                .ToDictionaryAsync(r => r.Id, r => r.Title);
-        }
-        ViewBag.MemberOptions = options;
-
         ViewData["Title"] = campaign.Name;
         return View(campaign);
     }

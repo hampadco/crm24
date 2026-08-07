@@ -4,7 +4,6 @@
 @model Campaign
 @{
     var memberRecords = (Dictionary<int, Crm.Core.Entities.DynamicRecord>)ViewBag.MemberRecords;
-    var memberOptions = (Dictionary<string, Dictionary<int, string>>)ViewBag.MemberOptions;
     var wonAmount = (decimal)ViewBag.WonAmount;
     var cost = Model.ActualCost > 0 ? Model.ActualCost : Model.Budget;
     var roi = cost > 0 ? Math.Round((wonAmount - cost) / cost * 100, 1) : (decimal?)null;
@@ -100,29 +99,24 @@
             <div class="card-header bg-transparent"><h5 class="mb-0">افزودن عضو</h5></div>
             <div class="card-body">
                 <p class="text-muted small mb-3">با جستجو در لیست، سرنخ / مخاطب / فرصت را انتخاب کنید.</p>
-                @foreach (var group in memberOptions.Where(g => g.Value.Count > 0))
+                @foreach (var moduleName in new[] { "leads", "contacts", "opportunities" })
                 {
                     <form asp-action="AddMember" asp-route-id="@Model.Id" method="post" class="mb-3">
                         @Html.AntiForgeryToken()
-                        <input type="hidden" name="moduleName" value="@group.Key" />
-                        <label class="form-label small fw-semibold">@moduleLabels.GetValueOrDefault(group.Key, group.Key)</label>
+                        <input type="hidden" name="moduleName" value="@moduleName" />
+                        <label class="form-label small fw-semibold">@moduleLabels.GetValueOrDefault(moduleName, moduleName)</label>
                         <div class="d-flex gap-2 align-items-start">
-                            <select name="recordId" class="form-select crm-select2" data-placeholder="جستجوی @moduleLabels.GetValueOrDefault(group.Key, group.Key)…">
+                            <select name="recordId" class="form-select crm-select2"
+                                    data-placeholder="جستجوی @moduleLabels.GetValueOrDefault(moduleName, moduleName)…"
+                                    data-allow-clear="true"
+                                    data-ajax-url="/App/lookup/module/@moduleName">
                                 <option value=""></option>
-                                @foreach (var option in group.Value)
-                                {
-                                    <option value="@option.Key">@option.Value</option>
-                                }
                             </select>
                             <button type="submit" class="btn btn-primary text-nowrap">
                                 <i class="bx bx-plus me-1"></i>افزودن
                             </button>
                         </div>
                     </form>
-                }
-                @if (memberOptions.All(g => g.Value.Count == 0))
-                {
-                    <p class="text-muted mb-0">رکوردی برای افزودن وجود ندارد.</p>
                 }
             </div>
         </div>

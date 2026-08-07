@@ -106,6 +106,7 @@
             var $el = $(this);
             if ($el.hasClass('select2-hidden-accessible')) return;
             var allowClear = $el.data('allow-clear') === true || $el.data('allow-clear') === 'true';
+            var ajaxUrl = $el.data('ajax-url');
             var dropdownParentAttr = $el.data('dropdown-parent');
             // داخل کارت فرم overflow ممکن است دراپ‌داون را ببرد — والد body
             var parent = $el.closest('.crm-rf-form').length ? $(document.body) : $el.parent();
@@ -115,13 +116,38 @@
                 $el.wrap('<div class="position-relative"></div>');
                 parent = $el.parent();
             }
-            $el.select2({
+            var opts = {
                 dir: 'rtl',
                 width: '100%',
                 placeholder: $el.data('placeholder') || 'جستجو و انتخاب…',
                 allowClear: allowClear,
                 dropdownParent: parent
-            });
+            };
+            if (ajaxUrl) {
+                opts.minimumInputLength = 0;
+                opts.ajax = {
+                    url: ajaxUrl,
+                    dataType: 'json',
+                    delay: 200,
+                    data: function (params) {
+                        return {
+                            q: params.term || '',
+                            page: params.page || 1
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        var results = (data && data.results) ? data.results : [];
+                        var more = !!(data && data.pagination && data.pagination.more);
+                        return {
+                            results: results,
+                            pagination: { more: more }
+                        };
+                    },
+                    cache: true
+                };
+            }
+            $el.select2(opts);
         });
     }
 

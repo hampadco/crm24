@@ -25,11 +25,14 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">مخاطب مرتبط</label>
-                    <select asp-for="ContactRecordId" class="form-select">
-                        <option value="">— انتخاب کنید —</option>
-                        @foreach (var (id, title) in Model.ContactOptions)
+                    <select asp-for="ContactRecordId" class="form-select crm-select2"
+                            data-placeholder="جستجوی مخاطب…"
+                            data-allow-clear="true"
+                            data-ajax-url="/App/lookup/module/contacts">
+                        <option value=""></option>
+                        @if (Model.ContactRecordId is int cid && Model.ContactOptions.TryGetValue(cid, out var ctitle))
                         {
-                            <option value="@id">@title</option>
+                            <option value="@cid" selected>@ctitle</option>
                         }
                     </select>
                 </div>
@@ -76,6 +79,15 @@
                     </tr>
                 </thead>
                 <tbody id="linesBody"></tbody>
+                <tfoot>
+                    <tr class="crm-line-add-row">
+                        <td colspan="7" class="p-2 bg-light">
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100" style="border-style:dashed;font-weight:600" onclick="addLine()">
+                                <i class="bx bx-plus me-1"></i> افزودن ردیف
+                            </button>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
         <div class="card-footer text-end">
@@ -105,26 +117,82 @@
 
     let lineIndex = 0;
 
+    function fmtInt(n) {
+        return Math.round(Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0, minimumFractionDigits: 0 });
+    }
+
+    function parseMoney(v) {
+        const n = parseFloat(String(v || '').replace(/,/g, ''));
+        return isNaN(n) ? 0 : n;
+    }
+
+    function bindMoney(input) {
+        if (!input || input.dataset.moneyBound) return;
+        input.dataset.moneyBound = '1';
+        input.addEventListener('input', () => {
+            const raw = String(input.value || '').replace(/[^\d]/g, '');
+            const pos = input.selectionStart || 0;
+            const digitsBefore = String(input.value).slice(0, pos).replace(/[^\d]/g, '').length;
+            if (!raw) { input.value = ''; recalc(); return; }
+            const formatted = fmtInt(raw);
+            input.value = formatted;
+            let seen = 0, newPos = formatted.length;
+            for (let i = 0; i < formatted.length; i++) {
+                if (/\d/.test(formatted[i])) {
+                    seen++;
+                    if (seen >= digitsBefore) { newPos = i + 1; break; }
+                }
+            }
+            try { input.setSelectionRange(newPos, newPos); } catch (e) {}
+            recalc();
+        });
+        input.addEventListener('blur', () => { input.value = fmtInt(parseMoney(input.value)); recalc(); });
+    }
+
     function addLine(data) {
         data = data || { productId: null, title: '', qty: 1, price: 0, disc: 0, tax: 0 };
         const i = lineIndex++;
-        const options = ['<option value="">— دستی —</option>']
-            .concat(products.map(p => `<option value="${p.id}" ${p.id === data.productId ? 'selected' : ''}>${p.name}</option>`))
-            .join('');
+        let selectedOpt = '<option value=""></option>';
+        if (data.productId) {
+            const p = products.find(x => x.id === data.productId);
+            const label = p ? p.name : ('#' + data.productId);
+            selectedOpt += `<option value="${data.productId}" selected data-price="${data.price}" data-tax="${data.tax}">${escapeHtml(label)}</option>`;
+        }
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>
-                <select name="Lines[${i}].ProductId" class="form-select form-select-sm mb-1" onchange="pickProduct(this, ${i})">${options}</select>
+                <select name="Lines[${i}].ProductId" class="form-select form-select-sm mb-1 crm-select2"
+                        data-placeholder="جستجوی محصول…" data-allow-clear="true"
+                        data-ajax-url="/App/lookup/products" data-line-idx="${i}">${selectedOpt}</select>
                 <input name="Lines[${i}].Title" class="form-control form-control-sm" placeholder="شرح آیتم" value="${escapeHtml(data.title)}" />
             </td>
-            <td><input name="Lines[${i}].Quantity" type="number" step="any" min="0" class="form-control form-control-sm calc" value="${data.qty}" /></td>
-            <td><input name="Lines[${i}].UnitPrice" type="number" step="any" min="0" class="form-control form-control-sm calc" value="${data.price}" /></td>
-            <td><input name="Lines[${i}].DiscountPercent" type="number" step="any" min="0" max="100" class="form-control form-control-sm calc" value="${data.disc}" /></td>
-            <td><input name="Lines[${i}].TaxPercent" type="number" step="any" min="0" max="100" class="form-control form-control-sm calc" value="${data.tax}" /></td>
+            <td><input name="Lines[${i}].Quantity" type="text" inputmode="decimal" dir="ltr" class="form-control form-control-sm calc" value="${data.qty}" /></td>
+            <td><input name="Lines[${i}].UnitPrice" type="text" inputmode="numeric" dir="ltr" class="form-control form-control-sm calc money-int" value="${fmtInt(data.price)}" /></td>
+            <td><input name="Lines[${i}].DiscountPercent" type="text" inputmode="decimal" dir="ltr" class="form-control form-control-sm calc" value="${data.disc}" /></td>
+            <td><input name="Lines[${i}].TaxPercent" type="text" inputmode="decimal" dir="ltr" class="form-control form-control-sm calc" value="${data.tax}" /></td>
             <td class="line-total text-nowrap">0</td>
-            <td><button type="button" class="btn btn-sm btn-icon btn-text-danger" onclick="this.closest('tr').remove(); recalc();"><i class="bx bx-x"></i></button></td>`;
+            <td><button type="button" class="btn btn-sm btn-icon btn-text-danger" onclick="removeLine(this)"><i class="bx bx-x"></i></button></td>`;
         document.getElementById('linesBody').appendChild(row);
+
+        const sel = row.querySelector('select');
+        if (window.initCrmSelect2) window.initCrmSelect2(row);
+        if (window.jQuery) {
+            window.jQuery(sel).on('change', function () { pickProduct(this, i); });
+        } else {
+            sel.addEventListener('change', function () { pickProduct(this, i); });
+        }
+        row.querySelectorAll('.money-int').forEach(bindMoney);
+        recalc();
+    }
+
+    function removeLine(btn) {
+        const row = btn.closest('tr');
+        if (window.jQuery) {
+            const $sel = window.jQuery(row).find('select.crm-select2');
+            if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+        }
+        row.remove();
         recalc();
     }
 
@@ -133,30 +201,55 @@
     }
 
     function pickProduct(select, i) {
-        const p = products.find(x => x.id === parseInt(select.value));
         const row = select.closest('tr');
-        if (p) {
-            row.querySelector(`[name="Lines[${i}].Title"]`).value = p.name;
-            row.querySelector(`[name="Lines[${i}].UnitPrice"]`).value = p.price;
-            row.querySelector(`[name="Lines[${i}].TaxPercent"]`).value = p.tax;
+        let name = '', price = null, tax = null;
+        if (window.jQuery) {
+            const s2 = window.jQuery(select).select2('data');
+            if (s2 && s2[0]) {
+                name = s2[0].text || '';
+                if (s2[0].price != null) price = s2[0].price;
+                if (s2[0].tax != null) tax = s2[0].tax;
+            }
         }
+        const p = products.find(x => x.id === parseInt(select.value));
+        if (p) {
+            name = name || p.name;
+            if (price == null) price = p.price;
+            if (tax == null) tax = p.tax;
+        }
+        if (name) row.querySelector(`[name="Lines[${i}].Title"]`).value = name;
+        if (price != null) row.querySelector(`[name="Lines[${i}].UnitPrice"]`).value = fmtInt(price);
+        if (tax != null) row.querySelector(`[name="Lines[${i}].TaxPercent"]`).value = tax;
         recalc();
     }
 
     function recalc() {
         let grand = 0;
-        const globalDisc = parseFloat(document.querySelector('[name="DiscountPercent"]').value) || 0;
+        const globalDisc = parseMoney(document.querySelector('[name="DiscountPercent"]').value);
         document.querySelectorAll('#linesBody tr').forEach(row => {
-            const val = name => parseFloat(row.querySelector(`[name$=".${name}"]`).value) || 0;
+            const val = name => parseMoney(row.querySelector(`[name$=".${name}"]`).value);
+            const priceEl = row.querySelector('[name$=".UnitPrice"]');
+            if (priceEl && priceEl !== document.activeElement) priceEl.value = fmtInt(val('UnitPrice'));
             const total = Math.round(val('Quantity') * val('UnitPrice') * (1 - val('DiscountPercent') / 100) * (1 + val('TaxPercent') / 100));
-            row.querySelector('.line-total').textContent = total.toLocaleString('fa-IR');
+            row.querySelector('.line-total').textContent = fmtInt(total);
             grand += total;
         });
         grand = Math.round(grand * (1 - globalDisc / 100));
-        document.getElementById('grandTotal').textContent = grand.toLocaleString('fa-IR');
+        document.getElementById('grandTotal').textContent = fmtInt(grand);
     }
 
-    document.addEventListener('input', e => { if (e.target.classList.contains('calc') || e.target.name === 'DiscountPercent') recalc(); });
+    document.addEventListener('input', e => {
+        if (e.target.classList.contains('calc') || e.target.name === 'DiscountPercent') {
+            if (e.target.classList.contains('money-int')) return;
+            recalc();
+        }
+    });
+
+    document.getElementById('docForm').addEventListener('submit', () => {
+        document.querySelectorAll('#linesBody .money-int').forEach(el => {
+            el.value = String(el.value || '').replace(/,/g, '');
+        });
+    });
 
     if (existingLines.length) existingLines.forEach(l => addLine(l));
     else addLine();

@@ -9,11 +9,22 @@
     string AuditActionLabel(string action) => action switch
     {
         "Create" => "ایجاد",
-        "Update" => "بروزرسانی",
+        "Update" => "ویرایش",
         "Delete" => "حذف",
         "Restore" => "بازیابی",
+        "Convert" => "تبدیل",
+        "Payment" => "ثبت پرداخت",
+        "Confirm" => "تأیید",
+        "Installments" => "ایجاد اقساط",
         _ => action
     };
+
+    string AuditUserLabel(int? userId) =>
+        userId is int uid && Model.AuditUserNames.TryGetValue(uid, out var n) ? n : "سیستم";
+
+    string FieldLabel(string fieldName) =>
+        Model.Fields.FirstOrDefault(f => string.Equals(f.Name, fieldName, StringComparison.OrdinalIgnoreCase))?.Label
+        ?? fieldName;
 
     string FormatFieldDisplay(FieldDef field)
     {
@@ -52,7 +63,7 @@
     <link rel="stylesheet" href="~/css/crm-record-detail.css" asp-append-version="true" />
 }
 
-<div class="crm-rd">
+<div class="crm-rd" @(string.Equals(Model.Module.Name, "pricebooks", StringComparison.OrdinalIgnoreCase) && Model.LineBlock is not null ? "data-default-panel=products" : null)>
     <div class="crm-rd-header">
         <div class="crm-rd-header-main">
             <div class="crm-rd-avatar" aria-hidden="true">
@@ -67,10 +78,33 @@
                 <h1 class="crm-rd-title">@Model.Record.Title</h1>
                 <div class="crm-rd-meta">
                     <span class="crm-rd-chip"><i class="bx bx-cube"></i> @Model.Module.SingularLabel</span>
-                    <span class="crm-rd-chip"><i class="bx bx-time-five"></i> ایجاد @PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)</span>
+                    <span class="crm-rd-chip"><i class="bx bx-time-five"></i> ایجاد @PersianDateHelper.ToJalaliDateTime(Model.Record.CreatedAtUtc)@(string.IsNullOrWhiteSpace(Model.CreatedByName) ? null : $" — {Model.CreatedByName}")</span>
                     @if (Model.Record.UpdatedAtUtc is DateTime updated)
                     {
-                        <span class="crm-rd-chip"><i class="bx bx-refresh"></i> بروزرسانی @PersianDateHelper.ToJalaliDateTime(updated)</span>
+                        <span class="crm-rd-chip"><i class="bx bx-refresh"></i> ویرایش @PersianDateHelper.ToJalaliDateTime(updated)@(string.IsNullOrWhiteSpace(Model.UpdatedByName) ? null : $" — {Model.UpdatedByName}")</span>
+                    }
+                    @if (Model.Module.Name is "quotes" or "sales_orders" or "invoices")
+                    {
+                        if (Model.PriceBookId is int pbId && !string.IsNullOrWhiteSpace(Model.PriceBookName))
+                        {
+                            <a class="crm-rd-chip" href="/App/m/pricebooks/@pbId"><i class="bx bx-book"></i> دفترچه قیمت: @Model.PriceBookName</a>
+                        }
+                        else
+                        {
+                            <span class="crm-rd-chip"><i class="bx bx-book"></i> قیمت پایه محصول</span>
+                        }
+                    }
+                    @if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var payStatus = Model.Values.GetValueOrDefault("status") ?? "";
+                        var payLabel = payStatus switch
+                        {
+                            "Paid" => "پرداخت کامل",
+                            "PartiallyPaid" => "نیمه‌پرداخت",
+                            "Canceled" => "لغو شده",
+                            _ => Model.InvoicePaidAmount > 0 ? "نیمه‌پرداخت" : "پرداخت‌نشده"
+                        };
+                        <span class="crm-rd-chip"><i class="bx bx-money"></i> @payLabel — پرداخت‌شده @Model.InvoicePaidAmount.ToString("N0") / مانده @Model.InvoiceRemainingAmount.ToString("N0")</span>
                     }
                 </div>
             </div>
@@ -138,7 +172,10 @@
             }
             @if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
             {
-                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#payModal">
+                var canPay = Model.InvoiceRemainingAmount > 0.01m;
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#payModal"
+                        @(canPay ? null : "disabled")
+                        title="@(canPay ? "ثبت پرداخت جدید" : "مانده‌ای برای پرداخت نیست")">
                     <i class="bx bx-money me-1"></i> ثبت پرداخت
                 </button>
             }
@@ -448,25 +485,62 @@
                         {
                             <li>
                                 <div class="fw-semibold">@AuditActionLabel(log.Action)</div>
-                                <div class="crm-rd-time">@PersianDateHelper.ToJalaliDateTime(log.AtUtc)</div>
+                                <div class="crm-rd-time">
+                                    @AuditUserLabel(log.UserId)
+                                    · @PersianDateHelper.ToJalaliDateTime(log.AtUtc)
+                                </div>
                                 @if (!string.IsNullOrWhiteSpace(log.Changes) && log.Changes != "{}")
                                 {
-                                    <div class="small text-muted mt-1" style="word-break: break-word; direction: ltr; text-align: left;">
+                                    <div class="small text-muted mt-1" style="word-break: break-word;">
                                         @{
                                             try
                                             {
                                                 using var doc = JsonDocument.Parse(log.Changes);
-                                                foreach (var prop in doc.RootElement.EnumerateObject().Take(8))
+                                                if (string.Equals(log.Action, "Convert", StringComparison.OrdinalIgnoreCase))
                                                 {
-                                                    if (prop.Value.ValueKind == JsonValueKind.Object
-                                                        && prop.Value.TryGetProperty("old", out var oldEl)
-                                                        && prop.Value.TryGetProperty("new", out var newEl))
+                                                    var contactId = doc.RootElement.TryGetProperty("ContactId", out var cEl) ? cEl.ToString() : null;
+                                                    var orgId = doc.RootElement.TryGetProperty("OrganizationId", out var oEl) ? oEl.ToString() : null;
+                                                    var oppId = doc.RootElement.TryGetProperty("OpportunityId", out var pEl) ? pEl.ToString() : null;
+                                                    <div>تبدیل سرنخ
+                                                        @if (!string.IsNullOrWhiteSpace(contactId) && contactId != "null")
+                                                        { <text>به مخاطب #@contactId </text> }
+                                                        @if (!string.IsNullOrWhiteSpace(orgId) && orgId != "null")
+                                                        { <text>و سازمان #@orgId </text> }
+                                                        @if (!string.IsNullOrWhiteSpace(oppId) && oppId != "null")
+                                                        { <text>و فرصت #@oppId</text> }
+                                                    </div>
+                                                }
+                                                else if (string.Equals(log.Action, "Payment", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    var amt = doc.RootElement.TryGetProperty("amount", out var aEl) ? aEl.ToString() : null;
+                                                    var method = doc.RootElement.TryGetProperty("method", out var mEl) ? mEl.ToString() : null;
+                                                    <div>مبلغ @(amt ?? "—") · روش @(method ?? "—")</div>
+                                                }
+                                                else
+                                                {
+                                                    foreach (var prop in doc.RootElement.EnumerateObject().Take(12))
                                                     {
-                                                        <div><code>@prop.Name</code>: @oldEl.ToString() → @newEl.ToString()</div>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div><code>@prop.Name</code>: @prop.Value.ToString()</div>
+                                                        string? oldVal = null, newVal = null;
+                                                        if (prop.Value.ValueKind == JsonValueKind.Object)
+                                                        {
+                                                            if (prop.Value.TryGetProperty("old", out var oldEl)
+                                                                || prop.Value.TryGetProperty("Old", out oldEl))
+                                                                oldVal = oldEl.ValueKind == JsonValueKind.Null ? null : oldEl.ToString();
+                                                            if (prop.Value.TryGetProperty("new", out var newEl)
+                                                                || prop.Value.TryGetProperty("New", out newEl))
+                                                                newVal = newEl.ValueKind == JsonValueKind.Null ? null : newEl.ToString();
+                                                        }
+
+                                                        if (oldVal is not null || newVal is not null)
+                                                        {
+                                                            var fromText = string.IsNullOrWhiteSpace(oldVal) ? "خالی" : oldVal;
+                                                            var toText = string.IsNullOrWhiteSpace(newVal) ? "خالی" : newVal;
+                                                            <div><strong>@FieldLabel(prop.Name)</strong>: از @fromText شد @toText</div>
+                                                        }
+                                                        else if (prop.Name is not "ContactId" and not "OrganizationId" and not "OpportunityId")
+                                                        {
+                                                            <div><strong>@FieldLabel(prop.Name)</strong>: @prop.Value.ToString()</div>
+                                                        }
                                                     }
                                                 }
                                             }
@@ -597,6 +671,145 @@
                 }
             </section>
 
+            @if (Model.LineBlock is not null)
+            {
+                var isPriceBook = string.Equals(Model.Module.Name, "pricebooks", StringComparison.OrdinalIgnoreCase);
+                <section id="products" class="crm-rd-panel" data-crm-rd-panel="products">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h5 class="crm-rd-panel-title mb-0 border-0 pb-0">@(isPriceBook ? "لیست قیمت‌ها" : "محصولات و اقلام")</h5>
+                        @if (Model.CanEdit)
+                        {
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="/App/m/@Model.Module.Name/@Model.Record.Id/edit">
+                                <i class="bx bx-edit me-1"></i> @(isPriceBook ? "ویرایش قیمت‌ها" : "ویرایش اقلام")
+                            </a>
+                        }
+                    </div>
+                    @if (Model.LineItems.Count == 0)
+                    {
+                        <div class="crm-rd-empty">@(isPriceBook ? "هنوز قیمتی در این دفترچه ثبت نشده است." : "هنوز محصولی برای این سند ثبت نشده است.")</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width:3rem">#</th>
+                                        @foreach (var f in Model.LineFields)
+                                        {
+                                            <th>@f.Label</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var rowNo = 0; }
+                                    @foreach (var row in Model.LineItems)
+                                    {
+                                        rowNo++;
+                                        <tr>
+                                            <td class="text-muted">@rowNo</td>
+                                            @foreach (var f in Model.LineFields)
+                                            {
+                                                var display = Model.LineDisplayValue(f, row) ?? "—";
+                                                var isNum = f.Type is FieldType.Currency or FieldType.Decimal
+                                                    or FieldType.Number or FieldType.Percent;
+                                                <td class="@(isNum ? "text-start" : null)" dir="@(isNum ? "ltr" : null)">@display</td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (!isPriceBook)
+                        {
+                            <div class="d-flex flex-wrap justify-content-end gap-4 mt-3 small">
+                                @if (!string.IsNullOrWhiteSpace(Model.Values.GetValueOrDefault("subTotal")))
+                                {
+                                    <div>جمع جزء: <strong>@(decimal.TryParse(Model.Values["subTotal"], out var st) ? st.ToString("N0") : Model.Values["subTotal"])</strong></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.Values.GetValueOrDefault("taxTotal")))
+                                {
+                                    <div>مالیات: <strong>@(decimal.TryParse(Model.Values["taxTotal"], out var tx) ? tx.ToString("N0") : Model.Values["taxTotal"])</strong></div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(Model.Values.GetValueOrDefault("grandTotal")))
+                                {
+                                    <div>جمع کل: <strong class="text-primary">@(decimal.TryParse(Model.Values["grandTotal"], out var gt) ? gt.ToString("N0") : Model.Values["grandTotal"])</strong></div>
+                                }
+                            </div>
+                        }
+                    }
+                </section>
+            }
+
+            @if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase))
+            {
+                <section id="payments" class="crm-rd-panel" data-crm-rd-panel="payments">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h5 class="crm-rd-panel-title mb-0 border-0 pb-0">پرداخت‌ها</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-secondary" href="/App/m/payments">
+                                <i class="bx bx-list-ul me-1"></i> همه پرداخت‌ها
+                            </a>
+                            @if (Model.CanEdit && Model.InvoiceRemainingAmount > 0.01m)
+                            {
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#payModal">
+                                    <i class="bx bx-plus me-1"></i> پرداخت جدید
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-4 mb-3 small">
+                        <div>جمع فاکتور: <strong>@Model.InvoiceGrandTotal.ToString("N0")</strong></div>
+                        <div>پرداخت‌شده: <strong class="text-success">@Model.InvoicePaidAmount.ToString("N0")</strong></div>
+                        <div>مانده: <strong class="@(Model.InvoiceRemainingAmount > 0 ? "text-warning" : "text-success")">@Model.InvoiceRemainingAmount.ToString("N0")</strong></div>
+                    </div>
+                    @if (Model.InvoicePayments.Count == 0)
+                    {
+                        <div class="crm-rd-empty">هنوز پرداختی برای این فاکتور ثبت نشده است.</div>
+                    }
+                    else
+                    {
+                        var methodLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["cash"] = "نقد", ["card"] = "کارت", ["transfer"] = "حواله", ["cheque"] = "چک"
+                        };
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>مبلغ</th>
+                                        <th>روش</th>
+                                        <th>تاریخ</th>
+                                        <th>پیگیری</th>
+                                        <th>توضیح</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{ var pNo = 0; }
+                                    @foreach (var pay in Model.InvoicePayments)
+                                    {
+                                        pNo++;
+                                        var amt = pay.GetValueOrDefault("amount");
+                                        var method = pay.GetValueOrDefault("method") ?? "";
+                                        var methodLabel = methodLabels.TryGetValue(method, out var ml) ? ml : method;
+                                        <tr>
+                                            <td class="text-muted">@pNo</td>
+                                            <td dir="ltr">@(decimal.TryParse(amt, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var pa) ? pa.ToString("N0") : amt)</td>
+                                            <td>@methodLabel</td>
+                                            <td>@(pay.GetValueOrDefault("paidAt") ?? "—")</td>
+                                            <td>@(pay.GetValueOrDefault("reference") ?? "—")</td>
+                                            <td>@(pay.GetValueOrDefault("description") ?? "—")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </section>
+            }
+
             @foreach (var group in Model.Relations)
             {
                 var createHref = !string.IsNullOrWhiteSpace(group.LinkFieldName)
@@ -632,12 +845,10 @@
                                 <div class="flex-grow-1" style="min-width:12rem">
                                     <label class="form-label small mb-1">اتصال رکورد موجود</label>
                                     <select name="relatedRecordId" class="form-select form-select-sm crm-select2"
-                                            data-placeholder="جستجو و انتخاب…" data-allow-clear="true" required>
+                                            data-placeholder="جستجو و انتخاب…" data-allow-clear="true"
+                                            data-ajax-url="/App/m/@Model.Module.Name/@Model.Record.Id/link-candidates?relatedModule=@Uri.EscapeDataString(group.ModuleName)&relationId=@m2mRelId"
+                                            required>
                                         <option value="">— انتخاب کنید —</option>
-                                        @foreach (var cand in group.LinkCandidates)
-                                        {
-                                            <option value="@cand.Id">@cand.Title</option>
-                                        }
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-outline-primary">
@@ -657,12 +868,10 @@
                                 <div class="flex-grow-1" style="min-width:12rem">
                                     <label class="form-label small mb-1">اتصال رکورد موجود</label>
                                     <select name="relatedRecordId" class="form-select form-select-sm crm-select2"
-                                            data-placeholder="جستجو و انتخاب…" data-allow-clear="true" required>
+                                            data-placeholder="جستجو و انتخاب…" data-allow-clear="true"
+                                            data-ajax-url="/App/m/@Model.Module.Name/@Model.Record.Id/link-candidates?relatedModule=@Uri.EscapeDataString(group.ModuleName)&linkField=@Uri.EscapeDataString(group.LinkFieldName!)"
+                                            required>
                                         <option value="">— انتخاب کنید —</option>
-                                        @foreach (var cand in group.LinkCandidates)
-                                        {
-                                            <option value="@cand.Id">@cand.Title</option>
-                                        }
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-sm btn-outline-primary">
@@ -739,6 +948,27 @@
                         <span class="crm-rd-count">@Model.Attachments.Count</span>
                     }
                 </button>
+                @if (Model.LineBlock is not null)
+                {
+                    <button type="button" class="nav-link" data-crm-rd-target="products">
+                        <i class="bx bx-package"></i>
+                        <span>@(string.Equals(Model.Module.Name, "pricebooks", StringComparison.OrdinalIgnoreCase) ? "لیست قیمت‌ها" : "محصولات")</span>
+                        @if (Model.LineItems.Count > 0)
+                        {
+                            <span class="crm-rd-count">@Model.LineItems.Count</span>
+                        }
+                    </button>
+                }
+                @if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase))
+                {
+                    <button type="button" class="nav-link" data-crm-rd-target="payments">
+                        <i class="bx bx-money"></i> <span>پرداخت‌ها</span>
+                        @if (Model.InvoicePayments.Count > 0)
+                        {
+                            <span class="crm-rd-count">@Model.InvoicePayments.Count</span>
+                        }
+                    </button>
+                }
                 @foreach (var group in Model.Relations)
                 {
                     <button type="button" class="nav-link" data-crm-rd-target="@group.TabKey">
@@ -757,7 +987,7 @@
     </div>
 </div>
 
-@if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
+@if (string.Equals(Model.Module.Name, "invoices", StringComparison.OrdinalIgnoreCase) && Model.CanEdit && Model.InvoiceRemainingAmount > 0.01m)
 {
     <div class="modal fade" id="payModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
@@ -768,10 +998,15 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-light border small mb-3">
+                        جمع فاکتور: <strong>@Model.InvoiceGrandTotal.ToString("N0")</strong>
+                        · پرداخت‌شده: <strong>@Model.InvoicePaidAmount.ToString("N0")</strong>
+                        · مانده: <strong>@Model.InvoiceRemainingAmount.ToString("N0")</strong>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">مبلغ</label>
                         <input type="text" inputmode="decimal" name="amount" class="form-control" dir="ltr" required
-                               value="@(Model.Values.GetValueOrDefault("grandTotal") ?? Model.Values.GetValueOrDefault("amount"))" />
+                               value="@Model.InvoiceRemainingAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">روش</label>
@@ -904,6 +1139,10 @@
         var hash = (location.hash || '').replace(/^#/, '');
         if (hash && root.querySelector('[data-crm-rd-panel="' + hash + '"]')) {
             showPanel(hash, false);
+        } else if (root.getAttribute('data-default-panel')) {
+            var def = root.getAttribute('data-default-panel');
+            if (root.querySelector('[data-crm-rd-panel="' + def + '"]'))
+                showPanel(def, false);
         }
     }
 

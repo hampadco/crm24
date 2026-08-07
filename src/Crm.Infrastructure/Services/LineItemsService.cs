@@ -59,34 +59,39 @@ public class LineItemsService
         if (block is null || lineModule is null || string.IsNullOrWhiteSpace(block.LineLinkField))
             return [];
 
-        var linkField = block.LineLinkField!;
+        return await LoadLinesAsync(lineModule.Id, block.LineLinkField!, parentRecordId);
+    }
+
+    /// <summary>بارگذاری سطرها وقتی بلاک/ماژول خط از قبل resolve شده.</summary>
+    public async Task<IReadOnlyList<Dictionary<string, string?>>> LoadLinesAsync(
+        int lineModuleId, string linkField, int parentRecordId)
+    {
+        if (string.IsNullOrWhiteSpace(linkField)
+            || linkField.Length > 64
+            || !linkField.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
+            return [];
+
         var parentKey = parentRecordId.ToString();
         var tenantId = _tenant.TenantId;
 
-        var rows = await _db.Database.SqlQuery<IdRow>($"""
-            SELECT r."Id" AS "Id"
+        var rows = await _db.Database.SqlQuery<LineDataRow>($"""
+            SELECT r."Id" AS "Id", r."CustomData" AS "CustomData"
             FROM "Records" r
-            WHERE r."ModuleId" = {lineModule.Id}
+            WHERE r."ModuleId" = {lineModuleId}
               AND r."TenantId" = {tenantId}
               AND r."IsDeleted" = FALSE
               AND COALESCE(r."CustomData" ->> {linkField}, '') = {parentKey}
             ORDER BY COALESCE(NULLIF(r."CustomData" ->> 'sortOrder', '')::int, r."Id") ASC
             """).ToListAsync();
 
-        if (rows.Count == 0)
-            return [];
-
-        var ids = rows.Select(r => r.Id).ToList();
-        var records = await _db.Records.AsNoTracking()
-            .Where(r => ids.Contains(r.Id))
-            .ToDictionaryAsync(r => r.Id);
-
-        var result = new List<Dictionary<string, string?>>();
-        foreach (var id in ids)
+        var result = new List<Dictionary<string, string?>>(rows.Count);
+        foreach (var row in rows)
         {
-            if (!records.TryGetValue(id, out var rec)) continue;
-            var data = DynamicRecordService.ParseData(rec);
-            data["__id"] = id.ToString();
+            var data = string.IsNullOrWhiteSpace(row.CustomData)
+                ? new Dictionary<string, string?>()
+                : JsonSerializer.Deserialize<Dictionary<string, string?>>(row.CustomData)
+                  ?? new Dictionary<string, string?>();
+            data["__id"] = row.Id.ToString();
             result.Add(data);
         }
         return result;
@@ -127,6 +132,12 @@ public class LineItemsService
         var existingIds = existing.Select(x => x.Id).ToHashSet();
         var keepIds = new HashSet<int>();
 
+        var parentModuleName = await _db.Modules.AsNoTracking()
+            .Where(m => m.Id == parentModuleId)
+            .Select(m => m.Name)
+            .FirstOrDefaultAsync();
+        var isPriceBook = string.Equals(parentModuleName, "pricebooks", StringComparison.OrdinalIgnoreCase);
+
         decimal subTotal = 0, taxTotal = 0;
         var sort = 0;
 
@@ -136,13 +147,25 @@ public class LineItemsService
             row["sortOrder"] = (++sort).ToString(CultureInfo.InvariantCulture);
 
             var qty = ParseDec(row, "quantity", 1);
-            var price = ParseDec(row, "unitPrice", 0);
+            var price = Math.Round(ParseDec(row, "unitPrice", 0), MidpointRounding.AwayFromZero);
             var disc = ParseDec(row, "discountPercent", 0);
             var tax = ParseDec(row, "taxPercent", 0);
+            if (isPriceBook)
+            {
+                qty = 1;
+                disc = 0;
+                tax = 0;
+                row["quantity"] = "1";
+                row["discountPercent"] = "0";
+                row["taxPercent"] = "0";
+            }
+
+            row["unitPrice"] = price.ToString("0", CultureInfo.InvariantCulture);
+
             var net = qty * price * (1 - disc / 100m);
             var lineTax = net * (tax / 100m);
-            var lineTotal = net + lineTax;
-            row["lineTotal"] = lineTotal.ToString("0.##", CultureInfo.InvariantCulture);
+            var lineTotal = Math.Round(net + lineTax, MidpointRounding.AwayFromZero);
+            row["lineTotal"] = lineTotal.ToString("0", CultureInfo.InvariantCulture);
             subTotal += net;
             taxTotal += lineTax;
 
@@ -186,20 +209,23 @@ public class LineItemsService
 
         await _db.SaveChangesAsync();
 
-        // نوشتن جمع‌ها روی والد
+        // نوشتن جمع‌ها روی والد (نه برای دفترچه قیمت)
         var parent = await _db.Records.FirstOrDefaultAsync(r => r.Id == parentRecordId && r.ModuleId == parentModuleId);
         if (parent is null) return;
+
+        if (isPriceBook)
+            return;
 
         var parentData = DynamicRecordService.ParseData(parent);
         var discountPercent = ParseDec(parentData, "discountPercent", 0);
         var discountAmount = subTotal * (discountPercent / 100m);
         var grand = subTotal - discountAmount + taxTotal;
 
-        parentData["subTotal"] = subTotal.ToString("0.##", CultureInfo.InvariantCulture);
-        parentData["discountAmount"] = discountAmount.ToString("0.##", CultureInfo.InvariantCulture);
-        parentData["taxTotal"] = taxTotal.ToString("0.##", CultureInfo.InvariantCulture);
-        parentData["grandTotal"] = grand.ToString("0.##", CultureInfo.InvariantCulture);
-        parentData["amount"] = grand.ToString("0.##", CultureInfo.InvariantCulture);
+        parentData["subTotal"] = Math.Round(subTotal, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
+        parentData["discountAmount"] = Math.Round(discountAmount, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
+        parentData["taxTotal"] = Math.Round(taxTotal, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
+        parentData["grandTotal"] = Math.Round(grand, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
+        parentData["amount"] = Math.Round(grand, MidpointRounding.AwayFromZero).ToString("0", CultureInfo.InvariantCulture);
 
         parent.CustomData = JsonSerializer.Serialize(parentData);
         await _db.SaveChangesAsync();
@@ -243,9 +269,10 @@ public class LineItemsService
     {
         if (!data.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
             return fallback;
+        raw = raw.Replace(",", "").Trim();
         if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var v))
             return v;
-        if (decimal.TryParse(raw, out v))
+        if (decimal.TryParse(raw, NumberStyles.Number, CultureInfo.CurrentCulture, out v))
             return v;
         return fallback;
     }
@@ -253,5 +280,11 @@ public class LineItemsService
     private sealed class IdRow
     {
         public int Id { get; set; }
+    }
+
+    private sealed class LineDataRow
+    {
+        public int Id { get; set; }
+        public string CustomData { get; set; } = "{}";
     }
 }

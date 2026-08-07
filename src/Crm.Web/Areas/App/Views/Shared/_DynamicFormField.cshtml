@@ -52,7 +52,14 @@
                     }
                     @foreach (var pick in field.PicklistValues.OrderBy(p => p.SortOrder))
                     {
-                        <option value="@pick.Value" selected="@(pick.Value == value)">@pick.Label</option>
+                        if (pick.Value == value)
+                        {
+                            <option value="@pick.Value" selected>@pick.Label</option>
+                        }
+                        else
+                        {
+                            <option value="@pick.Value">@pick.Label</option>
+                        }
                     }
                 </select>
                 break;
@@ -68,7 +75,14 @@
                             disabled="@readOnly">
                         @foreach (var pick in field.PicklistValues.OrderBy(p => p.SortOrder))
                         {
-                            <option value="@pick.Value" selected="@(selected.Contains(pick.Value))">@pick.Label</option>
+                            if (selected.Contains(pick.Value))
+                            {
+                                <option value="@pick.Value" selected>@pick.Label</option>
+                            }
+                            else
+                            {
+                                <option value="@pick.Value">@pick.Label</option>
+                            }
                         }
                     </select>
                 }
@@ -78,16 +92,26 @@
                 <select id="@name" name="@name" class="@selectClass crm-select2"
                         data-placeholder="جستجو و انتخاب…"
                         data-allow-clear="true"
+                        data-ajax-url="/App/m/@Model.Module.Name/lookup/@field.Name"
+                        @(string.Equals(field.Name, "priceBook", StringComparison.OrdinalIgnoreCase) ? "data-price-book=true" : null)
                         disabled="@readOnly">
-                    <option value="">— انتخاب کنید —</option>
-                    @if (Model.LookupOptions.TryGetValue(field.Name, out var options))
+                    <option value=""></option>
+                    @if (!string.IsNullOrWhiteSpace(value)
+                         && Model.LookupOptions.TryGetValue(field.Name, out var options))
                     {
                         @foreach (var (optId, optTitle) in options)
                         {
-                            <option value="@optId" selected="@(optId.ToString() == value)">@optTitle</option>
+                            if (string.Equals(optId.ToString(), value.Trim(), StringComparison.Ordinal))
+                            {
+                                <option value="@optId" selected>@optTitle</option>
+                            }
                         }
                     }
                 </select>
+                @if (string.Equals(field.Name, "priceBook", StringComparison.OrdinalIgnoreCase))
+                {
+                    <div class="form-text">با انتخاب محصول در سطرها، قیمت از این دفترچه پر می‌شود.</div>
+                }
                 break;
 
             case FieldType.Checkbox:

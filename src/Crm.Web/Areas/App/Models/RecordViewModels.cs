@@ -136,7 +136,12 @@ public class RecordFormViewModel
     /// </summary>
     public IEnumerable<(FieldBlock? Block, IReadOnlyList<FieldDef> Fields)> GroupedFields()
     {
-        var visible = Fields.Where(f => f.IsVisible).ToList();
+        var hasLineItems = Blocks.Any(b => b.Kind == BlockKind.LineItems);
+        // دفترچه قیمت کنار لیست محصولات نشان داده می‌شود؛ اینجا تکرار نشود
+        var visible = Fields
+            .Where(f => f.IsVisible)
+            .Where(f => !(hasLineItems && string.Equals(f.Name, "priceBook", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
         if (Blocks.Count == 0)
         {
             yield return (null, visible.OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList());
@@ -196,13 +201,60 @@ public class RecordDetailViewModel
 
     public IReadOnlyList<Note> Notes { get; set; } = [];
     public IReadOnlyList<AuditLog> AuditLogs { get; set; } = [];
+    /// <summary>UserId → نام نمایشی برای تایم‌لاین ممیزی.</summary>
+    public Dictionary<int, string> AuditUserNames { get; set; } = new();
+    /// <summary>نام ایجادکننده / آخرین ویرایش‌کننده.</summary>
+    public string? CreatedByName { get; set; }
+    public string? UpdatedByName { get; set; }
     public IReadOnlyList<RelatedRecordItem> Activities { get; set; } = [];
     public IReadOnlyList<RelatedRecordGroup> Relations { get; set; } = [];
     public IReadOnlyList<Attachment> Attachments { get; set; } = [];
     public IReadOnlyList<Tag> Tags { get; set; } = [];
 
+    /// <summary>سطرهای سند (محصولات) — فقط برای ماژول‌های دارای BlockKind.LineItems.</summary>
+    public FieldBlock? LineBlock { get; set; }
+    public IReadOnlyList<FieldDef> LineFields { get; set; } = [];
+    public IReadOnlyList<Dictionary<string, string?>> LineItems { get; set; } = [];
+    /// <summary>عنوان Lookupهای سطر (مثلاً product → نام محصول).</summary>
+    public Dictionary<string, Dictionary<string, string>> LineLookupTitles { get; set; } = new();
+
+    /// <summary>پرداخت‌های فاکتور (ماژول payments).</summary>
+    public IReadOnlyList<Dictionary<string, string?>> InvoicePayments { get; set; } = [];
+    public decimal InvoicePaidAmount { get; set; }
+    public decimal InvoiceRemainingAmount { get; set; }
+    public decimal InvoiceGrandTotal { get; set; }
+
+    /// <summary>دفترچه قیمت انتخاب‌شده روی سند فروش (Lookup به ماژول pricebooks).</summary>
+    public int? PriceBookId { get; set; }
+    public string? PriceBookName { get; set; }
+
     /// <summary>قالب‌های چاپ فعال که با نقش کاربر اشتراک شده‌اند.</summary>
     public IReadOnlyList<PrintTemplateOption> PrintTemplates { get; set; } = [];
+
+    public string? LineDisplayValue(FieldDef field, Dictionary<string, string?> row)
+    {
+        row.TryGetValue(field.Name, out var value);
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (field.Type == FieldType.Lookup
+            && LineLookupTitles.TryGetValue(field.Name, out var titles)
+            && titles.TryGetValue(value, out var title))
+            return title;
+
+        if (field.Type == FieldType.Picklist)
+            return field.PicklistValues.FirstOrDefault(p => p.Value == value)?.Label ?? value;
+
+        if (field.Type is FieldType.Currency or FieldType.Decimal or FieldType.Number)
+        {
+            if (decimal.TryParse(value, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var n)
+                || decimal.TryParse(value, out n))
+                return field.Type == FieldType.Currency ? n.ToString("N0") : n.ToString("N2");
+        }
+
+        return value;
+    }
 
     public string? DisplayValue(FieldDef field)
     {
@@ -210,8 +262,7 @@ public class RecordDetailViewModel
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
-        if (field.Type == FieldType.Lookup
-            && LookupTitles.TryGetValue(field.Name, out var titles)
+        if (LookupTitles.TryGetValue(field.Name, out var titles)
             && titles.TryGetValue(value, out var title))
             return title;
 

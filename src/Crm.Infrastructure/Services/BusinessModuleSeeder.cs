@@ -35,7 +35,8 @@ public class BusinessModuleSeeder
                 "purchase_orders", "contracts", "warranties", "projects", "project_tasks", "project_phases",
                 "leaves", "commissions", "documents", "services", "pricebooks", "payments", "installments",
                 "warehouses", "product_sales",
-                "quote_lines", "sales_order_lines", "invoice_lines", "purchase_order_lines"
+                "quote_lines", "sales_order_lines", "invoice_lines", "purchase_order_lines",
+                "pricebook_entries"
             };
             var have = await _db.Modules.CountAsync(m => m.TenantId == tenantId && expected.Contains(m.Name));
             var mutated = false;
@@ -69,12 +70,143 @@ public class BusinessModuleSeeder
             _cache.Set(financeKey, true, TimeSpan.FromHours(24));
         }
 
-        // ارتقای فیلد/بلاک/ماژول خطوط اسناد فروش
-        var docsKey = $"business-doc-modules-v2:{tenantId}";
+        // ارتقای فیلد/بلاک/ماژول خطوط اسناد فروش + منوی پرداخت‌ها
+        var docsKey = $"business-doc-modules-v6:{tenantId}";
         if (!_cache.TryGetValue(docsKey, out bool docsOk) || !docsOk)
         {
             await EnsureDocumentModulesAsync(tenantId);
             _cache.Set(docsKey, true, TimeSpan.FromHours(24));
+        }
+
+        // دفترچه قیمت: سطر محصول/قیمت — جدا و قابل اجبار از فرم (اگر کش docs نخورده باشد)
+        await EnsurePriceBooksStructureAsync(tenantId);
+
+        // فیلد Lookup دفترچه روی پیش‌فاکتور/سفارش/فاکتور — همیشه تضمین شود
+        await EnsureDocumentPriceBookFieldAsync(tenantId);
+    }
+
+    /// <summary>ماژول pricebook_entries + بلاک LineItems روی pricebooks + منو.</summary>
+    public async Task EnsurePriceBooksStructureAsync(int tenantId)
+    {
+        var cacheKey = $"pricebooks-structure-v1:{tenantId}";
+        if (_cache.TryGetValue(cacheKey, out bool ok) && ok)
+        {
+            // حتی با کش: اگر بلاک LineItems نباشد دوباره بساز (tenant خراب/نیمه‌کاره)
+            var parent = await _db.Modules.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "pricebooks");
+            if (parent is not null)
+            {
+                var hasLine = await _db.FieldBlocks.AsNoTracking()
+                    .AnyAsync(b => b.ModuleId == parent.Id && b.Kind == BlockKind.LineItems);
+                if (hasLine)
+                    return;
+            }
+            else
+                return;
+        }
+
+        var pricebooksMod = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "pricebooks");
+        if (pricebooksMod is null)
+        {
+            await EnsureAsync(tenantId, "pricebooks", "دفترچه قیمت", "دفترچه‌های قیمت", "bx-book", "sales", 240,
+            [
+                F("name", "نام دفترچه", FieldType.Text, required: true),
+                F("currency", "ارز", FieldType.Text, defaultValue: "IRR"),
+                F("isActive", "فعال", FieldType.Checkbox, defaultValue: "true"),
+                F("description", "توضیحات", FieldType.MultilineText, showInList: false)
+            ], isChild: false, showInMenu: true);
+            pricebooksMod = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "pricebooks");
+        }
+
+        if (pricebooksMod is not null)
+        {
+            pricebooksMod.ShowInMenu = true;
+            pricebooksMod.IsChildModule = false;
+            pricebooksMod.MenuGroup = "sales";
+            if (pricebooksMod.SortOrder <= 0) pricebooksMod.SortOrder = 240;
+            await _db.SaveChangesAsync();
+            await _rolePerms.EnsureModulePermissionRowsAsync(tenantId, pricebooksMod.Id);
+        }
+
+        await EnsureAsync(tenantId, "pricebook_entries", "سطر دفترچه قیمت", "سطرهای دفترچه قیمت", "bx-list-ul", "sales", 960,
+        [
+            F("title", "عنوان", FieldType.Text, required: true),
+            F("product", "محصول", FieldType.Lookup, lookupModule: "products"),
+            F("quantity", "تعداد", FieldType.Decimal, required: true, defaultValue: "1"),
+            F("unitPrice", "قیمت", FieldType.Currency, required: true),
+            F("discountPercent", "تخفیف ٪", FieldType.Percent, defaultValue: "0", showInList: false),
+            F("taxPercent", "مالیات ٪", FieldType.Percent, defaultValue: "0", showInList: false),
+            F("lineTotal", "جمع سطر", FieldType.Currency, showInList: false),
+            F("sortOrder", "ترتیب", FieldType.Number, showInList: false, defaultValue: "0"),
+            F("priceBook", "دفترچه", FieldType.Lookup, lookupModule: "pricebooks", showInList: false)
+        ], isChild: true, showInMenu: false);
+
+        // اگر ماژول از قبل بوده و فیلدها ناقص‌اند، فیلدهای لازم را اضافه کن
+        await EnsurePriceBookEntryFieldsAsync(tenantId);
+        await EnsureLineItemsBlockAsync(tenantId, "pricebooks", "pricebook_entries", "priceBook");
+
+        if (pricebooksMod is not null)
+        {
+            _cache.Remove($"modules:{tenantId}");
+            _cache.Remove($"fields:{tenantId}:{pricebooksMod.Id}");
+            _cache.Remove($"blocks:{tenantId}:{pricebooksMod.Id}");
+            var entryMod = await _db.Modules.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "pricebook_entries");
+            if (entryMod is not null)
+            {
+                _cache.Remove($"fields:{tenantId}:{entryMod.Id}");
+                await _rolePerms.EnsureModulePermissionRowsAsync(tenantId, entryMod.Id);
+            }
+        }
+
+        _cache.Set(cacheKey, true, TimeSpan.FromHours(24));
+    }
+
+    private async Task EnsurePriceBookEntryFieldsAsync(int tenantId)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "pricebook_entries");
+        if (module is null) return;
+
+        var needed = new (string Name, string Label, FieldType Type, string? Lookup, string? Default, bool ShowInList)[]
+        {
+            ("title", "عنوان", FieldType.Text, null, null, true),
+            ("product", "محصول", FieldType.Lookup, "products", null, true),
+            ("quantity", "تعداد", FieldType.Decimal, null, "1", true),
+            ("unitPrice", "قیمت", FieldType.Currency, null, null, true),
+            ("discountPercent", "تخفیف ٪", FieldType.Percent, null, "0", false),
+            ("taxPercent", "مالیات ٪", FieldType.Percent, null, "0", false),
+            ("lineTotal", "جمع سطر", FieldType.Currency, null, null, false),
+            ("sortOrder", "ترتیب", FieldType.Number, null, "0", false),
+            ("priceBook", "دفترچه", FieldType.Lookup, "pricebooks", null, false)
+        };
+
+        var existing = await _db.Fields.Where(f => f.ModuleId == module.Id).Select(f => f.Name).ToListAsync();
+        var maxSort = await _db.Fields.Where(f => f.ModuleId == module.Id).MaxAsync(f => (int?)f.SortOrder) ?? 0;
+        var added = false;
+        foreach (var (name, label, type, lookup, def, show) in needed)
+        {
+            if (existing.Contains(name, StringComparer.OrdinalIgnoreCase))
+                continue;
+            _db.Fields.Add(new FieldDef
+            {
+                TenantId = tenantId,
+                ModuleId = module.Id,
+                Name = name,
+                Label = label,
+                Type = type,
+                LookupModule = lookup,
+                DefaultValue = def,
+                IsCustom = false,
+                IsRequired = name is "title" or "quantity" or "unitPrice",
+                ShowInList = show,
+                SortOrder = ++maxSort
+            });
+            added = true;
+        }
+        if (added)
+        {
+            await _db.SaveChangesAsync();
+            _cache.Remove($"fields:{tenantId}:{module.Id}");
         }
     }
 
@@ -134,6 +266,7 @@ public class BusinessModuleSeeder
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
             F("contact", "مخاطب", FieldType.Lookup, lookupModule: "contacts"),
             F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
+            F("priceBook", "دفترچه قیمت", FieldType.Lookup, lookupModule: "pricebooks", showInList: false),
             F("number", "شماره", FieldType.Text, showInList: true),
             F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
@@ -156,6 +289,7 @@ public class BusinessModuleSeeder
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
             F("contact", "مخاطب", FieldType.Lookup, lookupModule: "contacts"),
             F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
+            F("priceBook", "دفترچه قیمت", FieldType.Lookup, lookupModule: "pricebooks", showInList: false),
             F("number", "شماره", FieldType.Text),
             F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
@@ -178,6 +312,7 @@ public class BusinessModuleSeeder
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
             F("contact", "مخاطب", FieldType.Lookup, lookupModule: "contacts"),
             F("opportunity", "فرصت فروش", FieldType.Lookup, lookupModule: "opportunities"),
+            F("priceBook", "دفترچه قیمت", FieldType.Lookup, lookupModule: "pricebooks", showInList: false),
             F("number", "شماره", FieldType.Text),
             F("issueDate", "تاریخ", FieldType.Date, defaultValue: "__TODAY__"),
             F("amount", "مبلغ", FieldType.Currency),
@@ -186,6 +321,8 @@ public class BusinessModuleSeeder
             F("discountAmount", "مبلغ تخفیف", FieldType.Currency, showInList: false),
             F("taxTotal", "مالیات", FieldType.Currency, showInList: false),
             F("grandTotal", "جمع کل", FieldType.Currency),
+            F("paidAmount", "پرداخت‌شده", FieldType.Currency, showInList: true),
+            F("remainingAmount", "مانده", FieldType.Currency, showInList: true),
             F("status", "وضعیت", FieldType.Picklist, defaultValue: "Draft",
                 picklist: [P("Draft", "پیش‌نویس"), P("Confirmed", "تأیید شده"), P("PartiallyPaid", "نیمه‌پرداخت"), P("Paid", "پرداخت‌شده"), P("Canceled", "لغو")]),
             F("printTitle", "عنوان چاپی", FieldType.Text, showInList: false),
@@ -314,7 +451,7 @@ public class BusinessModuleSeeder
             F("currency", "ارز", FieldType.Text, defaultValue: "IRR"),
             F("isActive", "فعال", FieldType.Checkbox, defaultValue: "true"),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ]);
+        ], isChild: false, showInMenu: true);
 
         await EnsureAsync(tenantId, "payments", "پرداخت", "پرداخت‌ها", "bx-money", "sales", ++sort,
         [
@@ -327,7 +464,7 @@ public class BusinessModuleSeeder
             F("reference", "شماره پیگیری", FieldType.Text, showInList: false),
             F("organization", "سازمان", FieldType.Lookup, lookupModule: "organizations"),
             F("description", "توضیحات", FieldType.MultilineText, showInList: false)
-        ], isChild: true, showInMenu: false);
+        ], isChild: false, showInMenu: true);
 
         await EnsureAsync(tenantId, "installments", "قسط", "اقساط", "bx-calendar-check", "sales", ++sort,
         [
@@ -701,17 +838,32 @@ public class BusinessModuleSeeder
         }
 
         // مخفی کردن ماژول‌های یتیم/جایگزین‌شده برای tenantهای قدیمی
-        foreach (var orphan in new[] { "product_sales", "payments" })
+        foreach (var orphan in new[] { "product_sales" })
         {
             var mod = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == orphan);
             if (mod is not null && mod.ShowInMenu)
             {
                 mod.ShowInMenu = false;
-                if (orphan == "payments")
-                    mod.IsChildModule = true;
                 await _db.SaveChangesAsync();
             }
         }
+
+        // پرداخت‌ها باید در منو دیده شوند (tenantهای قدیمی)
+        var paymentsMod = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "payments");
+        if (paymentsMod is not null)
+        {
+            paymentsMod.ShowInMenu = true;
+            paymentsMod.IsChildModule = false;
+            paymentsMod.MenuGroup = "sales";
+            if (paymentsMod.SortOrder <= 0) paymentsMod.SortOrder = 250;
+            await _db.SaveChangesAsync();
+            await _rolePerms.EnsureModulePermissionRowsAsync(tenantId, paymentsMod.Id);
+        }
+
+        await EnsurePriceBooksStructureAsync(tenantId);
+
+        await EnsureMissingDocumentHeaderFieldsAsync(tenantId, "invoices");
+        await EnsureDocumentPriceBookFieldAsync(tenantId);
 
         // تنظیم DocumentKind روی ماژول‌های موجود
         await EnsureDocumentKindAsync(tenantId, "quotes", DocumentKind.SalesQuote, "Q-", "sales_orders");
@@ -723,6 +875,7 @@ public class BusinessModuleSeeder
 
         var touched = lineDefs.Select(d => d.LineModule)
             .Concat(lineDefs.Select(d => d.ParentModule))
+            .Concat(["pricebooks", "pricebook_entries"])
             .ToList();
         var touchedIds = await _db.Modules
             .Where(m => m.TenantId == tenantId && touched.Contains(m.Name))
@@ -796,6 +949,8 @@ public class BusinessModuleSeeder
             ("discountAmount", "مبلغ تخفیف", FieldType.Currency, null),
             ("taxTotal", "مالیات", FieldType.Currency, null),
             ("grandTotal", "جمع کل", FieldType.Currency, null),
+            ("paidAmount", "پرداخت‌شده", FieldType.Currency, null),
+            ("remainingAmount", "مانده", FieldType.Currency, null),
             ("printTitle", "عنوان چاپی", FieldType.Text, null),
             ("sourceRecordId", "سند مبدأ", FieldType.Text, null)
         };
@@ -820,7 +975,7 @@ public class BusinessModuleSeeder
                 Type = type,
                 LookupModule = lookup,
                 IsCustom = false,
-                ShowInList = name is "number" or "grandTotal" or "contact",
+                ShowInList = name is "number" or "grandTotal" or "contact" or "paidAmount" or "remainingAmount",
                 SortOrder = ++maxSort
             });
             added = true;
@@ -828,6 +983,57 @@ public class BusinessModuleSeeder
 
         if (added)
             await _db.SaveChangesAsync();
+    }
+
+    /// <summary>فیلد Lookup دفترچه قیمت (ماژول داینامیک pricebooks) روی اسناد فروش.</summary>
+    public async Task EnsureDocumentPriceBookFieldAsync(int tenantId)
+    {
+        foreach (var moduleName in new[] { "quotes", "sales_orders", "invoices" })
+        {
+            var module = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == moduleName);
+            if (module is null) continue;
+
+            var mainBlockId = await _db.FieldBlocks.Where(b => b.ModuleId == module.Id && b.Kind != BlockKind.LineItems)
+                .OrderBy(b => b.SortOrder).Select(b => (int?)b.Id).FirstOrDefaultAsync();
+
+            var field = await _db.Fields.FirstOrDefaultAsync(f => f.ModuleId == module.Id && f.Name == "priceBook");
+            if (field is not null)
+            {
+                field.Type = FieldType.Lookup;
+                field.LookupModule = "pricebooks";
+                field.Label = "دفترچه قیمت";
+                field.ShowInList = false;
+                field.IsVisible = true;
+                if (field.BlockId is null && mainBlockId is not null)
+                    field.BlockId = mainBlockId;
+                await _db.SaveChangesAsync();
+                _cache.Remove($"fields:{tenantId}:{module.Id}");
+                continue;
+            }
+
+            // بعد از فرصت فروش
+            var oppSort = await _db.Fields.Where(f => f.ModuleId == module.Id && f.Name == "opportunity")
+                .Select(f => (int?)f.SortOrder).FirstOrDefaultAsync();
+            var maxSort = await _db.Fields.Where(f => f.ModuleId == module.Id).MaxAsync(f => (int?)f.SortOrder) ?? 0;
+            var sort = oppSort.HasValue ? oppSort.Value + 1 : maxSort + 1;
+
+            _db.Fields.Add(new FieldDef
+            {
+                TenantId = tenantId,
+                ModuleId = module.Id,
+                BlockId = mainBlockId,
+                Name = "priceBook",
+                Label = "دفترچه قیمت",
+                Type = FieldType.Lookup,
+                LookupModule = "pricebooks",
+                IsCustom = false,
+                IsVisible = true,
+                ShowInList = false,
+                SortOrder = sort
+            });
+            await _db.SaveChangesAsync();
+            _cache.Remove($"fields:{tenantId}:{module.Id}");
+        }
     }
 
     /// <summary>Lookup فرصت روی مالی + RelationDef فرصت→پیش‌فاکتور/فاکتور/سفارش.</summary>

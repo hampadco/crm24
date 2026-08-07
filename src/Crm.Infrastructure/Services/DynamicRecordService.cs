@@ -537,7 +537,13 @@ public class DynamicRecordService
         var oldData = JsonSerializer.Deserialize<Dictionary<string, string?>>(record.CustomData) ?? new();
         var changes = data
             .Where(kv => (oldData.TryGetValue(kv.Key, out var old) ? old : null) != kv.Value)
-            .ToDictionary(kv => kv.Key, kv => new { Old = oldData.GetValueOrDefault(kv.Key), New = kv.Value });
+            .ToDictionary(
+                kv => kv.Key,
+                kv => (object)new Dictionary<string, string?>
+                {
+                    ["old"] = oldData.GetValueOrDefault(kv.Key),
+                    ["new"] = kv.Value
+                });
 
         record.CustomData = JsonSerializer.Serialize(data);
         record.Title = ResolveTitle(fields, data);
@@ -792,7 +798,6 @@ public class DynamicRecordService
         IReadOnlyList<FieldDef> fields, Dictionary<string, string?> data)
     {
         var errors = new Dictionary<string, string>();
-        var tenantId = _tenant.TenantId;
 
         foreach (var field in fields.Where(f => f.Type == FieldType.Lookup))
         {
@@ -815,12 +820,14 @@ public class DynamicRecordService
                 continue;
             }
 
-            var exists = await _db.Records.AsNoTracking()
-                .AnyAsync(r => r.Id == lookupId
-                               && r.ModuleId == targetModule.Id
-                               && r.TenantId == tenantId
-                               && !r.IsDeleted);
-            if (!exists)
+            if (!await _access.CanViewModuleAsync(targetModule.Id))
+            {
+                errors[field.Name] = $"دسترسی به ماژول «{field.Label}» ندارید.";
+                continue;
+            }
+
+            var visible = await GetAsync(targetModule.Id, lookupId);
+            if (visible is null)
                 errors[field.Name] = $"رکورد انتخاب‌شده برای «{field.Label}» معتبر نیست.";
         }
 

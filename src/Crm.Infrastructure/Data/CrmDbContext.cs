@@ -44,8 +44,6 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<UserGroupMember> UserGroupMembers => Set<UserGroupMember>();
 
     public DbSet<Product> Products => Set<Product>();
-    public DbSet<PriceBook> PriceBooks => Set<PriceBook>();
-    public DbSet<PriceBookEntry> PriceBookEntries => Set<PriceBookEntry>();
     public DbSet<SalesDocument> SalesDocuments => Set<SalesDocument>();
     public DbSet<SalesDocumentLine> SalesDocumentLines => Set<SalesDocumentLine>();
     public DbSet<PaymentRecord> PaymentRecords => Set<PaymentRecord>();
@@ -236,14 +234,6 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
             e.HasIndex(p => new { p.TenantId, p.Name });
             foreach (var prop in new[] { "SalePrice", "TaxPercent", "StockQty", "ReorderPoint" })
                 e.Property(prop).HasPrecision(18, 2);
-        });
-
-        builder.Entity<PriceBookEntry>(e =>
-        {
-            e.Property(p => p.Price).HasPrecision(18, 2);
-            e.HasIndex(p => new { p.TenantId, p.PriceBookId, p.ProductId }).IsUnique();
-            e.HasOne(p => p.PriceBook).WithMany(b => b.Entries).HasForeignKey(p => p.PriceBookId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(p => p.Product).WithMany().HasForeignKey(p => p.ProductId).OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<SalesDocument>(e =>

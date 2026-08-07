@@ -215,6 +215,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/App/tickets", () => Results.Redirect("/App/m/tickets"));
 app.MapGet("/App/products", () => Results.Redirect("/App/m/products"));
+app.MapGet("/App/pricebooks", () => Results.Redirect("/App/m/pricebooks"));
+app.MapGet("/App/pricebooks/{id:int}", (int id) => Results.Redirect($"/App/m/pricebooks/{id}"));
 app.MapGet("/App/campaigns", () => Results.Redirect("/App/m/campaigns"));
 app.MapGet("/App/vendors", () => Results.Redirect("/App/m/vendors"));
 app.MapGet("/App/contracts", () => Results.Redirect("/App/m/contracts"));

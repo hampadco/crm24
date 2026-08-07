@@ -225,6 +225,19 @@ public class SalesDocumentService
         var invoice = await _db.Records.FirstOrDefaultAsync(r => r.ModuleId == invoiceModule.Id && r.Id == invoiceRecordId)
             ?? throw new InvalidOperationException("فاکتور یافت نشد.");
 
+        var invoiceData = DynamicRecordService.ParseData(invoice);
+        var grand = ParseDec(invoiceData, "grandTotal", ParseDec(invoiceData, "amount", 0));
+        if (grand <= 0)
+            throw new InvalidOperationException("مبلغ فاکتور مشخص نیست؛ ابتدا اقلام/جمع کل را ثبت کنید.");
+
+        var paidSoFar = await SumPaymentsAsync(invoiceRecordId);
+        var remaining = grand - paidSoFar;
+        if (remaining <= 0.01m)
+            throw new InvalidOperationException("این فاکتور به‌طور کامل پرداخت شده است.");
+        if (amount > remaining + 0.01m)
+            throw new InvalidOperationException(
+                $"مبلغ پرداخت از مانده فاکتور بیشتر است. مانده: {remaining:N0} ریال.");
+
         var paymentsModule = await _metadata.GetModuleByNameAsync("payments")
             ?? throw new InvalidOperationException("ماژول پرداخت یافت نشد.");
 
@@ -241,7 +254,14 @@ public class SalesDocumentService
         await _records.CreateAsync(paymentsModule.Id, data);
 
         await RecalcInvoicePaymentStatusAsync(invoiceModule, invoice);
-        _audit.Log("invoices", invoiceRecordId, "Payment", new { amount, method });
+        _audit.Log("invoices", invoiceRecordId, "Payment", new
+        {
+            amount,
+            method,
+            reference,
+            paidAmount = paidSoFar + amount,
+            remainingAmount = Math.Max(0, grand - (paidSoFar + amount))
+        });
         await _db.SaveChangesAsync();
     }
 
@@ -286,13 +306,13 @@ public class SalesDocumentService
         await _db.SaveChangesAsync();
     }
 
-    private async Task RecalcInvoicePaymentStatusAsync(ModuleDef invoiceModule, DynamicRecord invoice)
+    public async Task<decimal> SumPaymentsAsync(int invoiceRecordId)
     {
         var paymentsModule = await _metadata.GetModuleByNameAsync("payments");
-        if (paymentsModule is null) return;
+        if (paymentsModule is null) return 0;
 
         var tenantId = _tenant.TenantId;
-        var key = invoice.Id.ToString();
+        var key = invoiceRecordId.ToString();
         var paidRows = await _db.Database.SqlQuery<AmountRow>($"""
             SELECT COALESCE(NULLIF(r."CustomData" ->> 'amount', '')::numeric, 0) AS "Amount"
             FROM "Records" r
@@ -301,14 +321,58 @@ public class SalesDocumentService
               AND r."IsDeleted" = FALSE
               AND COALESCE(r."CustomData" ->> 'invoice', '') = {key}
             """).ToListAsync();
+        return paidRows.Sum(r => r.Amount);
+    }
 
-        var paid = paidRows.Sum(r => r.Amount);
+    public async Task<IReadOnlyList<Dictionary<string, string?>>> LoadPaymentsAsync(int invoiceRecordId)
+    {
+        var paymentsModule = await _metadata.GetModuleByNameAsync("payments");
+        if (paymentsModule is null) return [];
+
+        var tenantId = _tenant.TenantId;
+        var key = invoiceRecordId.ToString();
+        var rows = await _db.Database.SqlQuery<PaymentLineRow>($"""
+            SELECT r."Id" AS "Id", r."CustomData" AS "CustomData", r."CreatedAtUtc" AS "CreatedAtUtc",
+                   r."CreatedByUserId" AS "CreatedByUserId"
+            FROM "Records" r
+            WHERE r."ModuleId" = {paymentsModule.Id}
+              AND r."TenantId" = {tenantId}
+              AND r."IsDeleted" = FALSE
+              AND COALESCE(r."CustomData" ->> 'invoice', '') = {key}
+            ORDER BY COALESCE(r."CustomData" ->> 'paidAt', '') DESC, r."Id" DESC
+            """).ToListAsync();
+
+        var result = new List<Dictionary<string, string?>>(rows.Count);
+        foreach (var row in rows)
+        {
+            var data = string.IsNullOrWhiteSpace(row.CustomData)
+                ? new Dictionary<string, string?>()
+                : JsonSerializer.Deserialize<Dictionary<string, string?>>(row.CustomData)
+                  ?? new Dictionary<string, string?>();
+            data["__id"] = row.Id.ToString();
+            data["__createdAt"] = row.CreatedAtUtc.ToString("O");
+            if (row.CreatedByUserId is int uid)
+                data["__createdByUserId"] = uid.ToString();
+            result.Add(data);
+        }
+        return result;
+    }
+
+    private async Task RecalcInvoicePaymentStatusAsync(ModuleDef invoiceModule, DynamicRecord invoice)
+    {
+        var paid = await SumPaymentsAsync(invoice.Id);
         var data = DynamicRecordService.ParseData(invoice);
         var grand = ParseDec(data, "grandTotal", ParseDec(data, "amount", 0));
+        var remaining = Math.Max(0, grand - paid);
+
+        data["paidAmount"] = paid.ToString("0.##", CultureInfo.InvariantCulture);
+        data["remainingAmount"] = remaining.ToString("0.##", CultureInfo.InvariantCulture);
 
         if (paid <= 0)
-            data["status"] = "Confirmed";
-        else if (paid + 0.01m >= grand)
+            data["status"] = data.GetValueOrDefault("status") is "Draft" or "Canceled"
+                ? data["status"]
+                : "Confirmed";
+        else if (paid + 0.01m >= grand && grand > 0)
         {
             data["status"] = "Paid";
             await ComputeCommissionsAsync(invoice.Id, grand);
@@ -318,6 +382,14 @@ public class SalesDocumentService
 
         invoice.CustomData = JsonSerializer.Serialize(data);
         await _db.SaveChangesAsync();
+    }
+
+    private sealed class PaymentLineRow
+    {
+        public int Id { get; set; }
+        public string CustomData { get; set; } = "{}";
+        public DateTime CreatedAtUtc { get; set; }
+        public int? CreatedByUserId { get; set; }
     }
 
     private async Task DeductInventoryAsync(int invoiceModuleId, int invoiceRecordId)

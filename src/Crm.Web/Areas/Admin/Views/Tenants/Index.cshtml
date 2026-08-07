@@ -72,7 +72,7 @@
             form.addEventListener('submit', function (e) {
                 var msg = @(demoExists
                     ? Html.Raw("\"مشتری دمو از قبل هست. دادهٔ نمونه تکمیل/بازسازی شود؟\"")
-                    : Html.Raw("\"مشتری دمو با حداقل ۲۰۰ رکورد در هر صفحه ساخته شود؟\""));
+                    : Html.Raw("\"مشتری دمو با حدود ۵۵ رکورد در هر صفحه ساخته شود؟\""));
                 if (e.defaultPrevented) return;
                 e.preventDefault();
                 var proceed = function () {

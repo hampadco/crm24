@@ -23,23 +23,6 @@ public class Product : TenantEntity
     public string? Description { get; set; }
 }
 
-/// <summary>دفترچه قیمت — چند قیمت برای هر محصول (همکار/مصرف‌کننده و ...).</summary>
-public class PriceBook : TenantEntity
-{
-    public string Name { get; set; } = string.Empty;
-    public bool IsActive { get; set; } = true;
-    public ICollection<PriceBookEntry> Entries { get; set; } = new List<PriceBookEntry>();
-}
-
-public class PriceBookEntry : TenantEntity
-{
-    public int PriceBookId { get; set; }
-    public PriceBook PriceBook { get; set; } = null!;
-    public int ProductId { get; set; }
-    public Product Product { get; set; } = null!;
-    public decimal Price { get; set; }
-}
-
 public enum SalesDocumentKind
 {
     Quote = 0,

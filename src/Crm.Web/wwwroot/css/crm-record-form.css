@@ -267,6 +267,57 @@
   align-items: center;
 }
 
+/* Select2 فشرده داخل جدول اقلام */
+.crm-line-items .select2-container--default .select2-selection--single {
+  min-height: 1.95rem;
+  border-radius: 0.4rem;
+  padding: 0.1rem 0.2rem;
+}
+
+.crm-line-items .select2-container--default .select2-selection--single .select2-selection__rendered {
+  font-size: 0.8125rem;
+  padding-inline: 0.25rem;
+}
+
+.crm-line-items .crm-line-add-row td {
+  padding: 0.55rem 0.4rem;
+  border-top: 1px dashed #d0d7e2;
+  background: #f8fafc;
+}
+
+.crm-line-items .crm-line-add-row .btn {
+  border-style: dashed;
+  font-weight: 600;
+}
+
+.crm-line-pricebook-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e8edf5;
+  background: linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%);
+}
+
+.crm-line-pricebook-bar .crm-rf-label {
+  font-weight: 700;
+  color: #0f766e;
+  white-space: nowrap;
+}
+
+.crm-line-pricebook-bar .form-select,
+.crm-line-pricebook-bar .select2-container {
+  min-width: min(100%, 280px);
+  max-width: 360px;
+  flex: 1 1 220px;
+}
+
+.crm-line-pricebook-bar .form-text {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
 .crm-rf .select2-container--default .select2-selection--single .select2-selection__rendered {
   line-height: 1.4;
   padding-inline: 0.4rem;

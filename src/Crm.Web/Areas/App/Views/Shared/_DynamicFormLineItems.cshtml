@@ -1,35 +1,77 @@
+@using System.Globalization
 @using Crm.Core.Entities
 @model Crm.Web.Areas.App.Models.RecordFormViewModel
 @{
     var block = (FieldBlock)ViewData["LineBlock"]!;
-    var lineFields = Model.LineFields;
+    var isPriceBook = string.Equals(Model.Module.Name, "pricebooks", StringComparison.OrdinalIgnoreCase);
     var productsJson = System.Text.Json.JsonSerializer.Serialize(
         Model.ProductOptions.Select(p => new { id = p.Id, title = p.Title, price = p.SalePrice, tax = p.TaxPercent }));
+
+    string FormatPrice(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "";
+        if (decimal.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out var n)
+            || decimal.TryParse(raw, NumberStyles.Any, CultureInfo.CurrentCulture, out n))
+            return Math.Round(n, 0, MidpointRounding.AwayFromZero).ToString("N0", CultureInfo.InvariantCulture);
+        return raw;
+    }
 }
 
-<section class="crm-rf-block crm-line-items" data-line-items>
+<section class="crm-rf-block crm-line-items" data-line-items @(isPriceBook ? "data-pricebook-lines" : null)>
     <header class="crm-rf-block-head">
         <div class="crm-rf-block-icon" aria-hidden="true"><i class="bx bx-list-ul"></i></div>
         <div>
-            <h2 class="crm-rf-block-title">@block.Label</h2>
-            <p class="crm-rf-block-hint">محصولات و خدمات این سند</p>
+            <h2 class="crm-rf-block-title">@(isPriceBook ? "قیمت محصولات" : block.Label)</h2>
+            <p class="crm-rf-block-hint">@(isPriceBook ? "برای هر محصول یک قیمت در این دفترچه تعریف کنید" : "محصولات و خدمات این سند")</p>
         </div>
         <button type="button" class="btn btn-sm btn-primary ms-auto" data-add-line>
             <i class="bx bx-plus me-1"></i> افزودن سطر
         </button>
     </header>
+    @if (!isPriceBook)
+    {
+        var selectedBook = Model.Values.GetValueOrDefault("priceBook");
+        var bookOptions = Model.LookupOptions.TryGetValue("priceBook", out var opts) ? opts : [];
+        <div class="crm-line-pricebook-bar">
+            <label class="crm-rf-label mb-0" for="f_priceBook">دفترچه قیمت</label>
+            <select id="f_priceBook" name="f_priceBook"
+                    class="form-select form-select-sm crm-select2"
+                    data-price-book="true"
+                    data-placeholder="جستجوی دفترچه قیمت…"
+                    data-allow-clear="true"
+                    data-ajax-url="/App/m/@Model.Module.Name/lookup/priceBook">
+                <option value=""></option>
+                @foreach (var (optId, optTitle) in bookOptions)
+                {
+                    if (optId.ToString() == selectedBook)
+                    {
+                        <option value="@optId" selected>@optTitle</option>
+                    }
+                }
+            </select>
+            <span class="form-text mb-0">با انتخاب محصول، قیمت از این دفترچه پر می‌شود</span>
+        </div>
+    }
     <div class="crm-rf-block-body">
         <div class="table-responsive">
             <table class="table table-sm align-middle mb-0" data-lines-table>
                 <thead>
                     <tr>
-                        <th style="min-width:160px">محصول</th>
-                        <th style="min-width:140px">عنوان</th>
-                        <th style="width:90px">تعداد</th>
-                        <th style="width:110px">قیمت</th>
-                        <th style="width:80px">تخفیف٪</th>
-                        <th style="width:80px">مالیات٪</th>
-                        <th style="width:110px">جمع</th>
+                        <th style="min-width:200px">محصول</th>
+                        <th style="min-width:160px">عنوان</th>
+                        @if (isPriceBook)
+                        {
+                            <th style="width:130px">قیمت پایه</th>
+                            <th style="width:140px">قیمت دفترچه</th>
+                        }
+                        else
+                        {
+                            <th style="width:90px">تعداد</th>
+                            <th style="width:110px">قیمت</th>
+                            <th style="width:80px">تخفیف٪</th>
+                            <th style="width:80px">مالیات٪</th>
+                            <th style="width:110px">جمع</th>
+                        }
                         <th style="width:40px"></th>
                     </tr>
                 </thead>
@@ -37,37 +79,83 @@
                     @for (var i = 0; i < Model.LineItems.Count; i++)
                     {
                         var row = Model.LineItems[i];
+                        var selectedProduct = row.GetValueOrDefault("product");
+                        var basePrice = "";
+                        if (!string.IsNullOrWhiteSpace(selectedProduct)
+                            && int.TryParse(selectedProduct, out var pid))
+                        {
+                            var prod = Model.ProductOptions.FirstOrDefault(p => p.Id == pid);
+                            if (prod.Id == pid)
+                                basePrice = FormatPrice(prod.SalePrice.ToString(CultureInfo.InvariantCulture));
+                        }
                         <tr data-line-row>
                             <td>
                                 <input type="hidden" name="li[@i][__id]" value="@(row.GetValueOrDefault("__id"))" />
-                                <select name="li[@i][product]" class="form-select form-select-sm crm-select2" data-line-product>
-                                    <option value="">—</option>
+                                @if (isPriceBook)
+                                {
+                                    <input type="hidden" name="li[@i][quantity]" value="1" data-line-qty />
+                                    <input type="hidden" name="li[@i][discountPercent]" value="0" data-line-disc />
+                                    <input type="hidden" name="li[@i][taxPercent]" value="0" data-line-tax />
+                                    <input type="hidden" name="li[@i][lineTotal]" value="@(row.GetValueOrDefault("unitPrice") ?? "0")" data-line-total />
+                                }
+                                <select name="li[@i][product]"
+                                        class="form-select form-select-sm crm-select2"
+                                        data-line-product
+                                        data-placeholder="جستجوی محصول…"
+                                        data-allow-clear="true"
+                                        data-ajax-url="/App/lookup/products">
+                                    <option value=""></option>
                                     @foreach (var p in Model.ProductOptions)
                                     {
-                                        <option value="@p.Id"
-                                                data-price="@p.SalePrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                                data-tax="@p.TaxPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                                selected="@(row.GetValueOrDefault("product") == p.Id.ToString())">@p.Title</option>
+                                        if (selectedProduct == p.Id.ToString())
+                                        {
+                                            <option value="@p.Id"
+                                                    data-price="@p.SalePrice.ToString(CultureInfo.InvariantCulture)"
+                                                    data-tax="@p.TaxPercent.ToString(CultureInfo.InvariantCulture)"
+                                                    selected>@p.Title</option>
+                                        }
                                     }
                                 </select>
                             </td>
                             <td><input type="text" name="li[@i][title]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("title"))" data-line-title /></td>
-                            <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][quantity]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("quantity") ?? "1")" data-line-qty /></td>
-                            <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][unitPrice]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("unitPrice"))" data-line-price /></td>
-                            <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][discountPercent]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("discountPercent") ?? "0")" data-line-disc /></td>
-                            <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][taxPercent]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("taxPercent") ?? "0")" data-line-tax /></td>
-                            <td><input type="text" dir="ltr" class="form-control form-control-sm" value="@(row.GetValueOrDefault("lineTotal"))" readonly data-line-total /></td>
+                            @if (isPriceBook)
+                            {
+                                <td>
+                                    <input type="text" dir="ltr" class="form-control form-control-sm bg-light" value="@basePrice" readonly tabindex="-1" data-base-price />
+                                </td>
+                                <td><input type="text" inputmode="numeric" dir="ltr" name="li[@i][unitPrice]" class="form-control form-control-sm" value="@FormatPrice(row.GetValueOrDefault("unitPrice"))" data-line-price data-money-int /></td>
+                            }
+                            else
+                            {
+                                <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][quantity]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("quantity") ?? "1")" data-line-qty /></td>
+                                <td><input type="text" inputmode="numeric" dir="ltr" name="li[@i][unitPrice]" class="form-control form-control-sm" value="@FormatPrice(row.GetValueOrDefault("unitPrice"))" data-line-price data-money-int /></td>
+                                <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][discountPercent]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("discountPercent") ?? "0")" data-line-disc /></td>
+                                <td><input type="text" inputmode="decimal" dir="ltr" name="li[@i][taxPercent]" class="form-control form-control-sm" value="@(row.GetValueOrDefault("taxPercent") ?? "0")" data-line-tax /></td>
+                                <td><input type="text" dir="ltr" class="form-control form-control-sm" value="@FormatPrice(row.GetValueOrDefault("lineTotal"))" readonly data-line-total /></td>
+                            }
                             <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove-line title="حذف"><i class="bx bx-trash"></i></button></td>
                         </tr>
                     }
                 </tbody>
+                <tfoot>
+                    <tr class="crm-line-add-row">
+                        <td colspan="@(isPriceBook ? 5 : 8)">
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100" data-add-line>
+                                <i class="bx bx-plus me-1"></i> افزودن سطر
+                            </button>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
-        <div class="d-flex justify-content-end gap-4 mt-3 small">
-            <div>جمع جزء: <strong data-sum-sub>0</strong></div>
-            <div>مالیات: <strong data-sum-tax>0</strong></div>
-            <div>جمع کل: <strong data-sum-grand>0</strong></div>
-        </div>
+        @if (!isPriceBook)
+        {
+            <div class="d-flex justify-content-end gap-4 mt-3 small">
+                <div>جمع جزء: <strong data-sum-sub>0</strong></div>
+                <div>مالیات: <strong data-sum-tax>0</strong></div>
+                <div>جمع کل: <strong data-sum-grand>0</strong></div>
+            </div>
+        }
     </div>
 </section>
 
@@ -75,22 +163,38 @@
     <tr data-line-row>
         <td>
             <input type="hidden" name="li[__IDX__][__id]" value="" />
-            <select name="li[__IDX__][product]" class="form-select form-select-sm" data-line-product>
-                <option value="">—</option>
-                @foreach (var p in Model.ProductOptions)
-                {
-                    <option value="@p.Id"
-                            data-price="@p.SalePrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                            data-tax="@p.TaxPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)">@p.Title</option>
-                }
+            @if (isPriceBook)
+            {
+                <input type="hidden" name="li[__IDX__][quantity]" value="1" data-line-qty />
+                <input type="hidden" name="li[__IDX__][discountPercent]" value="0" data-line-disc />
+                <input type="hidden" name="li[__IDX__][taxPercent]" value="0" data-line-tax />
+                <input type="hidden" name="li[__IDX__][lineTotal]" value="0" data-line-total />
+            }
+            <select name="li[__IDX__][product]"
+                    class="form-select form-select-sm crm-select2"
+                    data-line-product
+                    data-placeholder="جستجوی محصول…"
+                    data-allow-clear="true"
+                    data-ajax-url="/App/lookup/products">
+                <option value=""></option>
             </select>
         </td>
         <td><input type="text" name="li[__IDX__][title]" class="form-control form-control-sm" data-line-title /></td>
-        <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][quantity]" class="form-control form-control-sm" value="1" data-line-qty /></td>
-        <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][unitPrice]" class="form-control form-control-sm" value="0" data-line-price /></td>
-        <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][discountPercent]" class="form-control form-control-sm" value="0" data-line-disc /></td>
-        <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][taxPercent]" class="form-control form-control-sm" value="0" data-line-tax /></td>
-        <td><input type="text" dir="ltr" class="form-control form-control-sm" value="0" readonly data-line-total /></td>
+        @if (isPriceBook)
+        {
+            <td>
+                <input type="text" dir="ltr" class="form-control form-control-sm bg-light" value="" readonly tabindex="-1" data-base-price />
+            </td>
+            <td><input type="text" inputmode="numeric" dir="ltr" name="li[__IDX__][unitPrice]" class="form-control form-control-sm" value="0" data-line-price data-money-int /></td>
+        }
+        else
+        {
+            <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][quantity]" class="form-control form-control-sm" value="1" data-line-qty /></td>
+            <td><input type="text" inputmode="numeric" dir="ltr" name="li[__IDX__][unitPrice]" class="form-control form-control-sm" value="0" data-line-price data-money-int /></td>
+            <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][discountPercent]" class="form-control form-control-sm" value="0" data-line-disc /></td>
+            <td><input type="text" inputmode="decimal" dir="ltr" name="li[__IDX__][taxPercent]" class="form-control form-control-sm" value="0" data-line-tax /></td>
+            <td><input type="text" dir="ltr" class="form-control form-control-sm" value="0" readonly data-line-total /></td>
+        }
         <td><button type="button" class="btn btn-sm btn-outline-danger" data-remove-line><i class="bx bx-trash"></i></button></td>
     </tr>
 </template>

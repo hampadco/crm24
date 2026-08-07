@@ -4,9 +4,11 @@ namespace Crm.Web.Services;
 
 public static class PersianDateHelper
 {
+    private static readonly TimeZoneInfo IranTimeZone = ResolveIranTimeZone();
+
     public static string ToJalaliDate(DateTime dateTime)
     {
-        var dt = Normalize(dateTime);
+        var dt = ToIranTime(dateTime);
         var pc = new PersianCalendar();
         return PersianFormattingHelper.ToPersianDigits(
             $"{pc.GetYear(dt):0000}/{pc.GetMonth(dt):00}/{pc.GetDayOfMonth(dt):00}");
@@ -14,20 +16,19 @@ public static class PersianDateHelper
 
     public static string ToJalaliDateTime(DateTime dateTime)
     {
-        var dt = Normalize(dateTime);
+        var dt = ToIranTime(dateTime);
         var pc = new PersianCalendar();
         return PersianFormattingHelper.ToPersianDigits(
             $"{pc.GetYear(dt):0000}/{pc.GetMonth(dt):00}/{pc.GetDayOfMonth(dt):00} {dt.Hour:00}:{dt.Minute:00}");
     }
 
-    /// <summary>مقدار ISO برای مقداردهی اولیه flatpickr (تاریخ).</summary>
-    public static string ToIsoDate(DateTime dateTime) => Normalize(dateTime).ToString("yyyy-MM-dd");
+    /// <summary>مقدار ISO برای مقداردهی اولیه flatpickr (تاریخ) — به وقت ایران.</summary>
+    public static string ToIsoDate(DateTime dateTime) => ToIranTime(dateTime).ToString("yyyy-MM-dd");
 
-    /// <summary>مقدار ISO برای مقداردهی اولیه flatpickr (تاریخ و ساعت).</summary>
-    public static string ToIsoDateTime(DateTime dateTime) => Normalize(dateTime).ToString("yyyy-MM-dd'T'HH:mm");
+    /// <summary>مقدار ISO برای مقداردهی اولیه flatpickr (تاریخ و ساعت) — به وقت ایران.</summary>
+    public static string ToIsoDateTime(DateTime dateTime) => ToIranTime(dateTime).ToString("yyyy-MM-dd'T'HH:mm");
 
     public static string? ToIsoDate(DateTime? dateTime) => dateTime is null ? null : ToIsoDate(dateTime.Value);
-
     public static string? ToIsoDateTime(DateTime? dateTime) => dateTime is null ? null : ToIsoDateTime(dateTime.Value);
 
     public static DateTime FromJalaliDateTime(string? jalali)
@@ -60,15 +61,37 @@ public static class PersianDateHelper
         }
 
         var pc = new PersianCalendar();
-        return pc.ToDateTime(year, month, day, hour, minute, 0, 0);
+        var localIran = pc.ToDateTime(year, month, day, hour, minute, 0, 0);
+        return TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(localIran, DateTimeKind.Unspecified),
+            IranTimeZone);
     }
 
-    private static DateTime Normalize(DateTime dateTime)
+    /// <summary>تبدیل UTC (یا Unspecified) به وقت ایران (+۰۳:۳۰).</summary>
+    public static DateTime ToIranTime(DateTime dateTime)
     {
-        return dateTime.Kind switch
+        var utc = dateTime.Kind switch
         {
-            DateTimeKind.Utc => dateTime.ToLocalTime(),
-            _ => dateTime
+            DateTimeKind.Utc => dateTime,
+            DateTimeKind.Local => dateTime.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)
         };
+        return TimeZoneInfo.ConvertTimeFromUtc(utc, IranTimeZone);
+    }
+
+    private static TimeZoneInfo ResolveIranTimeZone()
+    {
+        foreach (var id in new[] { "Asia/Tehran", "Iran Standard Time" })
+        {
+            try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
+            catch (TimeZoneNotFoundException) { }
+            catch (InvalidTimeZoneException) { }
+        }
+
+        return TimeZoneInfo.CreateCustomTimeZone(
+            "Iran/Custom",
+            TimeSpan.FromHours(3.5),
+            "Iran Standard Time",
+            "Iran Standard Time");
     }
 }

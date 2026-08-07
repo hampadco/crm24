@@ -24,6 +24,7 @@ public class RecordsController : AppControllerBase
     private readonly LineItemsService _lineItems;
     private readonly SalesDocumentService _docs;
     private readonly CrmDbContext _db;
+    private readonly BusinessModuleSeeder _business;
 
     public RecordsController(
         MetadataService metadata,
@@ -35,7 +36,8 @@ public class RecordsController : AppControllerBase
         WordExportService wordExport,
         LineItemsService lineItems,
         SalesDocumentService docs,
-        CrmDbContext db)
+        CrmDbContext db,
+        BusinessModuleSeeder business)
     {
         _metadata = metadata;
         _records = records;
@@ -47,6 +49,7 @@ public class RecordsController : AppControllerBase
         _lineItems = lineItems;
         _docs = docs;
         _db = db;
+        _business = business;
     }
 
     [HttpGet("/App/m/{moduleName}")]
@@ -338,6 +341,19 @@ public class RecordsController : AppControllerBase
         if (!await _access.CanCreateAsync(module.Id))
             return Forbid("Identity.Application");
 
+        if (string.Equals(moduleName, "pricebooks", StringComparison.OrdinalIgnoreCase)
+            && HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int tid)
+        {
+            await _business.EnsurePriceBooksStructureAsync(tid);
+            module = await _metadata.GetModuleByNameAsync(moduleName) ?? module;
+        }
+        else if (moduleName is "quotes" or "sales_orders" or "invoices"
+            && HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int docTid)
+        {
+            await _business.EnsureDocumentPriceBookFieldAsync(docTid);
+            module = await _metadata.GetModuleByNameAsync(moduleName) ?? module;
+        }
+
         // Prefill از query: ?f_organization=12&f_contact=34
         var prefill = new Dictionary<string, string?>();
         foreach (var key in Request.Query.Keys)
@@ -394,6 +410,19 @@ public class RecordsController : AppControllerBase
 
         if (!await _access.CanEditAsync(module.Id))
             return Forbid("Identity.Application");
+
+        if (string.Equals(moduleName, "pricebooks", StringComparison.OrdinalIgnoreCase)
+            && HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int tid)
+        {
+            await _business.EnsurePriceBooksStructureAsync(tid);
+            module = await _metadata.GetModuleByNameAsync(moduleName) ?? module;
+        }
+        else if (moduleName is "quotes" or "sales_orders" or "invoices"
+            && HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int docTid)
+        {
+            await _business.EnsureDocumentPriceBookFieldAsync(docTid);
+            module = await _metadata.GetModuleByNameAsync(moduleName) ?? module;
+        }
 
         var record = await _records.GetAsync(module.Id, id);
         if (record is null)
@@ -763,6 +792,13 @@ public class RecordsController : AppControllerBase
         if (!await _access.CanViewModuleAsync(module.Id))
             return Forbid("Identity.Application");
 
+        if (string.Equals(moduleName, "pricebooks", StringComparison.OrdinalIgnoreCase)
+            && HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int tid)
+        {
+            await _business.EnsurePriceBooksStructureAsync(tid);
+            module = await _metadata.GetModuleByNameAsync(moduleName) ?? module;
+        }
+
         var record = await _records.GetAsync(module.Id, id);
         if (record is null)
             return NotFound();
@@ -778,6 +814,29 @@ public class RecordsController : AppControllerBase
         var values = DynamicRecordService.ParseData(record);
         var canEditModule = await _access.CanEditAsync(module.Id);
         var canDeleteModule = await _access.CanDeleteAsync(module.Id);
+        var canModifyRecord = await _access.CanModifyRecordAsync(record);
+        var lookupTitles = await ResolveLookupTitlesAsync(fields, [values]);
+
+        var auditLogs = await _db.AuditLogs.AsNoTracking()
+            .Where(a => a.ModuleName == module.Name && a.RecordId == id)
+            .OrderByDescending(a => a.AtUtc)
+            .Take(50)
+            .ToListAsync();
+
+        var userIds = new HashSet<int>();
+        if (record.CreatedByUserId is int cby) userIds.Add(cby);
+        if (record.UpdatedByUserId is int uby) userIds.Add(uby);
+        foreach (var a in auditLogs)
+            if (a.UserId is int uid) userIds.Add(uid);
+
+        var userNames = userIds.Count == 0
+            ? new Dictionary<int, string>()
+            : await _db.Users.AsNoTracking()
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(
+                    u => u.Id,
+                    u => !string.IsNullOrWhiteSpace(u.FullName) ? u.FullName!
+                        : (!string.IsNullOrWhiteSpace(u.UserName) ? u.UserName! : $"کاربر #{u.Id}"));
 
         var model = new RecordDetailViewModel
         {
@@ -786,19 +845,18 @@ public class RecordsController : AppControllerBase
             Fields = fields,
             Blocks = blocks,
             Values = values,
-            LookupTitles = await ResolveLookupTitlesAsync(fields, [values]),
-            CanEdit = canEditModule && await _access.CanModifyRecordAsync(record),
-            CanDelete = canDeleteModule && await _access.CanModifyRecordAsync(record),
+            LookupTitles = lookupTitles,
+            CanEdit = canEditModule && canModifyRecord,
+            CanDelete = canDeleteModule && canModifyRecord,
             Notes = await _db.Notes.AsNoTracking()
                 .Where(n => n.ModuleName == module.Name && n.RecordId == id)
                 .OrderByDescending(n => n.CreatedAtUtc)
                 .Take(100)
                 .ToListAsync(),
-            AuditLogs = await _db.AuditLogs.AsNoTracking()
-                .Where(a => a.ModuleName == module.Name && a.RecordId == id)
-                .OrderByDescending(a => a.AtUtc)
-                .Take(50)
-                .ToListAsync(),
+            AuditLogs = auditLogs,
+            AuditUserNames = userNames,
+            CreatedByName = record.CreatedByUserId is int cb && userNames.TryGetValue(cb, out var cbn) ? cbn : null,
+            UpdatedByName = record.UpdatedByUserId is int ub && userNames.TryGetValue(ub, out var ubn) ? ubn : null,
             Attachments = await _db.Attachments.AsNoTracking()
                 .Where(a => a.ModuleName == module.Name && a.RecordId == id)
                 .OrderByDescending(a => a.CreatedAtUtc)
@@ -812,15 +870,358 @@ public class RecordsController : AppControllerBase
             PrintTemplates = await ListAccessiblePrintTemplatesAsync(module.Id)
         };
 
-        var inbound = await LoadInboundRelatedAsync(module, id);
+        var (lineBlock, lineModule, lineFields) = await _lineItems.GetLineBlockAsync(module.Id);
+        if (lineBlock is not null && lineModule is not null && !string.IsNullOrWhiteSpace(lineBlock.LineLinkField))
+        {
+            model.LineBlock = lineBlock;
+            var isPriceBook = string.Equals(module.Name, "pricebooks", StringComparison.OrdinalIgnoreCase);
+            var visibleLineNames = isPriceBook
+                ? new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "product", "title", "unitPrice" }
+                : null;
+            model.LineFields = lineFields
+                .Where(f => !string.Equals(f.Name, "sortOrder", StringComparison.OrdinalIgnoreCase))
+                .Where(f => visibleLineNames is null || visibleLineNames.Contains(f.Name))
+                .ToList();
+            model.LineItems = await _lineItems.LoadLinesAsync(lineModule.Id, lineBlock.LineLinkField!, id);
+
+            var lineLookups = lineFields
+                .Where(f => f.Type == FieldType.Lookup
+                            && !string.Equals(f.Name, "product", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            model.LineLookupTitles = await ResolveLookupTitlesAsync(lineLookups, model.LineItems);
+
+            var productIds = model.LineItems
+                .Select(r => r.GetValueOrDefault("product"))
+                .Where(v => !string.IsNullOrWhiteSpace(v) && int.TryParse(v, out _))
+                .Select(v => int.Parse(v!))
+                .Distinct()
+                .ToList();
+            if (productIds.Count > 0)
+            {
+                var productTitles = await _db.Products.AsNoTracking()
+                    .Where(p => productIds.Contains(p.Id))
+                    .ToDictionaryAsync(p => p.Id.ToString(), p => p.Name);
+                if (productTitles.Count > 0)
+                    model.LineLookupTitles["product"] = productTitles;
+            }
+        }
+
+        if (string.Equals(module.Name, "invoices", StringComparison.OrdinalIgnoreCase))
+        {
+            model.InvoicePayments = await _docs.LoadPaymentsAsync(id);
+            model.InvoiceGrandTotal = ParseMoney(values, "grandTotal", ParseMoney(values, "amount", 0));
+            model.InvoicePaidAmount = ParseMoney(values, "paidAmount", 0);
+            if (model.InvoicePaidAmount <= 0 && model.InvoicePayments.Count > 0)
+            {
+                model.InvoicePaidAmount = model.InvoicePayments.Sum(p =>
+                    ParseMoney(p, "amount", 0));
+            }
+            model.InvoiceRemainingAmount = ParseMoney(values, "remainingAmount",
+                Math.Max(0, model.InvoiceGrandTotal - model.InvoicePaidAmount));
+        }
+
+        if (module.Name is "quotes" or "sales_orders" or "invoices")
+        {
+            var pbRaw = values.GetValueOrDefault("priceBook");
+            if (int.TryParse(pbRaw, out var pbId) && pbId > 0)
+            {
+                model.PriceBookId = pbId;
+                if (lookupTitles.TryGetValue("priceBook", out var pbTitles)
+                    && pbTitles.TryGetValue(pbRaw!, out var pbName))
+                    model.PriceBookName = pbName;
+                else
+                {
+                    var title = await _db.Records.AsNoTracking()
+                        .Where(r => r.Id == pbId)
+                        .Select(r => r.Title)
+                        .FirstOrDefaultAsync();
+                    model.PriceBookName = title;
+                }
+            }
+        }
+
+        // فقط ماژول‌های سطر سند (*_lines) از مرتبط‌ها حذف شوند — نه payments/installments
+        var skipModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (lineModule is not null)
+            skipModules.Add(lineModule.Name);
+
+        var inbound = await LoadInboundRelatedAsync(module, id, skipModules);
         model.Activities = inbound
             .Where(r => ActivityModuleNames.Contains(r.ModuleName))
             .ToList();
-        model.Relations = await BuildRelationGroupsAsync(module, id, values, fields, inbound);
+        model.Relations = await BuildRelationGroupsAsync(
+            module, id, values, fields, inbound, lookupTitles, skipModules, loadCandidates: false);
+        if (string.Equals(module.Name, "invoices", StringComparison.OrdinalIgnoreCase))
+        {
+            model.Relations = model.Relations
+                .Where(g => !string.Equals(g.ModuleName, "payments", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
 
         ViewData["Title"] = record.Title;
         ViewData["PanelTitle"] = module.PluralLabel;
         return View(model);
+    }
+
+    /// <summary>قیمت محصول از سطرهای دفترچه قیمت داینامیک؛ در صورت نبود، SalePrice.</summary>
+    [HttpGet("/App/m/pricebooks/price")]
+    public async Task<IActionResult> PriceBookUnitPrice(int priceBookId, int productId)
+    {
+        if (productId <= 0)
+            return BadRequest();
+
+        var product = await _db.Products.AsNoTracking()
+            .Where(p => p.Id == productId)
+            .Select(p => new { p.SalePrice, p.TaxPercent })
+            .FirstOrDefaultAsync();
+        if (product is null)
+            return NotFound();
+
+        if (priceBookId > 0)
+        {
+            var pbModule = await _metadata.GetModuleByNameAsync("pricebooks");
+            if (pbModule is not null && await _access.CanViewModuleAsync(pbModule.Id))
+            {
+                var lines = await _lineItems.LoadLinesAsync(pbModule.Id, priceBookId);
+                var match = lines.FirstOrDefault(l =>
+                    string.Equals(l.GetValueOrDefault("product"), productId.ToString(), StringComparison.Ordinal));
+                if (match is not null)
+                {
+                    var raw = match.GetValueOrDefault("unitPrice") ?? match.GetValueOrDefault("price");
+                    if (decimal.TryParse(raw, System.Globalization.NumberStyles.Any,
+                            System.Globalization.CultureInfo.InvariantCulture, out var bookPrice)
+                        || decimal.TryParse(raw, out bookPrice))
+                    {
+                        var taxRaw = match.GetValueOrDefault("taxPercent");
+                        var tax = product.TaxPercent;
+                        if (decimal.TryParse(taxRaw, System.Globalization.NumberStyles.Any,
+                                System.Globalization.CultureInfo.InvariantCulture, out var t)
+                            || decimal.TryParse(taxRaw, out t))
+                            tax = t;
+                        return Json(new { price = bookPrice, tax, fromBook = true });
+                    }
+                }
+            }
+        }
+
+        return Json(new { price = product.SalePrice, tax = product.TaxPercent, fromBook = false });
+    }
+
+    /// <summary>جستجوی Ajax برای فیلد Lookup فرم (Select2).</summary>
+    [HttpGet("/App/m/{moduleName}/lookup/{fieldName}")]
+    public async Task<IActionResult> LookupSearch(
+        string moduleName,
+        string fieldName,
+        string? q = null,
+        int page = 1)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var fields = await _metadata.GetFieldsAsync(module.Id);
+        var field = fields.FirstOrDefault(f =>
+            string.Equals(f.Name, fieldName, StringComparison.OrdinalIgnoreCase)
+            && f.Type == FieldType.Lookup
+            && !string.IsNullOrWhiteSpace(f.LookupModule));
+        if (field is null || !field.IsVisible)
+            return NotFound();
+
+        var fieldAccess = await _access.GetFieldAccessMapAsync(module.Id);
+        if (fieldAccess.TryGetValue(field.Id, out var fa) && fa == FieldAccess.Hidden)
+            return Forbid("Identity.Application");
+
+        var target = await _metadata.GetModuleByNameAsync(field.LookupModule!);
+        if (target is null)
+            return NotFound();
+        if (!await _access.CanViewModuleAsync(target.Id))
+            return Forbid("Identity.Application");
+
+        // ReadOnly: فقط برای نمایش مقدار فعلی، جستجو خالی
+        if (fieldAccess.TryGetValue(field.Id, out var accessLevel) && accessLevel == FieldAccess.ReadOnly)
+            return Json(new { results = Array.Empty<object>(), pagination = new { more = false } });
+
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length > 80) term = term[..80];
+        page = Math.Max(1, page);
+        const int pageSize = 30;
+
+        var (items, _) = await _records.ListAsync(
+            target.Id,
+            search: string.IsNullOrWhiteSpace(term) ? null : term,
+            page: page,
+            pageSize: pageSize + 1,
+            includeTotal: false);
+
+        var more = items.Count > pageSize;
+        var pageItems = more ? items.Take(pageSize) : items;
+
+        return Json(new
+        {
+            results = pageItems.Select(r => new { id = r.Id, text = string.IsNullOrWhiteSpace(r.Title) ? $"#{r.Id}" : r.Title }),
+            pagination = new { more }
+        });
+    }
+
+    /// <summary>جستجوی Ajax محصولات typed برای خط‌اقلام / فرم‌های مالی.</summary>
+    [HttpGet("/App/lookup/products")]
+    public async Task<IActionResult> ProductLookupSearch(string? q = null, int page = 1)
+    {
+        var productsModule = await _metadata.GetModuleByNameAsync("products");
+        if (productsModule is not null && !await _access.CanViewModuleAsync(productsModule.Id))
+            return Forbid("Identity.Application");
+
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length > 80) term = term[..80];
+        page = Math.Max(1, page);
+        const int pageSize = 30;
+
+        var query = _db.Products.AsNoTracking().Where(p => p.IsActive && !p.IsDeleted);
+        if (!string.IsNullOrWhiteSpace(term))
+            query = query.Where(p => EF.Functions.ILike(p.Name, "%" + term + "%")
+                                     || (p.Sku != null && EF.Functions.ILike(p.Sku, "%" + term + "%")));
+
+        var rows = await query
+            .OrderBy(p => p.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize + 1)
+            .Select(p => new { p.Id, p.Name, p.SalePrice, p.TaxPercent })
+            .ToListAsync();
+
+        var more = rows.Count > pageSize;
+        var pageItems = more ? rows.Take(pageSize) : rows;
+
+        return Json(new
+        {
+            results = pageItems.Select(p => new
+            {
+                id = p.Id,
+                text = p.Name,
+                price = p.SalePrice,
+                tax = p.TaxPercent
+            }),
+            pagination = new { more }
+        });
+    }
+
+    /// <summary>جستجوی Ajax تأمین‌کنندگان typed.</summary>
+    [HttpGet("/App/lookup/vendors")]
+    public async Task<IActionResult> VendorLookupSearch(string? q = null, int page = 1)
+    {
+        var vendorsModule = await _metadata.GetModuleByNameAsync("vendors");
+        if (vendorsModule is not null && !await _access.CanViewModuleAsync(vendorsModule.Id))
+            return Forbid("Identity.Application");
+
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length > 80) term = term[..80];
+        page = Math.Max(1, page);
+        const int pageSize = 30;
+
+        var query = _db.Vendors.AsNoTracking().Where(v => !v.IsDeleted);
+        if (!string.IsNullOrWhiteSpace(term))
+            query = query.Where(v => EF.Functions.ILike(v.Name, "%" + term + "%"));
+
+        var rows = await query
+            .OrderBy(v => v.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize + 1)
+            .Select(v => new { v.Id, v.Name })
+            .ToListAsync();
+
+        var more = rows.Count > pageSize;
+        var pageItems = more ? rows.Take(pageSize) : rows;
+
+        return Json(new
+        {
+            results = pageItems.Select(v => new { id = v.Id, text = v.Name }),
+            pagination = new { more }
+        });
+    }
+
+    /// <summary>جستجوی Ajax مستقیم روی یک ماژول داینامیک (برای فرم‌های typed مثل مخاطب).</summary>
+    [HttpGet("/App/lookup/module/{targetModule}")]
+    public async Task<IActionResult> ModuleLookupSearch(string targetModule, string? q = null, int page = 1)
+    {
+        var target = await _metadata.GetModuleByNameAsync(targetModule);
+        if (target is null)
+            return NotFound();
+        if (!await _access.CanViewModuleAsync(target.Id))
+            return Forbid("Identity.Application");
+
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length > 80) term = term[..80];
+        page = Math.Max(1, page);
+        const int pageSize = 30;
+
+        var (items, _) = await _records.ListAsync(
+            target.Id,
+            search: string.IsNullOrWhiteSpace(term) ? null : term,
+            page: page,
+            pageSize: pageSize + 1,
+            includeTotal: false);
+
+        var more = items.Count > pageSize;
+        var pageItems = more ? items.Take(pageSize) : items;
+
+        return Json(new
+        {
+            results = pageItems.Select(r => new { id = r.Id, text = string.IsNullOrWhiteSpace(r.Title) ? $"#{r.Id}" : r.Title }),
+            pagination = new { more }
+        });
+    }
+
+    /// <summary>کاندیداهای اتصال مرتبط برای Select2 آژاکس (بدون لود سنگین در Details).</summary>
+    [HttpGet("/App/m/{moduleName}/{id:int}/link-candidates")]
+    public async Task<IActionResult> LinkCandidates(
+        string moduleName,
+        int id,
+        string relatedModule,
+        string? linkField = null,
+        int? relationId = null,
+        string? q = null,
+        int page = 1)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var parent = await _records.GetAsync(module.Id, id);
+        if (parent is null)
+            return NotFound();
+
+        var related = await _metadata.GetModuleByNameAsync(relatedModule);
+        if (related is null)
+            return NotFound();
+        if (!await _access.CanViewModuleAsync(related.Id))
+            return Forbid("Identity.Application");
+
+        List<(int Id, string Title)> candidates;
+        if (relationId is int rid)
+        {
+            var existing = await _db.RecordLinks.AsNoTracking()
+                .Where(l => l.RelationId == rid && (l.LeftRecordId == id || l.RightRecordId == id))
+                .Select(l => l.LeftRecordId == id ? l.RightRecordId : l.LeftRecordId)
+                .ToListAsync();
+            candidates = await LoadM2MCandidatesAsync(relatedModule, existing.ToHashSet(), q, page);
+        }
+        else if (!string.IsNullOrWhiteSpace(linkField))
+        {
+            candidates = await LoadLinkCandidatesAsync(relatedModule, linkField, id, [], q, page);
+        }
+        else
+        {
+            candidates = [];
+        }
+
+        return Json(new
+        {
+            results = candidates.Select(c => new { id = c.Id, text = c.Title }),
+            pagination = new { more = candidates.Count >= 30 }
+        });
     }
 
     [HttpPost("/App/m/{moduleName}/{id:int}/notes")]
@@ -1031,29 +1432,44 @@ public class RecordsController : AppControllerBase
         public string ModuleLabel { get; set; } = string.Empty;
     }
 
+    private static decimal ParseMoney(Dictionary<string, string?> data, string key, decimal fallback)
+    {
+        if (!data.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+            return fallback;
+        if (decimal.TryParse(raw, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
+            return v;
+        return decimal.TryParse(raw, out v) ? v : fallback;
+    }
+
     private static bool IsSafeJsonKey(string name) =>
         !string.IsNullOrWhiteSpace(name)
         && name.Length <= 64
         && name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
 
     /// <summary>رکوردهایی که Lookup آن‌ها به این رکورد اشاره می‌کند.</summary>
-    private async Task<List<RelatedRecordItem>> LoadInboundRelatedAsync(ModuleDef module, int recordId)
+    private async Task<List<RelatedRecordItem>> LoadInboundRelatedAsync(
+        ModuleDef module, int recordId, HashSet<string>? skipModules = null)
     {
         var lookupFields = await _db.Fields.AsNoTracking()
             .Include(f => f.Module)
             .Where(f => f.Type == FieldType.Lookup
                         && f.LookupModule == module.Name
-                        && f.ModuleId != module.Id)
+                        && f.ModuleId != module.Id
+                        && (f.Module == null || !f.Module.Name.EndsWith("_lines")))
             .ToListAsync();
 
-        var results = new List<RelatedRecordItem>();
-        var idStr = recordId.ToString();
-
-        foreach (var field in lookupFields)
+        if (skipModules is { Count: > 0 })
         {
-            if (!IsSafeJsonKey(field.Name) || field.Module is null)
-                continue;
+            lookupFields = lookupFields
+                .Where(f => f.Module is null || !skipModules.Contains(f.Module.Name))
+                .ToList();
+        }
 
+        var idStr = recordId.ToString();
+        var results = new List<RelatedRecordItem>();
+        foreach (var field in lookupFields.Where(f => IsSafeJsonKey(f.Name) && f.Module is not null))
+        {
             var rows = await _db.Database
                 .SqlQuery<RelatedSqlRow>($"""
                     SELECT r."Id" AS "Id",
@@ -1091,7 +1507,12 @@ public class RecordsController : AppControllerBase
     }
 
     private async Task<List<(int Id, string Title)>> LoadLinkCandidatesAsync(
-        string relatedModuleName, string linkFieldName, int parentRecordId, HashSet<int> alreadyLinked)
+        string relatedModuleName,
+        string linkFieldName,
+        int parentRecordId,
+        HashSet<int> alreadyLinked,
+        string? q = null,
+        int page = 1)
     {
         if (!IsSafeJsonKey(linkFieldName))
             return [];
@@ -1099,28 +1520,37 @@ public class RecordsController : AppControllerBase
         var relatedModule = await _metadata.GetModuleByNameAsync(relatedModuleName);
         if (relatedModule is null)
             return [];
+        if (!await _access.CanViewModuleAsync(relatedModule.Id))
+            return [];
 
         var parentStr = parentRecordId.ToString();
-        var rows = await _db.Database
-            .SqlQuery<RelatedSqlRow>($"""
-                SELECT r."Id" AS "Id",
-                       r."Title" AS "Title",
-                       m."Name" AS "ModuleName",
-                       m."SingularLabel" AS "ModuleLabel"
-                FROM "Records" r
-                INNER JOIN "Modules" m ON m."Id" = r."ModuleId"
-                WHERE r."ModuleId" = {relatedModule.Id}
-                  AND r."IsDeleted" = FALSE
-                  AND COALESCE(r."CustomData" ->> {linkFieldName}, '') <> {parentStr}
-                ORDER BY r."Title" ASC
-                LIMIT 80
-                """)
-            .ToListAsync();
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length > 80) term = term[..80];
+        page = Math.Max(1, page);
+        const int pageSize = 30;
 
-        return rows
-            .Where(r => !alreadyLinked.Contains(r.Id))
-            .Select(r => (r.Id, r.Title))
-            .ToList();
+        // چند صفحهٔ کوچک می‌گیریم تا بعد از فیلتر لینک، به اندازهٔ کافی بماند
+        var (items, _) = await _records.ListAsync(
+            relatedModule.Id,
+            search: string.IsNullOrWhiteSpace(term) ? null : term,
+            page: page,
+            pageSize: pageSize * 3,
+            includeTotal: false);
+
+        var result = new List<(int Id, string Title)>();
+        foreach (var r in items)
+        {
+            if (alreadyLinked.Contains(r.Id)) continue;
+            var data = DynamicRecordService.ParseData(r);
+            var linked = data.GetValueOrDefault(linkFieldName);
+            if (string.Equals(linked, parentStr, StringComparison.Ordinal))
+                continue;
+            result.Add((r.Id, string.IsNullOrWhiteSpace(r.Title) ? $"#{r.Id}" : r.Title));
+            if (result.Count >= pageSize)
+                break;
+        }
+
+        return result;
     }
 
     private async Task EnrichRelationGroupsAsync(List<RelatedRecordGroup> groups, int parentRecordId)
@@ -1130,7 +1560,7 @@ public class RecordsController : AppControllerBase
             g.ParentRecordId = parentRecordId;
             var linked = g.Records.Select(r => r.RecordId).ToHashSet();
 
-            if (g.IsManyToMany && g.RelationId is int relId)
+            if (g.IsManyToMany && g.RelationId is int)
             {
                 g.LinkCandidates = await LoadM2MCandidatesAsync(g.ModuleName, linked);
                 continue;
@@ -1143,20 +1573,31 @@ public class RecordsController : AppControllerBase
     }
 
     private async Task<List<(int Id, string Title)>> LoadM2MCandidatesAsync(
-        string relatedModuleName, HashSet<int> alreadyLinked)
+        string relatedModuleName, HashSet<int> alreadyLinked, string? q = null, int page = 1)
     {
         var relatedModule = await _metadata.GetModuleByNameAsync(relatedModuleName);
         if (relatedModule is null)
             return [];
+        if (!await _access.CanViewModuleAsync(relatedModule.Id))
+            return [];
 
-        var rows = await _db.Records.AsNoTracking()
-            .Where(r => r.ModuleId == relatedModule.Id && !alreadyLinked.Contains(r.Id))
-            .OrderBy(r => r.Title)
-            .Take(80)
-            .Select(r => new { r.Id, r.Title })
-            .ToListAsync();
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length > 80) term = term[..80];
+        page = Math.Max(1, page);
+        const int pageSize = 30;
 
-        return rows.Select(r => (r.Id, r.Title)).ToList();
+        var (items, _) = await _records.ListAsync(
+            relatedModule.Id,
+            search: string.IsNullOrWhiteSpace(term) ? null : term,
+            page: page,
+            pageSize: pageSize + alreadyLinked.Count + 5,
+            includeTotal: false);
+
+        return items
+            .Where(r => !alreadyLinked.Contains(r.Id))
+            .Take(pageSize)
+            .Select(r => (r.Id, string.IsNullOrWhiteSpace(r.Title) ? $"#{r.Id}" : r.Title))
+            .ToList();
     }
 
     private async Task<List<RelatedRecordGroup>> BuildRelationGroupsAsync(
@@ -1164,30 +1605,44 @@ public class RecordsController : AppControllerBase
         int recordId,
         Dictionary<string, string?> values,
         IReadOnlyList<FieldDef> fields,
-        IReadOnlyList<RelatedRecordItem> inbound)
+        IReadOnlyList<RelatedRecordItem> inbound,
+        Dictionary<string, Dictionary<string, string>>? lookupTitles = null,
+        HashSet<string>? skipModules = null,
+        bool loadCandidates = true)
     {
         var groups = new List<RelatedRecordGroup>();
 
-        // Outbound: lookup values روی همین رکورد
+        // Outbound: از LookupTitles از قبل resolve‌شده (بدون N+1)
         var outboundItems = new List<RelatedRecordItem>();
         foreach (var field in fields.Where(f => f.Type == FieldType.Lookup && !string.IsNullOrWhiteSpace(f.LookupModule)))
         {
             if (!values.TryGetValue(field.Name, out var raw) || !int.TryParse(raw, out var relatedId))
                 continue;
 
-            var related = await _db.Records.AsNoTracking()
-                .Where(r => r.Id == relatedId)
-                .Select(r => new { r.Id, r.Title, ModuleName = r.Module.Name, ModuleLabel = r.Module.SingularLabel })
-                .FirstOrDefaultAsync();
-            if (related is null)
+            string? title = null;
+            if (lookupTitles is not null
+                && lookupTitles.TryGetValue(field.Name, out var map)
+                && map.TryGetValue(relatedId.ToString(), out var t))
+                title = t;
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                title = await _db.Records.AsNoTracking()
+                    .Where(r => r.Id == relatedId)
+                    .Select(r => r.Title)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
                 continue;
 
+            var relatedModule = await _metadata.GetModuleByNameAsync(field.LookupModule!);
             outboundItems.Add(new RelatedRecordItem
             {
-                ModuleName = related.ModuleName,
-                ModuleLabel = related.ModuleLabel,
-                RecordId = related.Id,
-                Title = related.Title,
+                ModuleName = relatedModule?.Name ?? field.LookupModule!,
+                ModuleLabel = relatedModule?.SingularLabel ?? field.LookupModule!,
+                RecordId = relatedId,
+                Title = title,
                 FieldLabel = field.Label,
                 LinkFieldName = field.Name
             });
@@ -1212,6 +1667,9 @@ public class RecordsController : AppControllerBase
         // Inbound (غیر فعالیت) به‌صورت گروه
         foreach (var g in inbound.Where(r => !ActivityModuleNames.Contains(r.ModuleName)).GroupBy(r => r.ModuleName))
         {
+            if (skipModules is not null && skipModules.Contains(g.Key))
+                continue;
+
             groups.Add(new RelatedRecordGroup
             {
                 Label = g.First().ModuleLabel,
@@ -1244,6 +1702,10 @@ public class RecordsController : AppControllerBase
             {
                 var otherId = rel.SourceModuleId == module.Id ? rel.TargetModuleId : rel.SourceModuleId;
                 if (!moduleMap.TryGetValue(otherId, out var other))
+                    continue;
+                if (other.IsChildModule && other.Name.EndsWith("_lines", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (skipModules is not null && skipModules.Contains(other.Name))
                     continue;
 
                 var isM2M = rel.IsManyToMany || rel.Kind == RelationKind.ManyToMany;
@@ -1302,6 +1764,22 @@ public class RecordsController : AppControllerBase
                         ParentRecordId = recordId,
                         Records = matched
                     });
+                    continue;
+                }
+
+                // اگر inbound قبلاً این ماژول را پر کرده، دوباره JSONB اسکن نکن
+                var alreadyInbound = groups.FirstOrDefault(g =>
+                    !g.IsManyToMany
+                    && string.Equals(g.ModuleName, other.Name, StringComparison.OrdinalIgnoreCase));
+                if (alreadyInbound is not null
+                    && alreadyInbound.Records.Count > 0
+                    && !string.IsNullOrWhiteSpace(rel.LinkFieldName)
+                    && rel.SourceModuleId == module.Id)
+                {
+                    if (!string.IsNullOrWhiteSpace(rel.Label))
+                        alreadyInbound.Label = rel.Label;
+                    if (!string.IsNullOrWhiteSpace(linkField))
+                        alreadyInbound.LinkFieldName = linkField;
                     continue;
                 }
 
@@ -1387,7 +1865,8 @@ public class RecordsController : AppControllerBase
                 g.TabKey = $"{baseKey}-{n++}";
         }
 
-        await EnrichRelationGroupsAsync(groups, recordId);
+        if (loadCandidates)
+            await EnrichRelationGroupsAsync(groups, recordId);
         return groups;
     }
 
@@ -1735,16 +2214,58 @@ public class RecordsController : AppControllerBase
     {
         var fields = await _metadata.GetFieldsAsync(module.Id);
         var blocks = await _metadata.GetBlocksAsync(module.Id);
+        values ??= new Dictionary<string, string?>();
 
+        // فقط عنوان مقدار فعلی Lookup (برای Select2 Ajax) — نه لیست کامل
         var lookupOptions = new Dictionary<string, List<(int, string)>>();
         foreach (var field in fields.Where(f => f.Type == FieldType.Lookup && f.LookupModule is not null))
         {
-            var target = await _metadata.GetModuleByNameAsync(field.LookupModule!);
-            if (target is null)
+            if (!values.TryGetValue(field.Name, out var selectedRaw)
+                || string.IsNullOrWhiteSpace(selectedRaw)
+                || !int.TryParse(selectedRaw.Trim(), out var selectedId)
+                || selectedId <= 0)
+            {
+                lookupOptions[field.Name] = [];
                 continue;
+            }
 
-            var (items, _) = await _records.ListAsync(target.Id, search: null, page: 1, pageSize: 40, includeTotal: false);
-            lookupOptions[field.Name] = items.Select(r => (r.Id, r.Title)).ToList();
+            var target = await _metadata.GetModuleByNameAsync(field.LookupModule!);
+            if (target is null || !await _access.CanViewModuleAsync(target.Id))
+            {
+                lookupOptions[field.Name] = [(selectedId, $"#{selectedId}")];
+                continue;
+            }
+
+            var selected = await _records.GetAsync(target.Id, selectedId);
+            lookupOptions[field.Name] =
+            [
+                (selectedId, selected is null
+                    ? $"#{selectedId}"
+                    : (string.IsNullOrWhiteSpace(selected.Title) ? $"#{selectedId}" : selected.Title))
+            ];
+        }
+
+        // دفترچه قیمت روی اسناد فروش (اگر فیلد در متادیتا باشد یا فقط در خط‌اقلام)
+        if (module.Name is "quotes" or "sales_orders" or "invoices"
+            && !lookupOptions.ContainsKey("priceBook")
+            && values.TryGetValue("priceBook", out var pbRaw)
+            && int.TryParse(pbRaw?.Trim(), out var pbId) && pbId > 0)
+        {
+            var pbModule = await _metadata.GetModuleByNameAsync("pricebooks");
+            if (pbModule is not null && await _access.CanViewModuleAsync(pbModule.Id))
+            {
+                var selected = await _records.GetAsync(pbModule.Id, pbId);
+                lookupOptions["priceBook"] =
+                [
+                    (pbId, selected is null || string.IsNullOrWhiteSpace(selected.Title)
+                        ? $"#{pbId}"
+                        : selected.Title)
+                ];
+            }
+            else
+            {
+                lookupOptions["priceBook"] = [(pbId, $"#{pbId}")];
+            }
         }
 
         var (_, _, lineFields) = await _lineItems.GetLineBlockAsync(module.Id);
@@ -1752,12 +2273,21 @@ public class RecordsController : AppControllerBase
             ? await _lineItems.LoadLinesAsync(module.Id, rid)
             : [];
 
-        var products = await _db.Products.AsNoTracking()
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.Name)
-            .Take(500)
-            .Select(p => new ValueTuple<int, string, decimal, decimal>(p.Id, p.Name, p.SalePrice, p.TaxPercent))
-            .ToListAsync();
+        // فقط محصولات انتخاب‌شده در سطرها (Ajax بقیه را می‌آورد)
+        var selectedProductIds = lineItems
+            .Select(r => r.GetValueOrDefault("product"))
+            .Where(v => int.TryParse(v, out _))
+            .Select(v => int.Parse(v!))
+            .Distinct()
+            .ToList();
+
+        var products = selectedProductIds.Count == 0
+            ? new List<(int, string, decimal, decimal)>()
+            : await _db.Products.AsNoTracking()
+                .Where(p => p.IsActive && selectedProductIds.Contains(p.Id))
+                .OrderBy(p => p.Name)
+                .Select(p => new ValueTuple<int, string, decimal, decimal>(p.Id, p.Name, p.SalePrice, p.TaxPercent))
+                .ToListAsync();
 
         return new RecordFormViewModel
         {
@@ -1766,7 +2296,7 @@ public class RecordsController : AppControllerBase
             Blocks = blocks,
             FieldAccessMap = await _access.GetFieldAccessMapAsync(module.Id),
             RecordId = recordId,
-            Values = values ?? new Dictionary<string, string?>(),
+            Values = values,
             LookupOptions = lookupOptions,
             LineFields = lineFields,
             LineItems = lineItems,
