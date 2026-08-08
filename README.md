@@ -1,6 +1,8 @@
-# BamaCRM — پلتفرم مدیریت ارتباط با مشتری
+# CRM — پلتفرم مدیریت ارتباط با مشتری
 
 پلتفرم SaaS چند-مستاجری (Multi-Tenant) برای مدیریت فروش، پشتیبانی و ارتباط با مشتری — با ‎.NET 10 MVC.
+
+> **نام نمایشی محصول** فقط از بخش `Branding` در `src/Crm.Web/appsettings.json` خوانده می‌شود.
 
 ## ساختار سالوشن
 
@@ -13,8 +15,8 @@
 
 ### Area های `Crm.Web`
 
-- **Root** — سایت عمومی (پورت‌شده از TabenLife، بدون فروشگاه)
-- **`Areas/Admin`** — ادمین محتوای سایت (وبلاگ/صفحات/FAQ) — موقت؛ در پلن ۳ زیر پنل Owner می‌رود
+- **Root** — سایت عمومی
+- **`Areas/Admin`** — ادمین محتوای سایت (وبلاگ/صفحات/FAQ)
 - **`Areas/Owner`** — پنل مالک مجموعه (مدیریت Tenant ها، پلن‌ها، اشتراک)
 - **`Areas/App`** — پنل CRM هر مشتری (Tenant)
 - **`Areas/Portal`** — پورتال مشتریان نهایی هر Tenant
@@ -29,7 +31,10 @@
 # 1) دیتابیس
 docker compose up -d
 
-# 2) اجرای وب‌اپ
+# 2) اتصال به دیتابیس واقعی (در صورت نیاز)
+# فایل gitignored بسازید: src/Crm.Web/appsettings.Development.local.json
+
+# 3) اجرای وب‌اپ
 dotnet run --project src/Crm.Web
 ```
 
@@ -37,17 +42,17 @@ dotnet run --project src/Crm.Web
 - ادمین محتوای سایت: `/Admin` (کاربر پیش‌فرض در `appsettings.json` بخش `Admin`)
 - پنل مالک: `/Owner` — پنل CRM: `/App` — پورتال مشتری: `/Portal`
 
-دیتابیس: PostgreSQL 16 (`bamacrm` / `bamacrm` / `bamacrm_dev` روی پورت 5432) — اسکیما و داده اولیه به‌صورت خودکار هنگام اجرا ساخته می‌شود.
+دیتابیس پیش‌فرض Docker: PostgreSQL 16 (`crm` / `crm` / `crm_dev` روی پورت 5432) — اسکیما و داده اولیه به‌صورت خودکار هنگام اجرا ساخته می‌شود.
 
 ### Tenant نمونه (دمو)
 
 فقط در **Development** از پنل ادمین ← **مشتریان** ← دکمه «ساخت مشتری دمو» (در Production نمایش داده نمی‌شود):
 
 - ورود پنل CRM: `/App/Account/Login`
-- ایمیل: `demo@bamacrm.local`
+- ایمیل: مقدار `Branding:DemoEmail` در appsettings (پیش‌فرض `demo@crm.local`)
 - رمز: `Demo@1405`
 
-جزئیات کامل (دادهٔ دمو، نمودارها، تقویم، پورسانت، صفحه‌بندی و بهینه‌سازی لود): [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
+جزئیات کامل: [`docs/DEMO-TENANT.md`](docs/DEMO-TENANT.md)
 
 ## استقرار (Production — Cloud یا On-Premise)
 
@@ -59,7 +64,7 @@ docker compose -f docker-compose.deploy.yml up -d --build
 ```
 
 - وب‌اپ روی پورت `8080` — دیتابیس و آپلودها در ولوم Docker
-- **Backup خودکار:** سرویس `backup` هر ۲۴ ساعت `pg_dump` می‌گیرد (۱۴ نسخه آخر در ولوم `bamacrm_backups`)
+- **Backup خودکار:** سرویس `backup` هر ۲۴ ساعت `pg_dump` می‌گیرد (۱۴ نسخه آخر در ولوم `crm_backups`)
 - Migration ها هنگام بالا آمدن وب‌اپ خودکار اجرا می‌شوند
 
 ## REST API عمومی
@@ -78,27 +83,4 @@ docker compose -f docker-compose.deploy.yml up -d --build
 ./tools/smoke-e2e.ps1           # هسته و متادیتا
 ./tools/smoke-owner.ps1         # پنل مالک و اشتراک
 ./tools/smoke-sales.ps1         # فروش پایه
-./tools/smoke-finance.ps1       # چرخه مالی
-./tools/smoke-workflow.ps1      # گردش‌کار و گزارش
-./tools/smoke-support.ps1       # تیکتینگ و پورتال
-./tools/smoke-plan8.ps1         # پروژه/خرید/بازاریابی
-./tools/smoke-integrations.ps1  # API عمومی، درگاه پرداخت، VoIP
 ```
-
-## نقشه راه
-
-اجرا در ۹ پلن (سند مرجع: پلن «نقشه راه کامل ساخت پلتفرم CRM»):
-
-1. ✅ اسکلت سالوشن + سایت عمومی + پوسته پنل‌ها
-2. ✅ هسته CRM: Multi-Tenancy، موتور متادیتا، RBAC، Identity
-3. ✅ پنل مالک و سیستم اشتراک
-4. ✅ فروش پایه (سرنخ، مخاطب، فرصت، کاریز)
-5. ✅ محصول، انبار و چرخه مالی
-6. ✅ موتور گردش‌کار + داشبورد و گزارش‌ساز
-7. ✅ پشتیبانی و پورتال مشتریان نهایی
-8. ✅ پروژه، تأمین و خرید، بازاریابی
-9. ✅ یکپارچگی‌ها، API عمومی و استقرار
-
-### امکانات متادیتا
-
-- **Module Studio** — سفارشی‌سازی چیدمان، فیلد، روابط، تکراری‌ها و وابستگی نمایش (`docs/MODULE-STUDIO.md`)

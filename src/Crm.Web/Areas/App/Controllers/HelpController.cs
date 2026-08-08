@@ -1,17 +1,23 @@
+using Crm.Core;
 using Crm.Web.Models.Help;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Crm.Web.Areas.App.Controllers;
 
 public class HelpController : AppControllerBase
 {
+    private readonly BrandingOptions _branding;
+
+    public HelpController(IOptions<BrandingOptions> branding) => _branding = branding.Value;
+
     [HttpGet("/App/help")]
     public IActionResult Index()
     {
         ViewData["PanelTitle"] = "مرکز آموزش";
         return View(new HelpIndexViewModel
         {
-            Title = "مرکز آموزش BamaCRM",
+            Title = $"مرکز آموزش {_branding.DisplayName}",
             Description = "آموزش تک‌تک صفحات، فیلدها و روابط بین بخش‌ها — از سرنخ تا فاکتور، پروژه، تیکت و پورتال. برای شروع، «نقشه روابط CRM» را ببینید.",
             BaseUrl = "/App/help",
             Topics = Services.Help.AppHelpContent.Topics

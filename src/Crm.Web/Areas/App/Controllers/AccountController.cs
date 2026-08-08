@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Crm.Core;
 using Crm.Infrastructure.Identity;
 using Crm.Infrastructure.Services;
 using Crm.Web.Areas.App.Models;
@@ -15,15 +17,18 @@ public class AccountController : Controller
     private readonly SignInManager<CrmUser> _signInManager;
     private readonly UserManager<CrmUser> _userManager;
     private readonly TenantProvisioningService _provisioning;
+    private readonly BrandingOptions _branding;
 
     public AccountController(
         SignInManager<CrmUser> signInManager,
         UserManager<CrmUser> userManager,
-        TenantProvisioningService provisioning)
+        TenantProvisioningService provisioning,
+        IOptions<BrandingOptions> branding)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _provisioning = provisioning;
+        _branding = branding.Value;
     }
 
     [HttpGet]
@@ -46,7 +51,7 @@ public class AccountController : Controller
         }
 
         await _signInManager.SignInAsync(result.AdminUser, isPersistent: true);
-        TempData["Success"] = $"به BamaCRM خوش آمدید! دوره آزمایشی ۱۰ روزه «{result.Tenant!.Name}» فعال شد.";
+        TempData["Success"] = $"به {_branding.DisplayName} خوش آمدید! دوره آزمایشی ۱۰ روزه «{result.Tenant!.Name}» فعال شد.";
         return RedirectToAction("Index", "Dashboard", new { area = "App" });
     }
 

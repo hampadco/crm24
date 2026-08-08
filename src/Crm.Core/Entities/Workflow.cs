@@ -32,7 +32,7 @@ public class WorkflowRule : TenantEntity
     public ICollection<WorkflowAction> Actions { get; set; } = new List<WorkflowAction>();
 }
 
-/// <summary>۱۱ اکشن گردش‌کار طبق تحلیل BamaCRM.</summary>
+/// <summary>۱۱ اکشن گردش‌کار پشتیبانی‌شده.</summary>
 public enum WorkflowActionType
 {
     SendEmail = 0,

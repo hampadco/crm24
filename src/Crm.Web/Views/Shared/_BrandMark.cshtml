@@ -1,0 +1,14 @@
+@using Crm.Core
+@inject Microsoft.Extensions.Options.IOptions<BrandingOptions> BrandingAccessor
+@{
+    var brand = BrandingAccessor.Value;
+    var cssClass = ViewData["BrandClass"] as string ?? "fw-bold fs-4";
+}
+@if (brand.HasSplitMark)
+{
+    <span class="@cssClass">@brand.BrandPrefix<span class="text-primary">@brand.BrandAccentText</span></span>
+}
+else
+{
+    <span class="@cssClass">@brand.LatinName</span>
+}

@@ -15,9 +15,9 @@ artifacts/
 *.db-shm
 *.db-wal
 
-## Local dev overrides (connection strings, secrets)
-appsettings.Development.local.json
-**/appsettings.Development.local.json
+## Local overrides (connection strings, secrets)
+appsettings.*.local.json
+**/appsettings.*.local.json
 
 ## Node (future tooling)
 node_modules/

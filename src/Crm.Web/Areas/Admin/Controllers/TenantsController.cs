@@ -46,7 +46,7 @@ public class TenantsController : Controller
         if (_env.IsDevelopment())
         {
             ViewBag.DemoExists = await _demoSeeder.DemoExistsAsync();
-            ViewBag.DemoEmail = DemoTenantSeeder.DemoEmail;
+            ViewBag.DemoEmail = _demoSeeder.DemoEmail;
             ViewBag.DemoPassword = DemoTenantSeeder.DemoPassword;
         }
         return View(model);

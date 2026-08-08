@@ -21,7 +21,7 @@
 | مورد | مقدار |
 |------|--------|
 | آدرس | `/App/Account/Login` |
-| ایمیل | `demo@bamacrm.local` |
+| ایمیل | `demo@crm.local` |
 | رمز | `Demo@1405` |
 | اسلاگ tenant | `demo` |
 

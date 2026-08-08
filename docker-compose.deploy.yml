@@ -5,15 +5,15 @@
 services:
   postgres:
     image: postgres:16
-    container_name: bamacrm-db
+    container_name: crm-db
     environment:
-      POSTGRES_DB: bamacrm
-      POSTGRES_USER: bamacrm
+      POSTGRES_DB: crm
+      POSTGRES_USER: crm
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes:
-      - bamacrm_pgdata:/var/lib/postgresql/data
+      - crm_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bamacrm -d bamacrm"]
+      test: ["CMD-SHELL", "pg_isready -U crm -d crm"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,31 +23,31 @@ services:
     build:
       context: .
       dockerfile: src/Crm.Web/Dockerfile
-    container_name: bamacrm-web
+    container_name: crm-web
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=bamacrm;Username=bamacrm;Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=crm;Username=crm;Password=${POSTGRES_PASSWORD}"
     ports:
       - "8080:8080"
     volumes:
-      - bamacrm_uploads:/app/wwwroot/uploads
+      - crm_uploads:/app/wwwroot/uploads
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
 
-  # Backup خودکار روزانه Postgres — خروجی در ولوم bamacrm_backups (۱۴ نسخه آخر)
+  # Backup خودکار روزانه Postgres — خروجی در ولوم crm_backups (۱۴ نسخه آخر)
   backup:
     image: postgres:16
-    container_name: bamacrm-backup
+    container_name: crm-backup
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - bamacrm_backups:/backups
+      - crm_backups:/backups
     entrypoint: >
       bash -c 'while true; do
-        pg_dump -h postgres -U bamacrm -d bamacrm -F c -f "/backups/bamacrm-$$(date +%Y%m%d-%H%M).dump" &&
-        ls -1t /backups/bamacrm-*.dump 2>/dev/null | tail -n +15 | xargs -r rm --;
+        pg_dump -h postgres -U crm -d crm -F c -f "/backups/crm-$$(date +%Y%m%d-%H%M).dump" &&
+        ls -1t /backups/crm-*.dump 2>/dev/null | tail -n +15 | xargs -r rm --;
         sleep 86400;
       done'
     depends_on:
@@ -56,6 +56,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  bamacrm_pgdata:
-  bamacrm_uploads:
-  bamacrm_backups:
+  crm_pgdata:
+  crm_uploads:
+  crm_backups:

@@ -4,6 +4,7 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Crm.Core;
 using Crm.Core.Abstractions;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Identity;
@@ -21,6 +22,9 @@ builder.Configuration.AddJsonFile(
     optional: true,
     reloadOnChange: true);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// ---------- برندینگ محصول (تنها منبع نام نمایشی) ----------
+builder.Services.Configure<BrandingOptions>(builder.Configuration.GetSection(BrandingOptions.SectionName));
 
 // ---------- سایت عمومی و ادمین محتوا ----------
 builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection(AdminSettings.SectionName));

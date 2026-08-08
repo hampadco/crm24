@@ -1,6 +1,8 @@
+using Crm.Core;
 using Crm.Web.Models.Help;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace Crm.Web.Areas.Admin.Controllers;
 
@@ -8,13 +10,17 @@ namespace Crm.Web.Areas.Admin.Controllers;
 [Authorize]
 public class HelpController : Controller
 {
+    private readonly BrandingOptions _branding;
+
+    public HelpController(IOptions<BrandingOptions> branding) => _branding = branding.Value;
+
     [HttpGet("/Admin/help")]
     public IActionResult Index()
     {
         ViewData["PanelTitle"] = "مرکز آموزش";
         return View(new HelpIndexViewModel
         {
-            Title = "آموزش پنل مدیریت BamaCRM",
+            Title = $"آموزش پنل مدیریت {_branding.DisplayName}",
             Description = "راهنمای مدیریت مشتریان SaaS، اشتراک‌ها، تراکنش‌ها و محتوای سایت — با توضیح روابط Tenant، Plan، Subscription و فیلدهای هر صفحه.",
             BaseUrl = "/Admin/help",
             Topics = Services.Help.AdminHelpContent.Topics

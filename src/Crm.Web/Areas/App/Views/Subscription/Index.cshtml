@@ -95,7 +95,7 @@ else if (Context.Request.Query["payment"] == "failed")
         <div class="card-header"><h5 class="mb-0"><i class="bx bx-image me-1"></i> برندینگ چاپ اسناد</h5></div>
         <div class="card-body">
             <p class="text-muted small mb-3">
-                لوگوی شرکت شما روی سربرگ پیش‌فاکتور / فاکتور چاپ می‌شود (<code>{$COMPANY.logo}</code>). پایین هر چاپ هم عبارت «تهیه‌شده با BamaCRM» می‌آید.
+                لوگوی شرکت شما روی سربرگ پیش‌فاکتور / فاکتور چاپ می‌شود (<code>{$COMPANY.logo}</code>). پایین هر چاپ هم عبارت «@BrandingAccessor.Value.PrintCredit» می‌آید.
             </p>
             <div class="d-flex flex-wrap align-items-center gap-3">
                 @if (!string.IsNullOrWhiteSpace(tenant.LogoPath))

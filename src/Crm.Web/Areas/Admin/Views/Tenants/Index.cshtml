@@ -6,7 +6,7 @@
     var listQuery = ViewBag.TenantListQuery as TenantListQuery ?? new TenantListQuery();
     var allowDemo = ViewBag.AllowDemoTenant as bool? ?? false;
     var demoExists = ViewBag.DemoExists as bool? ?? false;
-    var demoEmail = ViewBag.DemoEmail as string ?? "demo@bamacrm.local";
+    var demoEmail = ViewBag.DemoEmail as string ?? BrandingAccessor.Value.DemoEmail;
     var demoPassword = ViewBag.DemoPassword as string ?? "Demo@1405";
 }
 

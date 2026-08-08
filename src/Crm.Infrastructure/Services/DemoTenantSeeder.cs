@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Crm.Core;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Identity;
@@ -14,9 +16,10 @@ namespace Crm.Infrastructure.Services;
 public class DemoTenantSeeder
 {
     public const string DemoSlug = "demo";
-    public const string DemoEmail = "demo@bamacrm.local";
     public const string DemoPassword = "Demo@1405";
     public const int TargetCount = 55;
+
+    public string DemoEmail => _branding.DemoEmail;
 
     private static readonly string[] FirstNames =
     [
@@ -107,17 +110,20 @@ public class DemoTenantSeeder
     private readonly UserManager<CrmUser> _users;
     private readonly SalesModuleSeeder _modules;
     private readonly BusinessModuleSeeder _business;
+    private readonly BrandingOptions _branding;
 
     public DemoTenantSeeder(
         CrmDbContext db,
         UserManager<CrmUser> users,
         SalesModuleSeeder modules,
-        BusinessModuleSeeder business)
+        BusinessModuleSeeder business,
+        IOptions<BrandingOptions> branding)
     {
         _db = db;
         _users = users;
         _modules = modules;
         _business = business;
+        _branding = branding.Value;
     }
 
     public async Task EnsureSeededAsync()
@@ -772,7 +778,7 @@ public class DemoTenantSeeder
         {
             tenant = new Tenant
             {
-                Name = "شرکت نمونه BamaCRM",
+                Name = $"شرکت نمونه {_branding.DisplayName}",
                 Slug = DemoSlug,
                 Status = TenantStatus.Active,
                 CreatedAtUtc = now,
