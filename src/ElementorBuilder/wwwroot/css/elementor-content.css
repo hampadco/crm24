@@ -47,10 +47,61 @@
     line-height: 1.4;
 }
 
-.widget-text p {
-    margin: 0;
+.widget-text {
     line-height: 1.75;
 }
+
+.widget-text p {
+    margin: 0 0 0.75em;
+    line-height: 1.75;
+}
+
+.widget-text p:last-child {
+    margin-bottom: 0;
+}
+
+.widget-text ul,
+.widget-text ol {
+    margin: 0 0 0.75em;
+    padding-right: 1.25rem;
+}
+
+.widget-text a {
+    color: #1a56db;
+    text-decoration: underline;
+}
+
+.widget-text strong,
+.widget-text b {
+    font-weight: 700;
+}
+
+.widget-text .ql-align-center,
+.widget-text [style*="text-align: center"] { text-align: center !important; }
+.widget-text .ql-align-left,
+.widget-text [style*="text-align: left"] { text-align: left !important; }
+.widget-text .ql-align-right,
+.widget-text [style*="text-align: right"] { text-align: right !important; }
+.widget-text .ql-align-justify,
+.widget-text [style*="text-align: justify"] { text-align: justify !important; }
+
+.widget-text blockquote {
+    margin: 0.65em 0;
+    padding: 0.65em 1em;
+    border: none;
+    border-right: 4px solid #1a56db;
+    background: #f3f4f6;
+    border-radius: 0 10px 10px 0;
+}
+
+.widget-text .ql-indent-1 { padding-right: 3em; }
+.widget-text .ql-indent-2 { padding-right: 6em; }
+.widget-text .ql-indent-3 { padding-right: 9em; }
+.widget-text .ql-indent-4 { padding-right: 12em; }
+.widget-text .ql-indent-5 { padding-right: 15em; }
+.widget-text .ql-indent-6 { padding-right: 18em; }
+.widget-text .ql-indent-7 { padding-right: 21em; }
+.widget-text .ql-indent-8 { padding-right: 24em; }
 
 .widget-image img {
     max-width: 100%;
@@ -137,7 +188,8 @@
     border-radius: 8px;
 }
 
-.widget-list ul {
+.widget-list ul,
+.widget-list ol {
     margin: 0;
     padding-right: 1.25rem;
 }
@@ -156,6 +208,34 @@
 .widget-alert {
     padding: 0.75rem 1rem;
     border-radius: 6px;
+}
+
+.widget-alert.alert-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+}
+
+.widget-alert.alert-success {
+    background: #ecfdf3;
+    border: 1px solid #abeFC6;
+    color: #065f46;
+}
+
+.widget-alert.alert-warning {
+    background: #fffaeb;
+    border: 1px solid #fedf89;
+    color: #92400e;
+}
+
+.widget-alert.alert-danger {
+    background: #fef3f2;
+    border: 1px solid #fecdca;
+    color: #912018;
+}
+
+.widget-alert p {
+    margin: 0;
 }
 
 /* Tablet — !important overrides inline desktop grid saved before sanitize fix */

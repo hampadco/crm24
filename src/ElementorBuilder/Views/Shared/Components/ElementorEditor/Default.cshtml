@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="@($"~{options.CssPath}")" asp-append-version="true" />
 <link rel="stylesheet" href="@($"~{options.ContentCssPath}")" asp-append-version="true" />
 <link rel="stylesheet" href="@($"~{options.FontAwesomePath}")" asp-append-version="true" />
+<link rel="stylesheet" href="~/_content/ElementorBuilder/lib/quill/quill.snow.css" asp-append-version="true" />
 
 <div class="elementor-editor-host">
 <div class="elementor-toolbar">
@@ -81,6 +82,14 @@
             انصراف
         </a>
     </div>
+</div>
+
+<div class="elementor-rte-dock" id="elementor-rte-dock" hidden>
+    <div class="elementor-rte-dock-label">
+        <i class="fas fa-font"></i>
+        <span>قالب‌بندی متن</span>
+    </div>
+    <div class="elementor-rte-dock-tools"></div>
 </div>
 
 <div class="elementor-editor-wrapper">
@@ -179,4 +188,5 @@ window.ElementorBuilderConfig = {
     maxUploadSizeMb: @options.MaxUploadSizeMb
 };
 </script>
+<script src="~/_content/ElementorBuilder/lib/quill/quill.min.js" asp-append-version="true"></script>
 <script src="@($"~{options.JsPath}")" asp-append-version="true"></script>

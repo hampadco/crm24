@@ -40,11 +40,68 @@ const ELEMENTOR_SECTION_TEMPLATES = [
     }
 ];
 
+const ELEMENTOR_INLINE_TYPES = new Set(['text', 'heading', 'quote', 'alert']);
+
+const ELEMENTOR_QUILL_SIZE_MIN = 10;
+const ELEMENTOR_QUILL_SIZE_MAX = 72;
+const ELEMENTOR_QUILL_SIZES = Array.from(
+    { length: ELEMENTOR_QUILL_SIZE_MAX - ELEMENTOR_QUILL_SIZE_MIN + 1 },
+    (_, i) => `${ELEMENTOR_QUILL_SIZE_MIN + i}px`
+);
+
+const ELEMENTOR_QUILL_TOOLBAR = [
+    // Header + size use custom RTL controls (see enhanceRteToolbar)
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    [{ script: 'sub' }, { script: 'super' }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }],
+    // Separate align buttons (not a dropdown) — RTL-first order
+    [{ align: 'right' }, { align: 'center' }, { align: 'left' }, { align: 'justify' }],
+    [{ direction: 'rtl' }],
+    ['blockquote', 'code-block'],
+    ['link'],
+    ['clean']
+];
+
+const ELEMENTOR_QUILL_HEADERS = [
+    { value: false, label: 'عادی' },
+    { value: 1, label: 'عنوان ۱' },
+    { value: 2, label: 'عنوان ۲' },
+    { value: 3, label: 'عنوان ۳' },
+    { value: 4, label: 'عنوان ۴' }
+];
+
+function elementorEnsureQuillFormats() {
+    if (typeof Quill === 'undefined' || Quill.__tabenFormatsReady) return;
+    try {
+        const Size = Quill.import('attributors/style/size');
+        Size.whitelist = ELEMENTOR_QUILL_SIZES;
+        Quill.register(Size, true);
+
+        // Inline styles so align/direction survive RTL + custom CSS
+        const AlignStyle = Quill.import('attributors/style/align');
+        // Quill omits "left" (LTR default); we need it for RTL Persian content
+        AlignStyle.whitelist = ['left', 'right', 'center', 'justify'];
+        Quill.register(AlignStyle, true);
+
+        const DirectionStyle = Quill.import('attributors/style/direction');
+        Quill.register(DirectionStyle, true);
+
+        Quill.__tabenFormatsReady = true;
+    } catch (err) {
+        console.warn('Quill format registration failed', err);
+    }
+}
+
 class ElementorBuilder {
     constructor(config) {
         this.config = this.resolveConfig(config);
         this.elements = [];
         this.selectedElement = null;
+        this.textEditor = null;
+        this._textEditorWidgetId = null;
+        this._textEditSaveTimer = null;
         this.clipboard = null;
         this.history = [];
         this.historyIndex = -1;
@@ -579,6 +636,7 @@ class ElementorBuilder {
 
         canvas.addEventListener('click', (e) => {
             if (e.target.closest('[data-el-action], button, .elementor-drag-handle')) return;
+            if (e.target.closest('.elementor-inline-text-editor, .ql-toolbar, .ql-editor, .elementor-inline-heading, .elementor-rte-dock')) return;
 
             const widget = e.target.closest('.elementor-widget');
             if (widget) {
@@ -1593,9 +1651,10 @@ class ElementorBuilder {
 
     sanitizeForSave(canvas) {
         const clone = canvas.cloneNode(true);
+        this.normalizeInlineEditorsInClone(clone);
         clone.querySelectorAll('.elementor-section-tools, .elementor-widget-tools, .elementor-column-header, .elementor-column-tools, .elementor-column-placeholder, .elementor-add-section-btn, .elementor-empty-state').forEach(el => el.remove());
         clone.querySelectorAll('.elementor-section, .elementor-column, .elementor-widget').forEach(el => {
-            el.classList.remove('active', 'drag-over', 'elementor-col-hidden-preview', 'elementor-section-reverse-preview', 'elementor-widget-dragging', 'elementor-section-dragging', 'elementor-column-dragging');
+            el.classList.remove('active', 'drag-over', 'elementor-col-hidden-preview', 'elementor-section-reverse-preview', 'elementor-widget-dragging', 'elementor-section-dragging', 'elementor-column-dragging', 'is-inline-editing');
         });
         this.applyResponsiveVars(clone);
         this.stripPublicGridInlineStyles(clone);
@@ -1607,6 +1666,7 @@ class ElementorBuilder {
     }
 
     editSection(sectionId) {
+        this.commitInlineTextEdit();
         const section = this.querySection(sectionId);
         if (!section) {
             this.syncSelection();
@@ -1727,6 +1787,7 @@ class ElementorBuilder {
     }
 
     editColumn(colId) {
+        this.commitInlineTextEdit();
         const col = this.queryColumn(colId);
         if (!col) {
             this.syncSelection();
@@ -1839,7 +1900,7 @@ class ElementorBuilder {
             heading: '<div class="widget-heading"><h2>عنوان جدید</h2></div>',
             text: '<div class="widget-text"><p>این یک متن نمونه است. محتوای خود را اینجا بنویسید.</p></div>',
             image: '<div class="widget-image"><img src="/images/seed/placeholder.jpg" alt="تصویر"></div>',
-            video: '<div class="widget-video widget-video--placeholder"><p class="text-muted mb-0">ویدیو — آدرس embed را در تنظیمات وارد کنید</p></div>',
+            video: '<div class="widget-video"><iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture"></iframe></div>',
             audio: `
                 <div class="widget-audio">
                     <div class="widget-audio-meta">
@@ -1857,7 +1918,7 @@ class ElementorBuilder {
             list: '<div class="widget-list"><ul><li>مورد اول</li><li>مورد دوم</li><li>مورد سوم</li></ul></div>',
             quote: '<div class="widget-quote"><blockquote><p>این یک نقل قول است</p></blockquote></div>',
             html: '<div class="widget-html"><p>محتوای HTML سفارشی</p></div>',
-            alert: '<div class="widget-alert alert alert-info">این یک پیام هشدار است</div>'
+            alert: '<div class="widget-alert alert alert-info"><p>این یک پیام هشدار است</p></div>'
         };
         
         return defaults[type] || '<p>ویجت</p>';
@@ -1870,14 +1931,26 @@ class ElementorBuilder {
             return;
         }
 
+        const type = widget.dataset.type;
+        const alreadyEditing = ELEMENTOR_INLINE_TYPES.has(type)
+            && this._textEditorWidgetId === widgetId
+            && this.textEditor;
+
+        if (!alreadyEditing) {
+            this.commitInlineTextEdit();
+        }
+
         document.querySelectorAll('.elementor-section.active, .elementor-column.active, .elementor-widget.active').forEach(el => el.classList.remove('active'));
         widget.classList.add('active');
 
         this.selectedElement = widget;
-        const type = widget.dataset.type;
 
         this.openSettingsView(this.getWidgetSettings(type, widgetId), `${this.getWidgetName(type)} · ${this.getDeviceLabel()}`);
         this.setupSettingsListeners(widgetId);
+
+        if (ELEMENTOR_INLINE_TYPES.has(type) && !alreadyEditing) {
+            this.startInlineTextEdit(widgetId);
+        }
     }
     
     getWidgetSettings(type, widgetId) {
@@ -1888,15 +1961,21 @@ class ElementorBuilder {
         let html = `<h5 style="margin-bottom: 20px;">تنظیمات ${this.getWidgetName(type)}</h5>`;
         
         switch(type) {
-            case 'heading':
+            case 'heading': {
                 const heading = content.querySelector('h1, h2, h3, h4, h5, h6');
                 const currentTag = heading ? heading.tagName.toLowerCase() : 'h2';
-                const currentText = heading ? heading.textContent : '';
-                
+                const headingColor = heading?.style.color || '#54595f';
+                const headingAlign = content.querySelector('.widget-heading')?.style.textAlign || 'right';
+
                 html += `
                     <div class="elementor-control-group">
-                        <label class="elementor-control-label">متن عنوان</label>
-                        <input type="text" class="elementor-control-input" data-setting="heading-text" value="${currentText}">
+                        <div class="elementor-inline-edit-hint">
+                            <i class="fas fa-i-cursor"></i>
+                            <div>
+                                <strong>ویرایش روی بوم</strong>
+                                <span>عنوان را مستقیم روی بوم ویرایش کنید.</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="elementor-control-group">
                         <label class="elementor-control-label">نوع عنوان</label>
@@ -1911,61 +1990,131 @@ class ElementorBuilder {
                     </div>
                     <div class="elementor-control-group">
                         <label class="elementor-control-label">رنگ متن</label>
-                        <input type="color" class="elementor-control-color" data-setting="heading-color" value="#54595f">
+                        <input type="color" class="elementor-control-color" data-setting="heading-color" value="${this.escapeAttr(headingColor.startsWith('#') ? headingColor : '#54595f')}">
                     </div>
                     <div class="elementor-control-group">
                         <label class="elementor-control-label">تراز متن</label>
                         <div class="elementor-control-buttons">
-                            <button type="button" class="elementor-control-btn" data-setting="heading-align" data-value="right">
+                            <button type="button" class="elementor-control-btn${headingAlign === 'right' ? ' active' : ''}" data-setting="heading-align" data-value="right">
                                 <i class="fas fa-align-right"></i>
                             </button>
-                            <button type="button" class="elementor-control-btn" data-setting="heading-align" data-value="center">
+                            <button type="button" class="elementor-control-btn${headingAlign === 'center' ? ' active' : ''}" data-setting="heading-align" data-value="center">
                                 <i class="fas fa-align-center"></i>
                             </button>
-                            <button type="button" class="elementor-control-btn" data-setting="heading-align" data-value="left">
+                            <button type="button" class="elementor-control-btn${headingAlign === 'left' ? ' active' : ''}" data-setting="heading-align" data-value="left">
                                 <i class="fas fa-align-left"></i>
                             </button>
                         </div>
                     </div>
                 `;
                 break;
+            }
                 
-            case 'text':
-                const text = content.querySelector('p');
-                const currentTextContent = text ? text.textContent : '';
-                
+            case 'text': {
                 html += `
                     <div class="elementor-control-group">
-                        <label class="elementor-control-label">متن</label>
-                        <textarea class="elementor-control-input" data-setting="text-content" rows="6">${currentTextContent}</textarea>
-                    </div>
-                    <div class="elementor-control-group">
-                        <label class="elementor-control-label">رنگ متن</label>
-                        <input type="color" class="elementor-control-color" data-setting="text-color" value="#7a7a7a">
-                    </div>
-                    <div class="elementor-control-group">
-                        <label class="elementor-control-label">اندازه فونت (px)</label>
-                        <input type="number" class="elementor-control-input" data-setting="text-size" value="16" min="10" max="100">
-                    </div>
-                    <div class="elementor-control-group">
-                        <label class="elementor-control-label">تراز متن</label>
-                        <div class="elementor-control-buttons">
-                            <button type="button" class="elementor-control-btn" data-setting="text-align" data-value="right">
-                                <i class="fas fa-align-right"></i>
-                            </button>
-                            <button type="button" class="elementor-control-btn" data-setting="text-align" data-value="center">
-                                <i class="fas fa-align-center"></i>
-                            </button>
-                            <button type="button" class="elementor-control-btn" data-setting="text-align" data-value="left">
-                                <i class="fas fa-align-left"></i>
-                            </button>
-                            <button type="button" class="elementor-control-btn" data-setting="text-align" data-value="justify">
-                                <i class="fas fa-align-justify"></i>
-                            </button>
+                        <div class="elementor-inline-edit-hint">
+                            <i class="fas fa-i-cursor"></i>
+                            <div>
+                                <strong>ویرایش روی بوم</strong>
+                                <span>اندازه فونت، رنگ، پس‌زمینه، تورفتگی و بقیه استایل‌ها از تولبار بالای متن در دسترس است.</span>
+                            </div>
                         </div>
                     </div>
                 `;
                 break;
+            }
+
+            case 'quote': {
+                html += `
+                    <div class="elementor-control-group">
+                        <div class="elementor-inline-edit-hint">
+                            <i class="fas fa-quote-right"></i>
+                            <div>
+                                <strong>ویرایش روی بوم</strong>
+                                <span>متن نقل قول را مستقیم روی بوم بنویسید و قالب‌بندی کنید.</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                break;
+            }
+
+            case 'alert': {
+                const alertEl = content.querySelector('.widget-alert');
+                const alertType = ['info', 'success', 'warning', 'danger']
+                    .find(t => alertEl?.classList.contains(`alert-${t}`)) || 'info';
+
+                html += `
+                    <div class="elementor-control-group">
+                        <div class="elementor-inline-edit-hint">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div>
+                                <strong>ویرایش روی بوم</strong>
+                                <span>متن هشدار را مستقیم روی بوم ویرایش کنید.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="elementor-control-group">
+                        <label class="elementor-control-label">نوع هشدار</label>
+                        <select class="elementor-control-select" data-setting="alert-type">
+                            <option value="info" ${alertType === 'info' ? 'selected' : ''}>اطلاعات</option>
+                            <option value="success" ${alertType === 'success' ? 'selected' : ''}>موفقیت</option>
+                            <option value="warning" ${alertType === 'warning' ? 'selected' : ''}>هشدار</option>
+                            <option value="danger" ${alertType === 'danger' ? 'selected' : ''}>خطر</option>
+                        </select>
+                    </div>
+                `;
+                break;
+            }
+
+            case 'list': {
+                const listEl = content.querySelector('.widget-list ul, .widget-list ol');
+                const listTag = listEl?.tagName?.toLowerCase() === 'ol' ? 'ol' : 'ul';
+                const listItems = listEl
+                    ? Array.from(listEl.querySelectorAll(':scope > li'))
+                    : [];
+
+                html += `
+                    <div class="elementor-control-group">
+                        <label class="elementor-control-label">نوع لیست</label>
+                        <select class="elementor-control-select" data-setting="list-style">
+                            <option value="ul" ${listTag === 'ul' ? 'selected' : ''}>نقطه‌ای (Bullet)</option>
+                            <option value="ol" ${listTag === 'ol' ? 'selected' : ''}>شماره‌دار</option>
+                        </select>
+                    </div>
+                    <div class="elementor-control-group">
+                        <label class="elementor-control-label">موارد لیست</label>
+                        <div class="elementor-list-editor">
+                            ${listItems.map((li, index) => `
+                                <div class="elementor-list-item-row">
+                                    <span class="elementor-list-item-num">${index + 1}</span>
+                                    <input type="text" class="elementor-control-input elementor-list-item-input"
+                                           data-index="${index}" value="${this.escapeAttr(li.textContent || '')}"
+                                           placeholder="متن مورد ${index + 1}">
+                                    <button type="button" class="elementor-list-item-remove" data-action="list-remove" data-index="${index}" title="حذف مورد">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            `).join('') || `
+                                <div class="elementor-list-item-row">
+                                    <span class="elementor-list-item-num">1</span>
+                                    <input type="text" class="elementor-control-input elementor-list-item-input"
+                                           data-index="0" value="مورد اول" placeholder="متن مورد">
+                                    <button type="button" class="elementor-list-item-remove" data-action="list-remove" data-index="0" title="حذف مورد">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                        <button type="button" class="elementor-list-add-btn" data-action="list-add">
+                            <i class="fas fa-plus"></i>
+                            افزودن مورد
+                        </button>
+                    </div>
+                `;
+                break;
+            }
                 
             case 'image':
                 const img = content.querySelector('img');
@@ -2225,6 +2374,9 @@ class ElementorBuilder {
         
         // Input and select changes
         settingsPanel.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.classList.contains('elementor-list-item-input')) return;
+            if (input.closest('.ql-toolbar') || input.closest('.ql-container')) return;
+
             input.addEventListener('input', () => {
                 if (!this.queryWidget(widgetId)) {
                     this.closeSettings();
@@ -2257,6 +2409,8 @@ class ElementorBuilder {
                 this.saveState();
             });
         });
+
+        this.setupListSettingsListeners(widgetId);
         
         // Image upload handler
         const imageUpload = settingsPanel.querySelector(`#image-upload-${widgetId}`);
@@ -2519,9 +2673,20 @@ class ElementorBuilder {
                 const oldHeading = content.querySelector('h1, h2, h3, h4, h5, h6');
                 if (oldHeading) {
                     const newHeading = document.createElement(value);
-                    newHeading.textContent = oldHeading.textContent;
+                    newHeading.innerHTML = oldHeading.innerHTML;
                     newHeading.style.cssText = oldHeading.style.cssText;
-                    oldHeading.replaceWith(newHeading);
+                    if (oldHeading.isContentEditable) {
+                        newHeading.contentEditable = 'true';
+                        newHeading.classList.add('elementor-inline-heading');
+                        oldHeading.replaceWith(newHeading);
+                        this.textEditor = {
+                            root: newHeading,
+                            focus: () => newHeading.focus(),
+                            isHeading: true
+                        };
+                    } else {
+                        oldHeading.replaceWith(newHeading);
+                    }
                 }
                 break;
                 
@@ -2534,26 +2699,56 @@ class ElementorBuilder {
                 const hAlign = content.querySelector('.widget-heading');
                 if (hAlign) hAlign.style.textAlign = value;
                 break;
-                
-            case 'text-content':
-                const p = content.querySelector('p');
-                if (p) p.textContent = value;
+
+            case 'alert-type': {
+                const alertTarget = content.querySelector('.widget-alert')
+                    || content.querySelector('.elementor-inline-text-editor');
+                if (!alertTarget) break;
+                if (alertTarget.classList.contains('elementor-inline-text-editor')) {
+                    alertTarget.dataset.restoreClass = `widget-alert alert alert-${value}`;
+                } else {
+                    alertTarget.className = `widget-alert alert alert-${value}`;
+                }
                 break;
+            }
                 
-            case 'text-color':
-                const pColor = content.querySelector('p');
-                if (pColor) pColor.style.color = value;
+            case 'text-content': {
+                const textRoot = content.querySelector('.widget-text');
+                if (textRoot) textRoot.innerHTML = value || '<p><br></p>';
                 break;
+            }
                 
-            case 'text-size':
-                const pSize = content.querySelector('p');
-                if (pSize) pSize.style.fontSize = value + 'px';
+            case 'text-color': {
+                this.applyInlineTextStyle(widgetId, 'color', value);
                 break;
+            }
                 
-            case 'text-align':
-                const pAlign = content.querySelector('.widget-text');
-                if (pAlign) pAlign.style.textAlign = value;
+            case 'text-size': {
+                this.applyInlineTextStyle(widgetId, 'fontSize', value + 'px');
                 break;
+            }
+                
+            case 'text-align': {
+                this.applyInlineTextStyle(widgetId, 'textAlign', value);
+                break;
+            }
+
+            case 'list-style': {
+                const oldList = content.querySelector('.widget-list ul, .widget-list ol');
+                const wrap = content.querySelector('.widget-list');
+                if (!wrap) break;
+                const nextTag = value === 'ol' ? 'ol' : 'ul';
+                if (oldList && oldList.tagName.toLowerCase() === nextTag) break;
+                const neu = document.createElement(nextTag);
+                if (oldList) {
+                    neu.innerHTML = oldList.innerHTML;
+                    oldList.replaceWith(neu);
+                } else {
+                    neu.innerHTML = '<li>مورد اول</li>';
+                    wrap.appendChild(neu);
+                }
+                break;
+            }
                 
             case 'image-src':
                 const img = content.querySelector('img');
@@ -2818,6 +3013,8 @@ class ElementorBuilder {
     }
 
     closeSettings() {
+        this.commitInlineTextEdit();
+
         const widgetsView = document.querySelector('.elementor-panel-view-widgets');
         const settingsView = document.querySelector('.elementor-panel-view-settings');
         const settingsContent = document.querySelector('.elementor-settings-content');
@@ -2963,7 +3160,14 @@ class ElementorBuilder {
     
     saveState() {
         const canvas = document.querySelector('.elementor-canvas-inner');
-        const state = canvas.innerHTML;
+        let state;
+        if (this.textEditor && this._inlineTextShell) {
+            const clone = canvas.cloneNode(true);
+            this.normalizeInlineEditorsInClone(clone);
+            state = clone.innerHTML;
+        } else {
+            state = canvas.innerHTML;
+        }
         
         // Remove future history if we're not at the end
         if (this.historyIndex < this.history.length - 1) {
@@ -2984,6 +3188,7 @@ class ElementorBuilder {
     }
     
     restoreState(state) {
+        this.clearInlineTextEditorRefs();
         const canvas = document.querySelector('.elementor-canvas-inner');
         canvas.innerHTML = state;
         this.hydrateEditorContent();
@@ -3028,8 +3233,794 @@ class ElementorBuilder {
     
     escapeHtml(text) {
         const div = document.createElement('div');
-        div.textContent = text;
+        div.textContent = text ?? '';
         return div.innerHTML;
+    }
+
+    escapeAttr(text) {
+        return this.escapeHtml(text).replace(/"/g, '&quot;');
+    }
+
+    destroyTextEditor() {
+        if (this._textEditSaveTimer) {
+            clearTimeout(this._textEditSaveTimer);
+            this._textEditSaveTimer = null;
+        }
+        this.detachRteDockToolbar();
+        this.textEditor = null;
+        this._textEditorWidgetId = null;
+        this._inlineTextShell = null;
+        this._inlineEditType = null;
+    }
+
+    ensureRteDock() {
+        let dock = document.getElementById('elementor-rte-dock');
+        if (dock) return dock;
+
+        const host = document.querySelector('.elementor-editor-host');
+        const toolbar = host?.querySelector('.elementor-toolbar');
+        dock = document.createElement('div');
+        dock.id = 'elementor-rte-dock';
+        dock.className = 'elementor-rte-dock';
+        dock.hidden = true;
+        dock.innerHTML = `
+            <div class="elementor-rte-dock-label">
+                <i class="fas fa-font"></i>
+                <span>قالب‌بندی متن</span>
+            </div>
+            <div class="elementor-rte-dock-tools"></div>
+        `;
+        if (toolbar) toolbar.after(dock);
+        else host?.prepend(dock);
+        return dock;
+    }
+
+    detachRteDockToolbar() {
+        this._rtePickerCleanup?.();
+        this._rteHeaderMenuCleanup?.();
+        const dock = document.getElementById('elementor-rte-dock');
+        const tools = dock?.querySelector('.elementor-rte-dock-tools');
+        if (tools) tools.replaceChildren();
+        if (dock) {
+            dock.hidden = true;
+            dock.classList.remove('is-active');
+        }
+        document.querySelector('.elementor-editor-host')?.classList.remove('has-rte-dock');
+        this._floatingToolbarHost = null;
+    }
+
+    attachRteDockToolbar(toolbarEl) {
+        this.detachRteDockToolbar();
+        if (!toolbarEl) return;
+
+        const dock = this.ensureRteDock();
+        const tools = dock.querySelector('.elementor-rte-dock-tools');
+        if (!tools) return;
+
+        tools.appendChild(toolbarEl);
+        dock.hidden = false;
+        dock.classList.add('is-active');
+        document.querySelector('.elementor-editor-host')?.classList.add('has-rte-dock');
+        this._floatingToolbarHost = dock;
+
+        dock.addEventListener('mousedown', (e) => e.stopPropagation());
+        dock.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    /** Quill Snow has no SVG for align=left — only for empty value. Inject the left-align icon. */
+    fixAlignLeftIcon(toolbarEl) {
+        const btn = toolbarEl?.querySelector('button.ql-align[value="left"]');
+        if (!btn) return;
+        if (btn.querySelector('.ql-stroke, .ql-fill')) return;
+        btn.innerHTML = [
+            '<svg viewBox="0 0 18 18">',
+            '<line class="ql-stroke" x1="3" x2="15" y1="4" y2="4"></line>',
+            '<line class="ql-stroke" x1="3" x2="11" y1="9" y2="9"></line>',
+            '<line class="ql-stroke" x1="3" x2="15" y1="14" y2="14"></line>',
+            '</svg>'
+        ].join('');
+    }
+
+    mountRteSizeStepper(toolbarEl, quill) {
+        if (!toolbarEl || !quill || toolbarEl.querySelector('.elementor-rte-size-stepper')) return;
+
+        const wrap = document.createElement('span');
+        wrap.className = 'ql-formats elementor-rte-size-stepper';
+        wrap.innerHTML = [
+            '<button type="button" class="elementor-rte-size-btn" data-delta="-1" title="کوچک‌تر" aria-label="کوچک‌تر">−</button>',
+            `<input type="number" class="elementor-rte-size-input" min="${ELEMENTOR_QUILL_SIZE_MIN}" max="${ELEMENTOR_QUILL_SIZE_MAX}" step="1" value="16" title="اندازه فونت (px)" aria-label="اندازه فونت" />`,
+            '<button type="button" class="elementor-rte-size-btn" data-delta="1" title="بزرگ‌تر" aria-label="بزرگ‌تر">+</button>'
+        ].join('');
+
+        const headerSelect = toolbarEl.querySelector('.elementor-rte-header-select');
+        if (headerSelect) headerSelect.after(wrap);
+        else toolbarEl.prepend(wrap);
+
+        const input = wrap.querySelector('.elementor-rte-size-input');
+
+        const clampSize = (raw) => {
+            let n = parseInt(raw, 10);
+            if (!Number.isFinite(n)) n = 16;
+            return Math.min(ELEMENTOR_QUILL_SIZE_MAX, Math.max(ELEMENTOR_QUILL_SIZE_MIN, n));
+        };
+
+        const applySize = (raw) => {
+            const n = clampSize(raw);
+            input.value = String(n);
+            const range = quill.getSelection(true);
+            quill.format('size', `${n}px`);
+            if (range) quill.setSelection(range.index, range.length, 'silent');
+        };
+
+        wrap.querySelectorAll('[data-delta]').forEach(btn => {
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                applySize((parseInt(input.value, 10) || 16) + parseInt(btn.dataset.delta, 10));
+            });
+        });
+
+        input.addEventListener('mousedown', (e) => e.stopPropagation());
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('change', () => applySize(input.value));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applySize(input.value);
+                quill.focus();
+            }
+        });
+
+        const syncFromSelection = () => {
+            const size = quill.getFormat()?.size;
+            if (typeof size === 'string' && size.endsWith('px')) {
+                input.value = String(clampSize(size));
+            }
+        };
+        quill.on('selection-change', syncFromSelection);
+        quill.on('editor-change', syncFromSelection);
+    }
+
+    /** Custom header dropdown — Quill's built-in picker breaks in RTL dock. */
+    mountRteHeaderSelect(toolbarEl, quill) {
+        if (!toolbarEl || !quill || toolbarEl.querySelector('.elementor-rte-header-select')) return;
+
+        const wrap = document.createElement('span');
+        wrap.className = 'ql-formats elementor-rte-header-select';
+        wrap.innerHTML = [
+            '<button type="button" class="elementor-rte-header-btn" aria-haspopup="listbox" aria-expanded="false" title="سبک پاراگراف">',
+            '<span class="elementor-rte-header-label">عادی</span>',
+            '<i class="fas fa-chevron-down" aria-hidden="true"></i>',
+            '</button>'
+        ].join('');
+        toolbarEl.prepend(wrap);
+
+        const btn = wrap.querySelector('.elementor-rte-header-btn');
+        const labelEl = wrap.querySelector('.elementor-rte-header-label');
+
+        const menu = document.createElement('div');
+        menu.className = 'elementor-rte-header-menu';
+        menu.hidden = true;
+        menu.setAttribute('role', 'listbox');
+        menu.innerHTML = ELEMENTOR_QUILL_HEADERS.map(h => {
+            const val = h.value === false ? '' : String(h.value);
+            return `<button type="button" class="elementor-rte-header-option" role="option" data-value="${val}">${h.label}</button>`;
+        }).join('');
+        document.body.appendChild(menu);
+
+        let isOpen = false;
+
+        const closeMenu = () => {
+            isOpen = false;
+            menu.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+            btn.classList.remove('is-open');
+        };
+
+        const positionMenu = () => {
+            if (!menu.isConnected) document.body.appendChild(menu);
+
+            const rect = btn.getBoundingClientRect();
+            const margin = 8;
+            const gap = 4;
+            const mw = Math.max(rect.width, 148);
+
+            menu.hidden = false;
+            menu.style.cssText = [
+                'position:fixed',
+                `z-index:10100`,
+                `min-width:${mw}px`,
+                'right:auto',
+                'bottom:auto',
+                'margin:0'
+            ].join(';');
+
+            const oh = menu.offsetHeight || 180;
+            let top = rect.bottom + gap;
+            if (top + oh > window.innerHeight - margin) {
+                top = Math.max(margin, rect.top - gap - oh);
+            }
+            let left = rect.right - mw;
+            if (left < margin) left = margin;
+            if (left + mw > window.innerWidth - margin) {
+                left = Math.max(margin, window.innerWidth - margin - mw);
+            }
+            menu.style.top = `${Math.round(top)}px`;
+            menu.style.left = `${Math.round(left)}px`;
+        };
+
+        const openMenu = () => {
+            isOpen = true;
+            positionMenu();
+            btn.setAttribute('aria-expanded', 'true');
+            btn.classList.add('is-open');
+            const current = labelEl.textContent?.trim();
+            menu.querySelectorAll('.elementor-rte-header-option').forEach(opt => {
+                opt.classList.toggle('is-active', opt.textContent.trim() === current);
+            });
+        };
+
+        const toggleMenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (isOpen) closeMenu();
+            else openMenu();
+        };
+
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        btn.addEventListener('click', toggleMenu);
+
+        menu.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        menu.querySelectorAll('.elementor-rte-header-option').forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const raw = opt.dataset.value;
+                const value = raw === '' ? false : parseInt(raw, 10);
+                const range = quill.getSelection(true);
+                quill.format('header', value);
+                if (range) quill.setSelection(range.index, range.length, 'silent');
+                labelEl.textContent = opt.textContent.trim();
+                closeMenu();
+                quill.focus();
+            });
+        });
+
+        const onDocPointer = (e) => {
+            if (!isOpen) return;
+            if (menu.contains(e.target) || wrap.contains(e.target)) return;
+            closeMenu();
+        };
+        const onScrollOrResize = () => {
+            if (isOpen) positionMenu();
+        };
+        // Use bubble phase so the button click can open first without racing a capture closer
+        document.addEventListener('mousedown', onDocPointer);
+        window.addEventListener('scroll', onScrollOrResize, true);
+        window.addEventListener('resize', onScrollOrResize);
+
+        const labelForHeader = (header) => {
+            const match = ELEMENTOR_QUILL_HEADERS.find(h =>
+                h.value === header || (h.value === false && (header === false || header == null))
+            );
+            return match?.label || 'عادی';
+        };
+
+        const syncFromSelection = () => {
+            labelEl.textContent = labelForHeader(quill.getFormat()?.header);
+        };
+        quill.on('selection-change', syncFromSelection);
+        quill.on('editor-change', syncFromSelection);
+
+        this._rteHeaderMenuCleanup?.();
+        this._rteHeaderMenuCleanup = () => {
+            closeMenu();
+            menu.remove();
+            document.removeEventListener('mousedown', onDocPointer);
+            window.removeEventListener('scroll', onScrollOrResize, true);
+            window.removeEventListener('resize', onScrollOrResize);
+            this._rteHeaderMenuCleanup = null;
+        };
+    }
+
+    enhanceRteToolbar(toolbarEl, quill) {
+        if (!toolbarEl) return;
+        this.fixAlignLeftIcon(toolbarEl);
+        this.mountRteHeaderSelect(toolbarEl, quill);
+        this.mountRteSizeStepper(toolbarEl, quill);
+        this.mountRteFixedPickers(toolbarEl);
+    }
+
+    /**
+     * Quill picker menus (header / color) open with position:absolute and get
+     * clipped under the settings panel. Pin them with position:fixed like the
+     * admin category dropdown.
+     */
+    mountRteFixedPickers(toolbarEl) {
+        if (!toolbarEl || toolbarEl.dataset.fixedPickers === '1') return;
+        toolbarEl.dataset.fixedPickers = '1';
+
+        const clearOptionsStyle = (options) => {
+            if (!options) return;
+            ['position', 'top', 'left', 'right', 'bottom', 'width', 'minWidth',
+                'maxHeight', 'zIndex', 'margin', 'overflowY', 'visibility'].forEach(prop => {
+                options.style[prop] = '';
+            });
+        };
+
+        const positionOptions = (picker) => {
+            const options = picker.querySelector(':scope > .ql-picker-options');
+            const label = picker.querySelector(':scope > .ql-picker-label');
+            if (!options || !label) return;
+
+            if (!picker.classList.contains('ql-expanded')) {
+                clearOptionsStyle(options);
+                return;
+            }
+
+            const rect = label.getBoundingClientRect();
+            const margin = 8;
+            const gap = 4;
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            options.style.position = 'fixed';
+            options.style.zIndex = '10090';
+            options.style.right = 'auto';
+            options.style.bottom = 'auto';
+            options.style.margin = '0';
+            options.style.minWidth = `${Math.max(Math.ceil(rect.width), 128)}px`;
+            options.style.visibility = 'hidden';
+
+            requestAnimationFrame(() => {
+                if (!picker.classList.contains('ql-expanded')) {
+                    clearOptionsStyle(options);
+                    return;
+                }
+
+                const ow = Math.max(options.offsetWidth || 0, rect.width, 128);
+                const oh = options.offsetHeight || 160;
+
+                let top = rect.bottom + gap;
+                if (top + oh > vh - margin) {
+                    top = Math.max(margin, rect.top - gap - oh);
+                }
+
+                // Align to label's inline-end (right edge in LTR metrics = natural under RTL chip)
+                let left = rect.right - ow;
+                if (left < margin) left = margin;
+                if (left + ow > vw - margin) left = Math.max(margin, vw - margin - ow);
+
+                options.style.top = `${Math.round(top)}px`;
+                options.style.left = `${Math.round(left)}px`;
+                options.style.maxHeight = `${Math.max(120, Math.min(280, vh - top - margin))}px`;
+                options.style.overflowY = 'auto';
+                options.style.visibility = '';
+            });
+        };
+
+        const repositionExpanded = () => {
+            toolbarEl.querySelectorAll('.ql-picker.ql-expanded').forEach(positionOptions);
+        };
+
+        const observer = new MutationObserver(mutations => {
+            for (const m of mutations) {
+                if (m.type === 'attributes' && m.target?.classList?.contains('ql-picker')) {
+                    positionOptions(m.target);
+                }
+            }
+        });
+
+        toolbarEl.querySelectorAll('.ql-picker').forEach(picker => {
+            observer.observe(picker, { attributes: true, attributeFilter: ['class'] });
+        });
+
+        const onScrollOrResize = () => repositionExpanded();
+        window.addEventListener('scroll', onScrollOrResize, true);
+        window.addEventListener('resize', onScrollOrResize);
+
+        this._rtePickerCleanup?.();
+        this._rtePickerCleanup = () => {
+            observer.disconnect();
+            window.removeEventListener('scroll', onScrollOrResize, true);
+            window.removeEventListener('resize', onScrollOrResize);
+            toolbarEl.querySelectorAll('.ql-picker-options').forEach(clearOptionsStyle);
+            delete toolbarEl.dataset.fixedPickers;
+            this._rtePickerCleanup = null;
+        };
+    }
+
+    clearInlineTextEditorRefs() {
+        document.querySelectorAll('.elementor-widget.is-inline-editing').forEach(el => {
+            el.classList.remove('is-inline-editing');
+        });
+        document.querySelectorAll('.elementor-inline-heading').forEach(el => {
+            el.contentEditable = 'false';
+            el.classList.remove('elementor-inline-heading');
+            el.removeAttribute('contenteditable');
+        });
+        this.destroyTextEditor();
+    }
+
+    normalizeInlineEditorsInClone(root) {
+        root.querySelectorAll('.elementor-inline-heading, [contenteditable="true"]').forEach(el => {
+            el.contentEditable = 'false';
+            el.classList.remove('elementor-inline-heading');
+            el.removeAttribute('contenteditable');
+        });
+
+        root.querySelectorAll('.elementor-inline-text-editor').forEach(shell => {
+            const type = shell.dataset.inlineType || 'text';
+            const editor = shell.querySelector('.ql-editor') || shell.querySelector('.elementor-inline-text-fallback');
+            const html = editor?.innerHTML || '<p><br></p>';
+            let restored;
+
+            if (type === 'quote') {
+                restored = document.createElement('blockquote');
+                restored.innerHTML = html;
+            } else if (type === 'alert') {
+                restored = document.createElement('div');
+                restored.className = shell.dataset.restoreClass || 'widget-alert alert alert-info';
+                restored.innerHTML = html;
+            } else {
+                restored = document.createElement('div');
+                restored.className = 'widget-text';
+                restored.innerHTML = html;
+            }
+
+            if (editor) {
+                ['color', 'fontSize', 'textAlign', 'backgroundColor'].forEach(prop => {
+                    if (editor.style[prop]) restored.style[prop] = editor.style[prop];
+                });
+            }
+
+            shell.replaceWith(restored);
+        });
+
+        root.querySelectorAll('.ql-toolbar').forEach(el => el.remove());
+        root.querySelectorAll('.elementor-widget.is-inline-editing').forEach(el => {
+            el.classList.remove('is-inline-editing');
+        });
+    }
+
+    applyInlineTextStyle(widgetId, prop, value) {
+        if (this._textEditorWidgetId === widgetId && this.textEditor) {
+            this.textEditor.root.style[prop] = value;
+            return;
+        }
+
+        const widget = this.queryWidget(widgetId);
+        const textRoot = widget?.querySelector('.widget-text, .widget-alert, blockquote, h1, h2, h3, h4, h5, h6');
+        if (textRoot) textRoot.style[prop] = value;
+    }
+
+    commitInlineTextEdit() {
+        if (!this.textEditor || !this._textEditorWidgetId) {
+            this.clearInlineTextEditorRefs();
+            return;
+        }
+
+        const widgetId = this._textEditorWidgetId;
+        const widget = this.queryWidget(widgetId);
+        const type = this._inlineEditType || widget?.dataset.type || 'text';
+        const editorRoot = this.textEditor.root;
+
+        if (type === 'heading' || this.textEditor.isHeading) {
+            if (editorRoot) {
+                editorRoot.contentEditable = 'false';
+                editorRoot.classList.remove('elementor-inline-heading');
+                editorRoot.removeAttribute('contenteditable');
+            }
+            widget?.classList.remove('is-inline-editing');
+            this.destroyTextEditor();
+            if (!this._skipInlineHistory) {
+                this._skipInlineHistory = true;
+                this.saveState();
+                this._skipInlineHistory = false;
+            }
+            return;
+        }
+
+        const shell = this._inlineTextShell;
+        const html = editorRoot?.innerHTML || '<p><br></p>';
+        let restored;
+
+        if (type === 'quote') {
+            restored = document.createElement('blockquote');
+            restored.innerHTML = html;
+        } else if (type === 'alert') {
+            restored = document.createElement('div');
+            restored.className = shell?.dataset.restoreClass || 'widget-alert alert alert-info';
+            restored.innerHTML = html;
+        } else {
+            restored = document.createElement('div');
+            restored.className = 'widget-text';
+            restored.innerHTML = html;
+        }
+
+        ['color', 'fontSize', 'textAlign', 'backgroundColor'].forEach(prop => {
+            if (editorRoot?.style[prop]) restored.style[prop] = editorRoot.style[prop];
+        });
+
+        if (shell?.parentElement) {
+            shell.replaceWith(restored);
+        } else if (widget) {
+            const content = widget.querySelector('.elementor-widget-content');
+            const existing = content?.querySelector('.widget-text, .widget-alert, blockquote, .elementor-inline-text-editor');
+            if (existing) existing.replaceWith(restored);
+            else if (content) {
+                if (type === 'quote') {
+                    let wrap = content.querySelector('.widget-quote');
+                    if (!wrap) {
+                        wrap = document.createElement('div');
+                        wrap.className = 'widget-quote';
+                        content.appendChild(wrap);
+                    }
+                    wrap.appendChild(restored);
+                } else {
+                    content.appendChild(restored);
+                }
+            }
+        }
+
+        widget?.classList.remove('is-inline-editing');
+        this.destroyTextEditor();
+
+        if (!this._skipInlineHistory) {
+            this._skipInlineHistory = true;
+            this.saveState();
+            this._skipInlineHistory = false;
+        }
+    }
+
+    startInlineTextEdit(widgetId) {
+        const widget = this.queryWidget(widgetId);
+        if (!widget || !ELEMENTOR_INLINE_TYPES.has(widget.dataset.type)) return;
+
+        if (this._textEditorWidgetId === widgetId && this.textEditor) {
+            this.textEditor.focus?.();
+            return;
+        }
+
+        this._skipInlineHistory = true;
+        this.commitInlineTextEdit();
+        this._skipInlineHistory = false;
+
+        const type = widget.dataset.type;
+        const content = widget.querySelector('.elementor-widget-content');
+        if (!content) return;
+
+        if (type === 'heading') {
+            this.startInlineHeadingEdit(widget, widgetId);
+            return;
+        }
+
+        let target = null;
+        let restoreClass = '';
+
+        if (type === 'text') {
+            target = content.querySelector('.widget-text');
+            if (!target) {
+                target = document.createElement('div');
+                target.className = 'widget-text';
+                target.innerHTML = '<p><br></p>';
+                content.appendChild(target);
+            }
+        } else if (type === 'quote') {
+            let wrap = content.querySelector('.widget-quote');
+            if (!wrap) {
+                wrap = document.createElement('div');
+                wrap.className = 'widget-quote';
+                content.appendChild(wrap);
+            }
+            target = wrap.querySelector('blockquote');
+            if (!target) {
+                target = document.createElement('blockquote');
+                target.innerHTML = '<p>این یک نقل قول است</p>';
+                wrap.appendChild(target);
+            }
+        } else if (type === 'alert') {
+            target = content.querySelector('.widget-alert');
+            if (!target) {
+                target = document.createElement('div');
+                target.className = 'widget-alert alert alert-info';
+                target.innerHTML = '<p>این یک پیام هشدار است</p>';
+                content.appendChild(target);
+            }
+            restoreClass = target.className;
+        }
+
+        if (!target) return;
+
+        const initialHtml = target.innerHTML?.trim() || '<p><br></p>';
+
+        const shell = document.createElement('div');
+        shell.className = 'elementor-inline-text-editor';
+        shell.dataset.inlineType = type;
+        if (restoreClass) shell.dataset.restoreClass = restoreClass;
+
+        const mount = document.createElement('div');
+        mount.className = 'elementor-inline-text-mount';
+        shell.appendChild(mount);
+        target.replaceWith(shell);
+
+        widget.classList.add('is-inline-editing');
+        this._inlineTextShell = shell;
+        this._textEditorWidgetId = widgetId;
+        this._inlineEditType = type;
+
+        const placeholder = type === 'quote'
+            ? 'متن نقل قول را بنویسید...'
+            : type === 'alert'
+                ? 'متن هشدار را بنویسید...'
+                : 'متن خود را اینجا بنویسید...';
+
+        if (typeof Quill === 'undefined') {
+            mount.contentEditable = 'true';
+            mount.classList.add('elementor-inline-text-fallback');
+            mount.innerHTML = initialHtml;
+            mount.focus();
+            this.textEditor = { root: mount, focus: () => mount.focus() };
+            shell.addEventListener('mousedown', (e) => e.stopPropagation());
+            shell.addEventListener('click', (e) => e.stopPropagation());
+            return;
+        }
+
+        elementorEnsureQuillFormats();
+
+        const quill = new Quill(mount, {
+            theme: 'snow',
+            placeholder,
+            modules: {
+                toolbar: {
+                    container: ELEMENTOR_QUILL_TOOLBAR,
+                    handlers: {
+                        align(value) {
+                            // Explicit handler so left/right/center always apply as styles
+                            this.quill.format('align', value || false);
+                        }
+                    }
+                }
+            },
+            formats: [
+                'header', 'size', 'bold', 'italic', 'underline', 'strike',
+                'color', 'background', 'script', 'list', 'indent',
+                'align', 'direction', 'blockquote', 'code-block', 'link'
+            ]
+        });
+
+        quill.root.setAttribute('dir', 'rtl');
+        quill.setText('');
+        quill.clipboard.dangerouslyPasteHTML(0, initialHtml);
+
+        // Default Persian block direction + right align
+        const len = quill.getLength();
+        if (len > 0) {
+            quill.formatLine(0, len, { direction: 'rtl', align: 'right' }, 'silent');
+        }
+
+        quill.focus();
+
+        const toolbarEl = shell.querySelector('.ql-toolbar');
+        if (toolbarEl) {
+            // Attach first, then enhance — detach() would wipe header menu if enhanced before attach
+            this.attachRteDockToolbar(toolbarEl);
+            this.enhanceRteToolbar(toolbarEl, quill);
+        }
+
+        shell.addEventListener('mousedown', (e) => e.stopPropagation());
+        shell.addEventListener('click', (e) => e.stopPropagation());
+
+        this.textEditor = quill;
+    }
+
+    startInlineHeadingEdit(widget, widgetId) {
+        const wrap = widget.querySelector('.widget-heading') || widget.querySelector('.elementor-widget-content');
+        let heading = widget.querySelector('h1, h2, h3, h4, h5, h6');
+        if (!heading && wrap) {
+            heading = document.createElement('h2');
+            heading.textContent = 'عنوان جدید';
+            wrap.appendChild(heading);
+        }
+        if (!heading) return;
+
+        heading.contentEditable = 'true';
+        heading.classList.add('elementor-inline-heading');
+        heading.spellcheck = true;
+        heading.focus();
+
+        const range = document.createRange();
+        range.selectNodeContents(heading);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+
+        heading.addEventListener('mousedown', (e) => e.stopPropagation());
+        heading.addEventListener('click', (e) => e.stopPropagation());
+        heading.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.execCommand('insertLineBreak');
+            }
+        });
+
+        widget.classList.add('is-inline-editing');
+        this._textEditorWidgetId = widgetId;
+        this._inlineEditType = 'heading';
+        this._inlineTextShell = null;
+        this.textEditor = {
+            root: heading,
+            focus: () => heading.focus(),
+            isHeading: true
+        };
+    }
+
+    setupListSettingsListeners(widgetId) {
+        const settingsPanel = document.querySelector('.elementor-settings-content');
+        if (!settingsPanel?.querySelector('.elementor-list-editor')) return;
+
+        const ensureList = () => {
+            const widget = this.queryWidget(widgetId);
+            if (!widget) return null;
+            const wrap = widget.querySelector('.widget-list');
+            if (!wrap) return null;
+            let list = wrap.querySelector('ul, ol');
+            if (!list) {
+                list = document.createElement('ul');
+                wrap.appendChild(list);
+            }
+            return { widget, wrap, list };
+        };
+
+        settingsPanel.querySelectorAll('.elementor-list-item-input').forEach(input => {
+            input.addEventListener('input', () => {
+                const ctx = ensureList();
+                if (!ctx) return;
+                const index = Number(input.dataset.index);
+                const items = ctx.list.querySelectorAll(':scope > li');
+                if (items[index]) {
+                    items[index].textContent = input.value;
+                }
+            });
+            input.addEventListener('change', () => this.saveState());
+        });
+
+        settingsPanel.querySelector('[data-action="list-add"]')?.addEventListener('click', () => {
+            const ctx = ensureList();
+            if (!ctx) return;
+            const li = document.createElement('li');
+            li.textContent = 'مورد جدید';
+            ctx.list.appendChild(li);
+            this.saveState();
+            this.editWidget(widgetId);
+        });
+
+        settingsPanel.querySelectorAll('[data-action="list-remove"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ctx = ensureList();
+                if (!ctx) return;
+                const items = ctx.list.querySelectorAll(':scope > li');
+                if (items.length <= 1) {
+                    this.showMessage('حداقل یک مورد در لیست لازم است', 'error');
+                    return;
+                }
+                const index = Number(btn.dataset.index);
+                items[index]?.remove();
+                this.saveState();
+                this.editWidget(widgetId);
+            });
+        });
     }
     
     showMessage(message, type = 'success') {

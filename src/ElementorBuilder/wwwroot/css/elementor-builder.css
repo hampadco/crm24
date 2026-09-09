@@ -43,7 +43,12 @@ body.elementor-builder-fullscreen {
 
 .elementor-editor-host.is-fullscreen .elementor-toolbar {
     flex-shrink: 0;
-    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+    box-shadow: none;
+    z-index: 2;
+}
+
+.elementor-editor-host.is-fullscreen .elementor-rte-dock.is-active {
+    flex-shrink: 0;
     z-index: 2;
 }
 
@@ -514,10 +519,25 @@ body.elementor-builder-fullscreen .elementor-fullscreen-only {
     color: var(--elementor-secondary);
 }
 
-.widget-text p {
-    margin: 0;
+.widget-text {
     line-height: 1.7;
     color: var(--elementor-text);
+}
+
+.widget-text p {
+    margin: 0 0 0.7em;
+    line-height: 1.7;
+    color: inherit;
+}
+
+.widget-text p:last-child {
+    margin-bottom: 0;
+}
+
+.widget-text ul,
+.widget-text ol {
+    margin: 0 0 0.7em;
+    padding-right: 1.25rem;
 }
 
 .widget-image img {
@@ -758,7 +778,522 @@ body.elementor-builder-fullscreen .elementor-fullscreen-only {
     border-color: var(--elementor-primary);
 }
 
-/* Toolbar */
+.elementor-list-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.elementor-list-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.elementor-list-item-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #f1f3f5;
+    color: var(--elementor-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.elementor-list-item-row .elementor-control-input {
+    margin: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+.elementor-list-item-remove {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--elementor-border);
+    background: #fff;
+    color: #b42318;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.elementor-list-item-remove:hover {
+    background: #fef3f2;
+    border-color: #fecdca;
+}
+
+.elementor-list-add-btn {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px dashed var(--elementor-border);
+    background: #fafbfc;
+    color: var(--elementor-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.elementor-list-add-btn:hover {
+    border-color: var(--elementor-primary);
+    color: var(--elementor-primary);
+    background: rgba(147, 0, 60, 0.04);
+}
+
+.elementor-inline-edit-hint {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(147, 0, 60, 0.05);
+    border: 1px solid rgba(147, 0, 60, 0.12);
+    color: var(--elementor-secondary);
+}
+
+.elementor-inline-edit-hint > i {
+    margin-top: 2px;
+    color: var(--elementor-primary);
+}
+
+.elementor-inline-edit-hint strong {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.elementor-inline-edit-hint span {
+    display: block;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--elementor-text);
+}
+
+.elementor-widget.is-inline-editing {
+    z-index: 5;
+}
+
+.elementor-inline-text-editor {
+    border: 1px solid var(--elementor-primary);
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+    overflow: visible;
+}
+
+.elementor-inline-text-editor .ql-container.ql-snow {
+    border: none;
+    min-height: 120px;
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.elementor-inline-text-editor .ql-editor {
+    min-height: 110px;
+    direction: rtl;
+    text-align: start;
+    line-height: 1.75;
+    padding: 12px 14px;
+}
+
+.elementor-inline-text-editor .ql-editor.ql-blank::before {
+    right: 14px;
+    left: auto;
+    font-style: normal;
+    color: #98a2b3;
+}
+
+/* Alignment must apply on block children, not only inherited from editor */
+.elementor-inline-text-editor .ql-editor p,
+.elementor-inline-text-editor .ql-editor h1,
+.elementor-inline-text-editor .ql-editor h2,
+.elementor-inline-text-editor .ql-editor h3,
+.elementor-inline-text-editor .ql-editor h4,
+.elementor-inline-text-editor .ql-editor h5,
+.elementor-inline-text-editor .ql-editor h6,
+.elementor-inline-text-editor .ql-editor li,
+.elementor-inline-text-editor .ql-editor blockquote {
+    text-align: inherit;
+}
+
+.elementor-inline-text-editor .ql-editor .ql-align-right,
+.elementor-inline-text-editor .ql-editor [style*="text-align: right"],
+.elementor-inline-text-editor .ql-editor [style*="text-align:right"] {
+    text-align: right !important;
+}
+
+.elementor-inline-text-editor .ql-editor .ql-align-center,
+.elementor-inline-text-editor .ql-editor [style*="text-align: center"],
+.elementor-inline-text-editor .ql-editor [style*="text-align:center"] {
+    text-align: center !important;
+}
+
+.elementor-inline-text-editor .ql-editor .ql-align-left,
+.elementor-inline-text-editor .ql-editor [style*="text-align: left"],
+.elementor-inline-text-editor .ql-editor [style*="text-align:left"] {
+    text-align: left !important;
+}
+
+.elementor-inline-text-editor .ql-editor .ql-align-justify,
+.elementor-inline-text-editor .ql-editor [style*="text-align: justify"],
+.elementor-inline-text-editor .ql-editor [style*="text-align:justify"] {
+    text-align: justify !important;
+}
+
+.elementor-inline-text-editor .ql-editor blockquote {
+    margin: 0.65em 0;
+    padding: 0.65em 1em;
+    border: none;
+    border-right: 4px solid #1a56db;
+    background: #f3f4f6;
+    border-radius: 0 10px 10px 0;
+    color: #111827;
+}
+
+.elementor-inline-text-editor .ql-editor pre.ql-syntax,
+.elementor-inline-text-editor .ql-editor .ql-code-block-container,
+.elementor-inline-text-editor .ql-editor pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    direction: ltr;
+    text-align: left;
+}
+
+/* RTL-friendly indents (Quill default indent CSS is LTR-biased) */
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-1 { padding-right: 3em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-2 { padding-right: 6em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-3 { padding-right: 9em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-4 { padding-right: 12em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-5 { padding-right: 15em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-6 { padding-right: 18em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-7 { padding-right: 21em !important; padding-left: 0 !important; }
+.elementor-inline-text-editor .ql-editor[dir="rtl"] .ql-indent-8 { padding-right: 24em !important; padding-left: 0 !important; }
+
+.elementor-inline-text-fallback {
+    min-height: 110px;
+    padding: 12px 14px;
+    outline: none;
+    direction: rtl;
+    text-align: start;
+    line-height: 1.75;
+}
+
+.elementor-inline-heading {
+    outline: 2px solid rgba(147, 0, 60, 0.35);
+    outline-offset: 4px;
+    border-radius: 4px;
+    cursor: text;
+}
+
+/* RTE dock under main builder toolbar */
+.elementor-rte-dock {
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    background: #fff;
+    border-bottom: 1px solid var(--elementor-border);
+    padding: 8px 12px;
+    direction: rtl;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+    overflow: visible;
+    position: relative;
+    z-index: 20;
+}
+
+.elementor-rte-dock.is-active {
+    display: flex;
+}
+
+.elementor-rte-dock-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--elementor-secondary);
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(147, 0, 60, 0.06);
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
+.elementor-rte-dock-label i {
+    color: var(--elementor-primary);
+}
+
+.elementor-rte-dock-tools {
+    flex: 1;
+    min-width: 0;
+    overflow: visible;
+}
+
+.elementor-rte-dock-tools .ql-toolbar.ql-snow {
+    border: none !important;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    direction: rtl;
+    width: 100%;
+    overflow: visible;
+}
+
+.elementor-rte-dock-tools .ql-toolbar.ql-snow .ql-formats {
+    margin: 0 4px 0 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Active format state */
+.elementor-rte-dock-tools .ql-snow.ql-toolbar button,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar button {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.elementor-rte-dock-tools .ql-snow.ql-toolbar button:hover,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar button:hover {
+    background: #f3f4f6;
+    border-color: #e5e7eb;
+}
+
+.elementor-rte-dock-tools .ql-snow.ql-toolbar button.ql-active,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar button.ql-active,
+.elementor-rte-dock-tools .ql-snow.ql-toolbar .ql-picker-label.ql-active,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar .ql-picker-label.ql-active {
+    background: rgba(147, 0, 60, 0.12) !important;
+    border-color: rgba(147, 0, 60, 0.28) !important;
+    color: var(--elementor-primary) !important;
+}
+
+.elementor-rte-dock-tools .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar button.ql-active .ql-stroke,
+.elementor-rte-dock-tools .ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar .ql-picker-label.ql-active .ql-stroke {
+    stroke: var(--elementor-primary) !important;
+}
+
+.elementor-rte-dock-tools .ql-snow.ql-toolbar button.ql-active .ql-fill,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar button.ql-active .ql-fill,
+.elementor-rte-dock-tools .ql-snow.ql-toolbar button.ql-active .ql-stroke.ql-fill,
+.elementor-rte-dock-tools .ql-snow .ql-toolbar button.ql-active .ql-stroke.ql-fill {
+    fill: var(--elementor-primary) !important;
+}
+
+/* Dropdowns must escape the dock */
+.elementor-rte-dock-tools .ql-snow .ql-picker {
+    position: relative;
+    z-index: 1;
+    float: none;
+}
+
+.elementor-rte-dock-tools .ql-snow .ql-picker.ql-expanded {
+    z-index: 10080;
+}
+
+.elementor-rte-dock-tools .ql-snow .ql-picker-options {
+    z-index: 10081;
+    max-height: min(240px, 50vh);
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(16, 24, 40, 0.16);
+    background: #fff;
+}
+
+.elementor-rte-dock-tools .ql-snow .ql-color-picker .ql-picker-options,
+.elementor-rte-dock-tools .ql-snow .ql-background .ql-picker-options {
+    max-width: 184px;
+    padding: 6px;
+}
+
+/* Custom header style dropdown (replaces broken Quill ql-header picker) */
+.elementor-rte-dock-tools .elementor-rte-header-select {
+    display: inline-flex;
+    align-items: center;
+}
+
+.elementor-rte-dock-tools .elementor-rte-header-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: auto !important;
+    min-width: 5.5rem;
+    height: 30px !important;
+    padding: 0 10px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    background: #fff;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    direction: rtl;
+}
+
+.elementor-rte-dock-tools .elementor-rte-header-btn:hover,
+.elementor-rte-dock-tools .elementor-rte-header-btn.is-open {
+    background: #f9fafb !important;
+    border-color: #d1d5db !important;
+}
+
+.elementor-rte-dock-tools .elementor-rte-header-btn i {
+    font-size: 9px;
+    color: #6b7280;
+    transition: transform 0.15s ease;
+}
+
+.elementor-rte-dock-tools .elementor-rte-header-btn.is-open i {
+    transform: rotate(180deg);
+}
+
+.elementor-rte-header-menu {
+    direction: rtl;
+    text-align: right;
+    padding: 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgba(16, 24, 40, 0.18);
+}
+
+.elementor-rte-header-menu[hidden] {
+    display: none !important;
+}
+
+.elementor-rte-header-option {
+    display: block;
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: right;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.elementor-rte-header-option:hover {
+    background: #f3f4f6;
+}
+
+.elementor-rte-header-option.is-active {
+    background: rgba(147, 0, 60, 0.1);
+    color: var(--elementor-primary, #93003c);
+}
+
+.elementor-rte-header-option[data-value="1"] { font-size: 1.35em; }
+.elementor-rte-header-option[data-value="2"] { font-size: 1.2em; }
+.elementor-rte-header-option[data-value="3"] { font-size: 1.08em; }
+.elementor-rte-header-option[data-value="4"] { font-size: 1em; }
+
+/* Quick font-size stepper: − / number / + */
+.elementor-rte-dock-tools .elementor-rte-size-stepper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    height: 30px;
+    background: #fff;
+    direction: ltr;
+}
+
+.elementor-rte-dock-tools .elementor-rte-size-btn {
+    width: 28px !important;
+    height: 30px !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: #f9fafb;
+    color: #374151;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.elementor-rte-dock-tools .elementor-rte-size-btn:hover {
+    background: #f3f4f6 !important;
+    border-color: transparent !important;
+    color: var(--elementor-primary);
+}
+
+.elementor-rte-dock-tools .elementor-rte-size-input {
+    width: 44px;
+    height: 30px;
+    border: none;
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    background: #fff;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.elementor-rte-dock-tools .elementor-rte-size-input::-webkit-outer-spin-button,
+.elementor-rte-dock-tools .elementor-rte-size-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.elementor-rte-dock-tools .elementor-rte-size-input:focus {
+    outline: none;
+    background: #fff7f9;
+}
+
+@media (max-width: 767px) {
+    .elementor-rte-dock {
+        padding: 6px 8px;
+        gap: 8px;
+    }
+
+    .elementor-rte-dock-label span {
+        display: none;
+    }
+}
+
+/* Main builder toolbar */
 .elementor-toolbar {
     background: #fff;
     padding: 15px 20px;
