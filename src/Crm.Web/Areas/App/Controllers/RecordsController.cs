@@ -75,7 +75,9 @@ public class RecordsController : AppControllerBase
             activeView = savedViews.FirstOrDefault(v => v.Id == viewId);
 
         var fields = await _metadata.GetFieldsAsync(module.Id);
-        var allVisible = fields.Where(f => f.IsVisible).ToList();
+        var allVisible = fields
+            .Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
+            .ToList();
         var listFields = (await _listColumns.GetListFieldsAsync(module.Id)).ToList();
         var blocks = await _metadata.GetBlocksAsync(module.Id);
 
@@ -804,7 +806,7 @@ public class RecordsController : AppControllerBase
             return NotFound();
 
         var fields = (await _metadata.GetFieldsAsync(module.Id))
-            .Where(f => f.IsVisible)
+            .Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
             .ToList();
         var fieldAccess = await _access.GetFieldAccessMapAsync(module.Id);
         if (fieldAccess.Count > 0)
@@ -884,18 +886,17 @@ public class RecordsController : AppControllerBase
         if (telConfig.HasTelefonchy && telConfig.TelefonchyRecordingEnabled
             && string.Equals(module.Name, "calls", StringComparison.OrdinalIgnoreCase))
         {
-            if (!TelefonchyCallService.HasRecording(values))
-            {
-                var callSvc = HttpContext.RequestServices.GetRequiredService<TelefonchyCallService>();
-                await callSvc.EnsureRecordingAsync(module.Id, record);
-                record = await _records.GetAsync(module.Id, id) ?? record;
-                values = DynamicRecordService.ParseData(record);
-                model.Record = record;
-                model.Values = values;
-            }
-
-            model.HasCallRecording = TelefonchyCallService.HasRecording(values);
-            model.HasPendingRecording = TelefonchyCallService.IsRecordingPending(values);
+            var tenant = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>();
+            var store = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ICallRecordingStore>();
+            var local = store.TryGetPublicPath(tenant.TenantId ?? 0, record.Id, values.GetValueOrDefault("recordingFile"));
+            model.HasCallRecording = local is not null || TelefonchyCallService.HasRecording(values);
+            var unavailable = TelefonchyCallService.IsRecordingUnavailable(values)
+                || (!model.HasCallRecording
+                    && TelefonchyCallService.IsRecordingPending(values)
+                    && record.CreatedAtUtc < DateTime.UtcNow.AddMinutes(-30));
+            model.HasUnavailableRecording = !model.HasCallRecording && unavailable;
+            model.HasPendingRecording = !model.HasCallRecording && !unavailable
+                && TelefonchyCallService.IsRecordingPending(values);
         }
 
         var (lineBlock, lineModule, lineFields) = await _lineItems.GetLineBlockAsync(module.Id);
@@ -2240,7 +2241,9 @@ public class RecordsController : AppControllerBase
     private async Task<RecordFormViewModel> BuildFormModelAsync(
         ModuleDef module, int? recordId, Dictionary<string, string?>? values)
     {
-        var fields = await _metadata.GetFieldsAsync(module.Id);
+        var fields = (await _metadata.GetFieldsAsync(module.Id))
+            .Where(f => !TelefonchyCallService.IsInternalCallField(f.Name))
+            .ToList();
         var blocks = await _metadata.GetBlocksAsync(module.Id);
         values ??= new Dictionary<string, string?>();
 

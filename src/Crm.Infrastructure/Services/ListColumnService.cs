@@ -31,7 +31,7 @@ public class ListColumnService
     public async Task<IReadOnlyList<FieldDef>> GetListFieldsAsync(int moduleId)
     {
         var all = await _metadata.GetFieldsAsync(moduleId);
-        var visible = all.Where(f => f.IsVisible).ToList();
+        var visible = all.Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name)).ToList();
         var preferredIds = await GetPreferredColumnIdsAsync(moduleId);
 
         if (preferredIds.Count > 0)
@@ -61,7 +61,7 @@ public class ListColumnService
             throw new InvalidOperationException("ماژول یافت نشد.");
 
         var allowed = (await _metadata.GetFieldsAsync(moduleId))
-            .Where(f => f.IsVisible)
+            .Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
             .Select(f => f.Id)
             .ToHashSet();
 

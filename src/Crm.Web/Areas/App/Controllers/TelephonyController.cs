@@ -253,18 +253,11 @@ public class TelephonyController : AppControllerBase
         });
 
         if (!TelefonchyCallService.HasRecording(data)
-            || string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile")))
+            || string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile"))
+            || _recordingStore.TryGetAbsolutePath(tenantId, callRecordId, data.GetValueOrDefault("recordingFile")) is null)
         {
-            if (string.IsNullOrWhiteSpace(data.GetValueOrDefault("cuid")))
-            {
-                var refreshed = await RefreshCallIdentifiersAsync(module.Id, callRecordId, data);
-                if (!string.IsNullOrWhiteSpace(refreshed))
-                    data["cuid"] = refreshed;
-                record = await _records.GetAsync(module.Id, callRecordId) ?? record;
-                data = DynamicRecordService.ParseData(record);
-            }
-
-            var state = await _calls.EnsureRecordingAsync(module.Id, record);
+            var state = await _calls.EnsureRecordingAsync(
+                module.Id, record, lookupMissingIds: false, fallbackFileId: false);
             record = await _records.GetAsync(module.Id, callRecordId) ?? record;
             data = DynamicRecordService.ParseData(record);
             if (state != TelefonchyCallService.CallRecordingState.Ready

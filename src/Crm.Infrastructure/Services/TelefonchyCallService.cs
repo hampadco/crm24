@@ -70,9 +70,21 @@ public class TelefonchyCallService
         return value.Contains('-');
     }
 
+    public static bool IsInternalCallField(string? name) =>
+        !string.IsNullOrWhiteSpace(name)
+        && (name.StartsWith("recording", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("hasAudio", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("fileStatus", StringComparison.OrdinalIgnoreCase));
+
     public static bool HasRecording(IReadOnlyDictionary<string, string?> data) =>
-        !string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile"))
-        || HasUsableRecordingId(data.GetValueOrDefault("recordingFileId"));
+        !string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile"));
+
+    public bool HasStoredRecording(DynamicRecord record, IReadOnlyDictionary<string, string?>? data = null)
+    {
+        data ??= DynamicRecordService.ParseData(record);
+        return _recordings.TryGetAbsolutePath(
+            _tenant.TenantId ?? 0, record.Id, data.GetValueOrDefault("recordingFile")) is not null;
+    }
 
     /// <summary>
     /// تماس مکالمه داشته یا نام فایل ضبط آمده، ولی فایل هنوز در CRM ذخیره نشده.
@@ -81,13 +93,24 @@ public class TelefonchyCallService
     {
         if (HasRecording(data))
             return false;
+        var status = data.GetValueOrDefault("recordingStatus");
+        if (status is "unavailable" or "failed" or "expired" or "missing")
+            return false;
         if (!string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFileName")))
             return true;
         if (data.GetValueOrDefault("hasAudio") is "true" or "1")
             return true;
-        if (string.Equals(data.GetValueOrDefault("recordingStatus"), "processing", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(status, "processing", StringComparison.OrdinalIgnoreCase))
             return true;
         return int.TryParse(data.GetValueOrDefault("talkSeconds"), out var talk) && talk > 0;
+    }
+
+    public static bool IsRecordingUnavailable(IReadOnlyDictionary<string, string?> data)
+    {
+        if (HasRecording(data))
+            return false;
+        var status = data.GetValueOrDefault("recordingStatus");
+        return status is "unavailable" or "failed" or "expired" or "missing";
     }
 
     public static string? CanonicalPhone(string? raw)
@@ -217,18 +240,32 @@ public class TelefonchyCallService
     /// اگر آماده نباشد Processing برمی‌گرداند تا UI و جاب بعداً تکرار کنند.
     /// </summary>
     public async Task<CallRecordingState> EnsureRecordingAsync(
-        int callsModuleId, DynamicRecord record, CancellationToken ct = default)
+        int callsModuleId,
+        DynamicRecord record,
+        CancellationToken ct = default,
+        bool lookupMissingIds = true,
+        bool fallbackFileId = true)
     {
         var data = DynamicRecordService.ParseData(record);
         var tenantId = _tenant.TenantId ?? 0;
-        if (!string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile"))
-            && _recordings.TryGetAbsolutePath(tenantId, record.Id, data.GetValueOrDefault("recordingFile")) is not null)
+        var publicPath = _recordings.TryGetPublicPath(tenantId, record.Id, data.GetValueOrDefault("recordingFile"));
+        if (publicPath is not null)
+        {
+            if (!string.Equals(data.GetValueOrDefault("recordingFile"), publicPath, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(data.GetValueOrDefault("recordingStatus"), "ready", StringComparison.OrdinalIgnoreCase))
+            {
+                data["recordingFile"] = publicPath;
+                data["recordingStatus"] = "ready";
+                await _records.UpdateAsync(callsModuleId, record.Id, data);
+            }
             return CallRecordingState.Ready;
+        }
 
         var cuid = data.GetValueOrDefault("cuid");
-        var recordId = MongoCallId(data.GetValueOrDefault("callId"));
+        var recordId = MongoCallId(data.GetValueOrDefault("callId"))
+            ?? MongoCallId(data.GetValueOrDefault("recordingRecordId"));
 
-        if (string.IsNullOrWhiteSpace(cuid) || string.IsNullOrWhiteSpace(recordId))
+        if (lookupMissingIds && (string.IsNullOrWhiteSpace(cuid) || string.IsNullOrWhiteSpace(recordId)))
         {
             var found = await _client.FindCallAsync(
                 cuid, data.GetValueOrDefault("callId"), data.GetValueOrDefault("phoneNumber"), tenantId, ct);
@@ -242,24 +279,28 @@ public class TelefonchyCallService
             }
         }
 
+        TelefonchyMergedRecordingState? mergedState = null;
+        var gateBlocked = false;
         if (!string.IsNullOrWhiteSpace(cuid) && !string.IsNullOrWhiteSpace(recordId))
         {
-            var merged = await _client.GetMergedRecordingAsync(cuid, recordId, tenantId, ct: ct);
+            var merged = await _client.GetMergedRecordingAsync(
+                cuid, recordId, tenantId, data.GetValueOrDefault("recordingDownloadUrl"), ct);
+            mergedState = merged.State;
             if (merged.IsReady)
             {
                 await PersistRecordingAsync(callsModuleId, record, data, merged.Content!, merged.ContentType, merged.FileName, "merged", ct);
                 return CallRecordingState.Ready;
             }
 
-            if (merged.State == TelefonchyMergedRecordingState.Processing)
-            {
-                data["recordingStatus"] = "processing";
-                await _records.UpdateAsync(callsModuleId, record.Id, data);
-                return CallRecordingState.Processing;
-            }
+            gateBlocked = TelefonchyApiGate.LooksRateLimited(merged.Message)
+                || TelefonchyApiGate.LooksTokenBanned(merged.Message);
         }
 
-        if (HasUsableRecordingId(data.GetValueOrDefault("recordingFileId")) && !string.IsNullOrWhiteSpace(cuid))
+        // merged ممکن است هنوز ۲۰۲ باشد؛ اگر file_id از CDR آمده همان لحظه فایل را بگیر.
+        if (!gateBlocked
+            && fallbackFileId
+            && HasUsableRecordingId(data.GetValueOrDefault("recordingFileId"))
+            && !string.IsNullOrWhiteSpace(cuid))
         {
             var download = await _client.GetRecordingAsync(data.GetValueOrDefault("recordingFileId")!, cuid, tenantId, ct);
             if (download.Ok)
@@ -270,7 +311,40 @@ public class TelefonchyCallService
             }
         }
 
+        if (mergedState == TelefonchyMergedRecordingState.Processing)
+        {
+            data["recordingStatus"] = "processing";
+            await _records.UpdateAsync(callsModuleId, record.Id, data);
+            return CallRecordingState.Processing;
+        }
+
+        if (mergedState == TelefonchyMergedRecordingState.Failed && !gateBlocked)
+        {
+            data["recordingStatus"] = "unavailable";
+            await _records.UpdateAsync(callsModuleId, record.Id, data);
+            return CallRecordingState.None;
+        }
+
         return CallRecordingState.None;
+    }
+
+    public async Task TryFetchReadyRecordingAsync(TelefonchyCallDto call, CancellationToken ct = default)
+    {
+        var record = await FindCallRecordAsync(call.Cuid, call.RecordId ?? call.CallId, ct);
+        if (record is null)
+            return;
+        var data = DynamicRecordService.ParseData(record);
+        if (HasStoredRecording(record, data) || HasRecording(data))
+            return;
+        await EnsureRecordingAsync(record.ModuleId, record, ct, lookupMissingIds: false, fallbackFileId: true);
+    }
+
+    public async Task MarkRecordingAttemptAsync(int callsModuleId, DynamicRecord record, CancellationToken ct = default)
+    {
+        record = await _records.GetAsync(callsModuleId, record.Id) ?? record;
+        var data = DynamicRecordService.ParseData(record);
+        data["recordingLastFetchUtc"] = DateTime.UtcNow.ToString("o");
+        await _records.UpdateAsync(callsModuleId, record.Id, data);
     }
 
     private async Task PersistRecordingAsync(
@@ -670,7 +744,7 @@ public class TelefonchyCallService
             ["durationMinutes"] = talk is int t ? Math.Max(0, (int)Math.Ceiling(t / 60d)).ToString() : null,
             ["result"] = result,
             ["cuid"] = call.Cuid,
-            ["callId"] = call.CallId,
+            ["callId"] = MongoCallId(call.CallId) ?? call.RecordId,
             ["requestId"] = call.RequestId,
             ["phoneNumber"] = phone,
             ["extension"] = call.Extension,
@@ -678,6 +752,7 @@ public class TelefonchyCallService
             ["talkSeconds"] = talk?.ToString(),
             ["recordingFileId"] = call.FileId,
             ["recordingFileName"] = call.FileRecord,
+            ["recordingDownloadUrl"] = call.DownloadUrl,
             ["hasAudio"] = call.HasAudio ? "true" : null,
             ["fileStatus"] = call.FileStatus
         };

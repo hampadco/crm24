@@ -13,4 +13,7 @@ public interface ICallRecordingStore
         CancellationToken cancellationToken = default);
 
     string? TryGetAbsolutePath(int tenantId, int callRecordId, string? storedRelativePath);
+
+    /// <summary>مسیر عمومی فایل محلی، اگر روی دیسک باشد.</summary>
+    string? TryGetPublicPath(int tenantId, int callRecordId, string? storedRelativePath);
 }

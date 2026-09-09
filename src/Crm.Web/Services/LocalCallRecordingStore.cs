@@ -80,6 +80,17 @@ public class LocalCallRecordingStore : ICallRecordingStore
             .FirstOrDefault();
     }
 
+    public string? TryGetPublicPath(int tenantId, int callRecordId, string? storedRelativePath)
+    {
+        var abs = TryGetAbsolutePath(tenantId, callRecordId, storedRelativePath);
+        if (abs is null)
+            return null;
+
+        var root = Path.GetFullPath(_env.WebRootPath);
+        var relative = Path.GetRelativePath(root, abs).Replace('\\', '/');
+        return "/" + relative.TrimStart('/');
+    }
+
     private static string NormalizeExt(string extension, string contentType, string originalFileName)
     {
         var ext = extension;

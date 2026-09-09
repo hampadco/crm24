@@ -51,8 +51,8 @@ public class TelefonchyWebhookJob
             "job", "process-event", call, $"جاب رویداد: {ev}", payloadJson));
         if (ev == "recording.merged.ready")
         {
-            BackgroundJob.Enqueue<TelefonchyCallSyncJob>(
-                j => j.FetchMergedRecordingAsync(tenantId, call.Cuid, call.RecordId ?? call.CallId, 0));
+            await _calls.HandleHangupOrCdrAsync(call, fetchDetails: false);
+            await _calls.TryFetchReadyRecordingAsync(call);
             return;
         }
 
@@ -62,9 +62,7 @@ public class TelefonchyWebhookJob
             return;
         }
 
-        await _calls.HandleHangupOrCdrAsync(call, fetchDetails: true);
-        if (LooksAnswered(call))
-            ScheduleMergedFetch(tenantId, call, TimeSpan.FromSeconds(20));
+        await _calls.HandleHangupOrCdrAsync(call, fetchDetails: false);
     }
 
     [AutomaticRetry(Attempts = 2)]
@@ -91,9 +89,9 @@ public class TelefonchyWebhookJob
         if (string.Equals(call.Event, "recording.merged.ready", StringComparison.OrdinalIgnoreCase))
         {
             await _trace.WriteAsync(tenantId, TelefonchyTraceService.FromCall(
-                "job", "recording-merged-ready", call, "وب‌هوک ضبط merged آماده شد", payloadJson));
-            BackgroundJob.Enqueue<TelefonchyCallSyncJob>(
-                j => j.FetchMergedRecordingAsync(tenantId, call.Cuid, call.RecordId ?? call.CallId, 0));
+                "job", "recording-merged-ready", call, "وب‌هوک ضبط merged آماده شد — دریافت فایل", payloadJson));
+            await _calls.HandleHangupOrCdrAsync(call, fetchDetails: false);
+            await _calls.TryFetchReadyRecordingAsync(call);
             return;
         }
 
@@ -101,40 +99,20 @@ public class TelefonchyWebhookJob
             "job", "process-cdr", call,
             $"جاب CDR: status={call.Status} talk={call.TalkSeconds} file_id={call.FileId}",
             payloadJson));
-        await _calls.HandleHangupOrCdrAsync(call, fetchDetails: string.IsNullOrWhiteSpace(call.FileId));
-        if (LooksAnswered(call))
-            ScheduleMergedFetch(tenantId, call, TimeSpan.FromSeconds(20));
+        await _calls.HandleHangupOrCdrAsync(call, fetchDetails: false);
+        if (TelefonchyCallService.HasUsableRecordingId(call.FileId)
+            || !string.IsNullOrWhiteSpace(call.DownloadUrl))
+            await _calls.TryFetchReadyRecordingAsync(call);
     }
-
-    internal static void ScheduleMergedFetch(int tenantId, TelefonchyCallDto call, TimeSpan delay)
-    {
-        BackgroundJob.Schedule<TelefonchyCallSyncJob>(
-            j => j.FetchMergedRecordingAsync(tenantId, call.Cuid, call.RecordId ?? call.CallId, 0),
-            delay);
-    }
-
-    private static bool LooksAnswered(TelefonchyCallDto call) =>
-        call.TalkSeconds is > 0
-        || call.HasAudio
-        || !string.IsNullOrWhiteSpace(call.FileRecord)
-        || (call.Status ?? "").Contains("ANSWER", StringComparison.OrdinalIgnoreCase);
 }
 
 public class TelefonchyCallSyncJob
 {
-    private static readonly TimeSpan[] RetryDelays =
-    [
-        TimeSpan.FromSeconds(30),
-        TimeSpan.FromSeconds(60),
-        TimeSpan.FromMinutes(2),
-        TimeSpan.FromMinutes(5),
-        TimeSpan.FromMinutes(15)
-    ];
-
     private readonly CrmDbContext _db;
     private readonly TenantIntegrationService _integrations;
     private readonly TelefonchyClient _client;
     private readonly TelefonchyCallService _calls;
+    private readonly TelefonchyApiGate _gate;
     private readonly ILogger<TelefonchyCallSyncJob> _logger;
     private readonly TelefonchyTraceService _trace;
 
@@ -143,6 +121,7 @@ public class TelefonchyCallSyncJob
         TenantIntegrationService integrations,
         TelefonchyClient client,
         TelefonchyCallService calls,
+        TelefonchyApiGate gate,
         ILogger<TelefonchyCallSyncJob> logger,
         TelefonchyTraceService trace)
     {
@@ -150,6 +129,7 @@ public class TelefonchyCallSyncJob
         _integrations = integrations;
         _client = client;
         _calls = calls;
+        _gate = gate;
         _logger = logger;
         _trace = trace;
     }
@@ -177,6 +157,9 @@ public class TelefonchyCallSyncJob
     [AutomaticRetry(Attempts = 1)]
     public async Task SyncTenantAsync(int tenantId, bool initial = false)
     {
+        if (_gate.IsPaused)
+            return;
+
         var config = await _integrations.GetAsync(tenantId);
         if (!config.HasTelefonchy || !config.TelefonchySyncEnabled)
             return;
@@ -184,12 +167,13 @@ public class TelefonchyCallSyncJob
         _calls.BindTenant(tenantId);
 
         var from = initial || config.TelefonchyLastSyncUtc is null
-            ? DateTime.UtcNow.AddDays(-30)
+            ? DateTime.UtcNow.AddDays(-2)
             : config.TelefonchyLastSyncUtc.Value.AddHours(-1);
 
+        var maxPages = initial ? 3 : 1;
         var page = 1;
         var imported = 0;
-        while (page <= 50)
+        while (page <= maxPages)
         {
             var result = await _client.GetCallsAsync(tenantId, page, from, DateTime.UtcNow.AddDays(1));
             if (result is null || result.Calls.Count == 0)
@@ -210,103 +194,122 @@ public class TelefonchyCallSyncJob
         config.TelefonchyLastSyncUtc = DateTime.UtcNow;
         await _integrations.SaveAsync(config, tenantId);
         _logger.LogInformation("Telefonchy sync tenant {TenantId}: {Count} upserts.", tenantId, imported);
-        await BackfillMissingRecordingsAsync(tenantId);
     }
 
-    /// <summary>تماس‌های پاسخ‌داده‌شدهٔ اخیر که هنوز فایل ضبط ندارند را صف می‌کند.</summary>
     [AutomaticRetry(Attempts = 0)]
-    public async Task BackfillMissingRecordingsAsync(int tenantId)
+    public async Task DrainAllTenantsAsync()
     {
-        _calls.BindTenant(tenantId);
-        var module = await _db.Modules.AsNoTracking()
-            .FirstOrDefaultAsync(m => m.Name == "calls" && m.IsActive);
-        if (module is null)
+        if (_gate.IsPaused)
             return;
 
-        var since = DateTime.UtcNow.AddHours(-36);
-        var records = await _db.Records.AsNoTracking()
-            .Where(r => r.ModuleId == module.Id && r.CreatedAtUtc >= since)
+        var tenants = await _db.Tenants.AsNoTracking()
+            .Where(t => t.Status == TenantStatus.Active || t.Status == TenantStatus.Trial)
+            .Select(t => t.Id)
             .ToListAsync();
 
-        var queued = 0;
-        foreach (var record in records)
+        foreach (var tenantId in tenants)
         {
-            var data = DynamicRecordService.ParseData(record);
-            if (TelefonchyCallService.HasRecording(data) || !TelefonchyCallService.IsRecordingPending(data))
-                continue;
-
-            BackgroundJob.Enqueue<TelefonchyCallSyncJob>(
-                j => j.FetchMergedRecordingAsync(
-                    tenantId, data.GetValueOrDefault("cuid"), data.GetValueOrDefault("callId"), 0));
-            queued++;
+            try
+            {
+                await DrainOneRecordingAsync(tenantId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Telefonchy recording drain failed for tenant {TenantId}.", tenantId);
+            }
         }
-
-        if (queued > 0)
-            _logger.LogInformation("Telefonchy queued {Count} missing recordings for tenant {TenantId}.", queued, tenantId);
     }
 
+    [DisableConcurrentExecution(180)]
     [AutomaticRetry(Attempts = 0)]
-    public async Task FetchMergedRecordingAsync(int tenantId, string? cuid, string? recordId, int attempt)
+    public async Task DrainOneRecordingAsync(int tenantId)
     {
+        if (_gate.IsPaused)
+            return;
+
         var config = await _integrations.GetAsync(tenantId);
         if (!config.HasTelefonchy || !config.TelefonchyRecordingEnabled)
             return;
 
         _calls.BindTenant(tenantId);
+        var record = await PickPendingRecordingAsync(tenantId);
+        if (record is null)
+            return;
+
+        var data = DynamicRecordService.ParseData(record);
         await _trace.WriteAsync(tenantId, new TelefonchyTraceEntry
         {
             Kind = "job",
-            Action = "fetch-merged",
-            Cuid = cuid,
-            CallId = recordId,
-            Status = $"attempt-{attempt + 1}",
-            Summary = $"جاب دریافت ضبط merged attempt {attempt + 1}"
+            Action = "drain-merged",
+            Cuid = data.GetValueOrDefault("cuid"),
+            CallId = data.GetValueOrDefault("callId"),
+            CrmRecordId = record.Id,
+            Summary = $"درین صف ضبط — رکورد #{record.Id}"
         });
-        var record = await _calls.FindCallRecordAsync(cuid, recordId);
-        if (record is null)
-        {
-            _logger.LogInformation(
-                "Telefonchy recording fetch: CRM row not found tenant {TenantId} cuid {Cuid}.", tenantId, cuid);
-            Reschedule(tenantId, cuid, recordId, attempt);
-            return;
-        }
 
-        var data = DynamicRecordService.ParseData(record);
-        if (TelefonchyCallService.HasRecording(data)
-            && !string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile")))
-            return;
-
-        var state = await _calls.EnsureRecordingAsync(record.ModuleId, record);
-        if (state == TelefonchyCallService.CallRecordingState.Ready)
-        {
-            _logger.LogInformation("Telefonchy merged recording saved tenant {TenantId} cuid {Cuid}.", tenantId, cuid);
-            return;
-        }
-
+        var state = await _calls.EnsureRecordingAsync(
+            record.ModuleId, record, lookupMissingIds: false, fallbackFileId: true);
+        if (state != TelefonchyCallService.CallRecordingState.Ready)
+            await _calls.MarkRecordingAttemptAsync(record.ModuleId, record);
         _logger.LogInformation(
-            "Telefonchy merged recording {State} tenant {TenantId} cuid {Cuid} (attempt {Attempt}).",
-            state, tenantId, cuid, attempt + 1);
-        Reschedule(tenantId, cuid, recordId ?? data.GetValueOrDefault("callId"), attempt);
+            "Telefonchy drain {State} tenant {TenantId} record {RecordId}.",
+            state, tenantId, record.Id);
+
+        if (!_gate.IsPaused && await PickPendingRecordingAsync(tenantId) is not null)
+        {
+            BackgroundJob.Schedule<TelefonchyCallSyncJob>(
+                j => j.DrainOneRecordingAsync(tenantId),
+                TimeSpan.FromSeconds(3));
+        }
     }
 
-    private static void Reschedule(int tenantId, string? cuid, string? recordId, int attempt)
+    private async Task<DynamicRecord?> PickPendingRecordingAsync(int tenantId)
     {
-        if (attempt < 0 || attempt >= RetryDelays.Length)
-            return;
+        _calls.BindTenant(tenantId);
+        var module = await _db.Modules.AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Name == "calls" && m.IsActive);
+        if (module is null)
+            return null;
 
-        BackgroundJob.Schedule<TelefonchyCallSyncJob>(
-            j => j.FetchMergedRecordingAsync(tenantId, cuid, recordId, attempt + 1),
-            RetryDelays[attempt]);
+        var since = DateTime.UtcNow.AddHours(-36);
+        var records = await _db.Records.AsNoTracking()
+            .Where(r => r.ModuleId == module.Id && r.CreatedAtUtc >= since)
+            .OrderByDescending(r => r.CreatedAtUtc)
+            .ToListAsync();
+
+        foreach (var record in records)
+        {
+            var data = DynamicRecordService.ParseData(record);
+            if (_calls.HasStoredRecording(record, data)
+                || TelefonchyCallService.HasRecording(data)
+                || !TelefonchyCallService.IsRecordingPending(data))
+                continue;
+            if (string.IsNullOrWhiteSpace(data.GetValueOrDefault("cuid")))
+                continue;
+            var recStatus = data.GetValueOrDefault("recordingStatus");
+            if (recStatus is "unavailable" or "failed" or "expired" or "missing")
+                continue;
+            if (DateTime.TryParse(data.GetValueOrDefault("recordingLastFetchUtc"), out var last)
+                && DateTime.UtcNow - last.ToUniversalTime() < TimeSpan.FromSeconds(20))
+                continue;
+            return record;
+        }
+
+        return null;
     }
 
-    /// <summary>جاب‌های زمان‌بندی‌شدهٔ قبلی؛ به مسیر merged هدایت می‌شود.</summary>
+    /// <summary>جاب‌های قدیمی صف‌شده؛ دیگر API نمی‌زنند تا توکن محدود نشود.</summary>
+    [AutomaticRetry(Attempts = 0)]
+    public Task FetchMergedRecordingAsync(int tenantId, string? cuid, string? recordId, int attempt) =>
+        Task.CompletedTask;
+
     [Obsolete]
     [AutomaticRetry(Attempts = 0)]
     public Task RefreshRecordingAsync(int tenantId, string? cuid, string? callId, string? phone) =>
-        FetchMergedRecordingAsync(tenantId, cuid, callId, 0);
+        Task.CompletedTask;
 
     [Obsolete]
     [AutomaticRetry(Attempts = 0)]
     public Task RefreshRecordingAsync(int tenantId, string? cuid, string? callId, string? phone, int attempt) =>
-        FetchMergedRecordingAsync(tenantId, cuid, callId, 0);
+        Task.CompletedTask;
 }

@@ -222,11 +222,23 @@
                 <i class="bx bx-loader-alt bx-spin text-warning fs-3"></i>
                 <div class="flex-grow-1">
                     <div class="fw-semibold">در حال آماده‌سازی ضبط</div>
-                    <div class="text-muted small">تلفنچی هنوز شناسه فایل را نداده. این صفحه چند ثانیه دیگر خودش تازه می‌شود.</div>
+                    <div class="text-muted small">فایل صوت هنوز آماده نشده. این صفحه چند ثانیه دیگر خودش تازه می‌شود.</div>
                 </div>
             </div>
         </div>
         <script>setTimeout(function () { location.reload(); }, 20000);</script>
+    }
+    else if (Model.HasUnavailableRecording)
+    {
+        <div class="card mb-3">
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <i class="bx bx-microphone-off text-secondary fs-3"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">فایل در دسترس نیست</div>
+                    <div class="text-muted small">ضبط این تماس در تلفنچی موجود نیست یا منقضی شده است.</div>
+                </div>
+            </div>
+        </div>
     }
 
     @if (highlights.Count > 0)

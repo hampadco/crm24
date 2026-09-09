@@ -1,149 +1,204 @@
 زمان	نوع	عمل	وضعیت	شماره / cuid	خلاصه	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727932.39328
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۱۱	call	upsert-update	recording.merged.ready	
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — recording.merged.ready talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727633.38012
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۱۱	call	recording.merged.ready	recording.merged.ready	
+1788983216.1568633
+اتمام/جزئیات — status= talk= wait= fetchDetails=False	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۱۱	job	recording-merged-ready	recording.merged.ready	
+1788983216.1568633
+وب‌هوک ضبط merged آماده شد — صف درین می‌گیرد	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787575535.2135815
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۱۱	webhook	cdr-hook	recording.merged.ready	
+1788983216.1568633
+وب‌هوک CDR رسید — event=recording.merged.ready status= talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727460.37333
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۰۷	call	upsert-update	ANSWERED	
+09913389706
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — ANSWERED talk=15	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727422.37204
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۰۷	recording	/calls/record-quality/merged	Processing	
+1788983216.1568633
+Processing 275 بایت — فایل صوت در حال آماده‌سازی است.	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787576099.2137074
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۲۰:۰۷	job	drain-merged		
+1788983216.1568633
+#19647	درین صف ضبط — رکورد #19647	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787728001.39619
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787571695.2127547
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787576165.2137225
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727542.37635
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787571817.2127843
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787577424.2140544
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787563921.2103954
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727687.38275
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727961.39460
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727386.37078
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727819.38822
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787564192.2105040
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
-1787727656.38134
-Failed 167 بایت — دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787563921.2103954
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727422.37204
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787576099.2137074
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727687.38275
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787576165.2137225
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727819.38822
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787571817.2127843
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787577424.2140544
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727633.38012
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727961.39460
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727460.37333
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787575535.2135815
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787564192.2105040
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727542.37635
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727386.37078
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727656.38134
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787728001.39619
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787571695.2127547
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-5		جاب دریافت ضبط merged attempt 5	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
-1787727932.39328
-جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-4		جاب دریافت ضبط merged attempt 4	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6		جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6		جاب دریافت ضبط merged attempt 6	
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۲۴	call	smartcall	outgoing	
-09149501938
-#19644	تماس سریع رد شد: دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۲۴	api	GET /smartcall	ok		پاسخ تلفنچی 200 برای /smartcall	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۱۵	call	smartcall	outgoing	
-09149501938
-#19644	تماس سریع رد شد: دسترسی محدود شده است.	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
 payload
-۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۱۵	api	GET /smartcall	ok		پاسخ تلفنچی 200 برای /smartcall	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۱۲	call	upsert-update	outgoing	#19647	رکورد CRM #19647 به‌روز شد — talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۰۵	call	upsert-update	ANSWERED	
+09913389706
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — ANSWERED talk=15	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۰۵	call	hangup-or-cdr	ANSWERED	
+09913389706
+1788983216.1568633
+اتمام/جزئیات — status=ANSWERED talk=15 wait=9 fetchDetails=False	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۰۵	job	process-cdr	ANSWERED	
+09913389706
+1788983216.1568633
+جاب CDR: status=ANSWERED talk=15 file_id=4i1E-6f892319-04f7-4475-8179-59127f08f253	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۹:۰۵	webhook	cdr-hook	ANSWERED	
+09913389706
+1788983216.1568633
+وب‌هوک CDR رسید — event= status=ANSWERED talk=15	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۲۴	call	upsert-update	hangup	
+09913389706
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — hangup talk=15	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۲۴	call	hangup	hangup	
+09913389706
+1788983216.1568633
+اتمام/جزئیات — status= talk=15 wait=9 fetchDetails=False	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۲۴	job	process-event	hangup	
+09913389706
+1788983216.1568633
+جاب رویداد: hangup	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۲۴	webhook	events-hook	hangup	
+09913389706
+1788983216.1568633
+وب‌هوک رویداد رسید — event=hangup 165950 → 09913389706	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۹	call	upsert-update	dialing	
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — dialing talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۹	call	smartcall-status	dialing	
+1788983216.1568633
+وضعیت تماس سریع: dialing	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۹	api	GET /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	ok		پاسخ تلفنچی 200 برای /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۶	call	upsert-update	dialing	
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — dialing talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۶	call	smartcall-status	dialing	
+1788983216.1568633
+وضعیت تماس سریع: dialing	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۶	api	GET /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	ok		پاسخ تلفنچی 200 برای /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۳	call	upsert-update	dialing	
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — dialing talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۳	call	smartcall-status	dialing	
+1788983216.1568633
+وضعیت تماس سریع: dialing	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۳	api	GET /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	ok		پاسخ تلفنچی 200 برای /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۱	call	upsert-update	ringing	
+9913389706
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — ringing talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۱	call	ringing	ringing	
+9913389706
+1788983216.1568633
+زنگ — outgoing 165950 → 9913389706	
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۱	job	process-event	ringing	
+9913389706
+1788983216.1568633
+جاب رویداد: ringing	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۱	webhook	events-hook	ringing	
+9913389706
+1788983216.1568633
+وب‌هوک رویداد رسید — event=ringing 165950 → 9913389706	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۰	call	upsert-update	dialing	
+1788983216.1568633
+#19647	رکورد CRM #19647 به‌روز شد — dialing talk=	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۰	call	smartcall-status	dialing	
+1788983216.1568633
+وضعیت تماس سریع: dialing	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۳:۱۷:۰۰	api	GET /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2	ok		پاسخ تلفنچی 200 برای /smartcall/status/ctc_05f7f652-ac82-4592-a07d-9f401c18b5c2

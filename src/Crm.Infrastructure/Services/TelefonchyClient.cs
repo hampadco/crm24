@@ -151,17 +151,20 @@ public class TelefonchyClient
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<TelefonchyClient> _logger;
     private readonly TelefonchyTraceService _trace;
+    private readonly TelefonchyApiGate _gate;
 
     public TelefonchyClient(
         TenantIntegrationService integrations,
         IHttpClientFactory httpFactory,
         ILogger<TelefonchyClient> logger,
-        TelefonchyTraceService trace)
+        TelefonchyTraceService trace,
+        TelefonchyApiGate gate)
     {
         _integrations = integrations;
         _httpFactory = httpFactory;
         _logger = logger;
         _trace = trace;
+        _gate = gate;
     }
 
     public async Task<TelefonchyCallPage?> GetCallsAsync(
@@ -251,12 +254,12 @@ public class TelefonchyClient
 
         if (dest is not null)
         {
-            var byDest = await ScanCallsAsync(tenantId, from, to, dest, 3, cuid, callId, ct);
+            var byDest = await ScanCallsAsync(tenantId, from, to, dest, 1, cuid, callId, ct);
             if (byDest is not null)
                 return byDest;
         }
 
-        return await ScanCallsAsync(tenantId, from, to, dest: null, maxPages: 3, cuid, callId, ct);
+        return await ScanCallsAsync(tenantId, from, to, dest: null, maxPages: 1, cuid, callId, ct);
     }
 
     private async Task<TelefonchyCallDto?> ScanCallsAsync(
@@ -460,7 +463,9 @@ public class TelefonchyClient
 
         try
         {
-            using var request = BuildRequest(config, HttpMethod.Get, "/calls/record", new Dictionary<string, string?>
+            const string path = "/calls/record";
+            await _gate.WaitAsync(path, ct);
+            using var request = BuildRequest(config, HttpMethod.Get, path, new Dictionary<string, string?>
             {
                 ["file_id"] = fileId.Trim(),
                 ["cuid"] = cuid.Trim()
@@ -469,8 +474,10 @@ public class TelefonchyClient
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!response.IsSuccessStatusCode)
             {
+                var errBody = await response.Content.ReadAsStringAsync(ct);
+                _gate.Observe(response, path, errBody);
                 _logger.LogWarning("Telefonchy recording HTTP {Status}.", (int)response.StatusCode);
-                await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "error", $"HTTP {(int)response.StatusCode}", 0, ct);
+                await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "error", errBody, errBody.Length, ct);
                 return new TelefonchyRecordingResult
                 {
                     Error = $"تلفنچی کد {(int)response.StatusCode} برگرداند."
@@ -489,6 +496,10 @@ public class TelefonchyClient
             if (TryReadJsonError(bytes, out var apiError))
             {
                 _logger.LogWarning("Telefonchy recording rejected: {Error}", apiError);
+                if (TelefonchyApiGate.LooksRateLimited(apiError))
+                    _gate.NotifyLimited(path, apiError);
+                else
+                    _gate.Observe(response, path);
                 await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "rejected", apiError, bytes.Length, ct);
                 return new TelefonchyRecordingResult { Error = apiError };
             }
@@ -497,6 +508,7 @@ public class TelefonchyClient
             var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
                 ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
                 ?? $"{cuid}.mp3";
+            _gate.Observe(response, path);
             await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "ready", $"{contentType} {bytes.Length}b {fileName}", bytes.Length, ct);
             return new TelefonchyRecordingResult
             {
@@ -536,9 +548,11 @@ public class TelefonchyClient
 
         try
         {
+            const string path = "/calls/record-quality/merged";
+            await _gate.WaitAsync(path, ct);
             using var request = IsTrustedDownloadUrl(config, downloadUrl)
                 ? BuildAbsoluteRequest(config, downloadUrl!)
-                : BuildRequest(config, HttpMethod.Get, "/calls/record-quality/merged", new Dictionary<string, string?>
+                : BuildRequest(config, HttpMethod.Get, path, new Dictionary<string, string?>
                 {
                     ["cuid"] = cuid.Trim(),
                     ["record_id"] = recordId.Trim()
@@ -549,6 +563,7 @@ public class TelefonchyClient
             var bytes = await response.Content.ReadAsByteArrayAsync(ct);
             var jsonStatus = TryReadMergedStatus(bytes, out var jsonMessage);
             var http = (int)response.StatusCode;
+            _gate.Observe(response, path, jsonMessage);
 
             TelefonchyMergedRecordingResult result;
             if (response.StatusCode == System.Net.HttpStatusCode.Accepted
@@ -831,11 +846,14 @@ public class TelefonchyClient
     {
         try
         {
+            await _gate.WaitAsync(path, ct);
             using var request = BuildRequest(config, method, path, query);
             var client = _httpFactory.CreateClient("telefonchy");
             using var response = await client.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
             var status = (int)response.StatusCode;
+            _gate.Observe(response, path, body);
+
             await _trace.WriteAsync(new TelefonchyTraceEntry
             {
                 Kind = "api",
@@ -843,7 +861,7 @@ public class TelefonchyClient
                 Path = path,
                 HttpStatus = status,
                 Status = response.IsSuccessStatusCode ? "ok" : "error",
-                Summary = $"پاسخ تلفنچی {status} برای {path}",
+                Summary = $"پاسخ تلفنچی {status} برای {path}{FormatRateLimit(response)}",
                 Payload = path.Equals("/calls", StringComparison.OrdinalIgnoreCase)
                     ? $"query={FormatQuery(query)}; bytes={body.Length}"
                     : body
@@ -870,6 +888,19 @@ public class TelefonchyClient
             }, ct);
             return null;
         }
+    }
+
+    private static string FormatRateLimit(HttpResponseMessage response)
+    {
+        var remaining = response.Headers.TryGetValues("X-RateLimit-Remaining", out var rem)
+            ? rem.FirstOrDefault()
+            : null;
+        var limit = response.Headers.TryGetValues("X-RateLimit-Limit", out var lim)
+            ? lim.FirstOrDefault()
+            : null;
+        if (string.IsNullOrWhiteSpace(remaining) && string.IsNullOrWhiteSpace(limit))
+            return "";
+        return $" remaining={remaining}/{limit ?? "60"}";
     }
 
     private static string FormatQuery(IReadOnlyDictionary<string, string?>? query)

@@ -139,7 +139,7 @@ public class RecordFormViewModel
         var hasLineItems = Blocks.Any(b => b.Kind == BlockKind.LineItems);
         // دفترچه قیمت کنار لیست محصولات نشان داده می‌شود؛ اینجا تکرار نشود
         var visible = Fields
-            .Where(f => f.IsVisible)
+            .Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
             .Where(f => !(hasLineItems && string.Equals(f.Name, "priceBook", StringComparison.OrdinalIgnoreCase)))
             .ToList();
         if (Blocks.Count == 0)
@@ -235,6 +235,7 @@ public class RecordDetailViewModel
     public string? ClickToCallPhone { get; set; }
     public bool HasCallRecording { get; set; }
     public bool HasPendingRecording { get; set; }
+    public bool HasUnavailableRecording { get; set; }
 
     public string? LineDisplayValue(FieldDef field, Dictionary<string, string?> row)
     {
@@ -305,7 +306,7 @@ public class RecordDetailViewModel
     /// <summary>فیلدهای قابل‌نمایش گروه‌بندی‌شده بر اساس بلاک (مثل فرم).</summary>
     public IEnumerable<(FieldBlock? Block, IReadOnlyList<FieldDef> Fields)> GroupedFields()
     {
-        var visible = Fields.Where(f => f.IsVisible).ToList();
+        var visible = Fields.Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name)).ToList();
         if (Blocks.Count == 0)
         {
             yield return (null, visible.OrderBy(f => f.SortOrder).ThenBy(f => f.Id).ToList());
@@ -335,7 +336,7 @@ public class RecordDetailViewModel
     /// <summary>فیلدهای کلیدی خلاصه: عنوان‌مانند + ShowInList.</summary>
     public IReadOnlyList<FieldDef> SummaryFields()
     {
-        var ordered = Fields.Where(f => f.IsVisible)
+        var ordered = Fields.Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
             .OrderBy(f => f.SortOrder)
             .ThenBy(f => f.Id)
             .ToList();
@@ -358,7 +359,7 @@ public class RecordDetailViewModel
             "company", "organization", "city", "priority"
         };
 
-        var ordered = Fields.Where(f => f.IsVisible)
+        var ordered = Fields.Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
             .OrderBy(f => f.SortOrder)
             .ThenBy(f => f.Id)
             .ToList();

@@ -499,6 +499,7 @@ public class DynamicRecordService
         var fields = await _metadata.GetFieldsAsync(moduleId);
 
         var data = ValidateAndBuildData(fields, values);
+        KeepIntegrationExtras(values, oldData: new Dictionary<string, string?>(), data);
         await ValidateLookupsAsync(fields, data);
         await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: null);
 
@@ -530,11 +531,13 @@ public class DynamicRecordService
             throw new UnauthorizedAccessException();
 
         var fields = await _metadata.GetFieldsAsync(moduleId);
+        var oldData = JsonSerializer.Deserialize<Dictionary<string, string?>>(record.CustomData)
+            ?? new Dictionary<string, string?>();
         var data = ValidateAndBuildData(fields, values);
+        KeepIntegrationExtras(values, oldData, data);
         await ValidateLookupsAsync(fields, data);
         await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: id);
 
-        var oldData = JsonSerializer.Deserialize<Dictionary<string, string?>>(record.CustomData) ?? new();
         var changes = data
             .Where(kv => (oldData.TryGetValue(kv.Key, out var old) ? old : null) != kv.Value)
             .ToDictionary(
@@ -793,6 +796,39 @@ public class DynamicRecordService
 
         return data;
     }
+
+    /// <summary>
+    /// کلیدهای ضبط/تلفنچی که ممکن است هنوز فیلد ماژول نباشند، یا در فرم آپدیت
+    /// نیامده باشند، نباید از CustomData پاک شوند.
+    /// </summary>
+    private static void KeepIntegrationExtras(
+        Dictionary<string, string?> values,
+        IReadOnlyDictionary<string, string?> oldData,
+        Dictionary<string, string?> data)
+    {
+        foreach (var key in oldData.Keys.Concat(values.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!IsIntegrationExtra(key))
+                continue;
+
+            var incoming = values.GetValueOrDefault(key);
+            if (!string.IsNullOrWhiteSpace(incoming))
+            {
+                data[key] = incoming.Trim();
+                continue;
+            }
+
+            var previous = oldData.GetValueOrDefault(key);
+            if (!string.IsNullOrWhiteSpace(previous)
+                && string.IsNullOrWhiteSpace(data.GetValueOrDefault(key)))
+                data[key] = previous;
+        }
+    }
+
+    private static bool IsIntegrationExtra(string key) =>
+        key.StartsWith("recording", StringComparison.OrdinalIgnoreCase)
+        || key.Equals("hasAudio", StringComparison.OrdinalIgnoreCase)
+        || key.Equals("fileStatus", StringComparison.OrdinalIgnoreCase);
 
     private async Task ValidateLookupsAsync(
         IReadOnlyList<FieldDef> fields, Dictionary<string, string?> data)

@@ -365,6 +365,14 @@ public class SalesModuleSeeder
             F("waitSeconds", "انتظار (ثانیه)", FieldType.Number, showInList: false),
             F("talkSeconds", "مکالمه (ثانیه)", FieldType.Number, showInList: false),
             F("recordingFileId", "شناسه فایل ضبط", FieldType.Text, showInList: false),
+            F("recordingFile", "مسیر فایل ضبط", FieldType.Text, showInList: false),
+            F("recordingSource", "منبع ضبط", FieldType.Text, showInList: false),
+            F("recordingStatus", "وضعیت ضبط", FieldType.Text, showInList: false),
+            F("recordingLastFetchUtc", "آخرین دریافت ضبط", FieldType.Text, showInList: false),
+            F("recordingFileName", "نام فایل ضبط تلفنچی", FieldType.Text, showInList: false),
+            F("recordingDownloadUrl", "آدرس دانلود ضبط", FieldType.Url, showInList: false),
+            F("hasAudio", "دارای صوت", FieldType.Text, showInList: false),
+            F("fileStatus", "وضعیت فایل تلفنچی", FieldType.Text, showInList: false),
             F("lead", "سرنخ", FieldType.Lookup, showInList: false, lookupModule: "leads")
         };
 
@@ -405,6 +413,7 @@ public class SalesModuleSeeder
                 Type = spec.Type,
                 IsCustom = false,
                 ShowInList = spec.ShowInList,
+                IsVisible = !TelefonchyCallService.IsInternalCallField(spec.Name),
                 LookupModule = spec.LookupModule,
                 SortOrder = maxOrder
             });
@@ -412,6 +421,20 @@ public class SalesModuleSeeder
         }
 
         if (added)
+            await _db.SaveChangesAsync();
+
+        var toHide = await _db.Fields
+            .Where(f => f.TenantId == tenantId && f.ModuleId == module.Id && f.IsVisible)
+            .ToListAsync();
+        var hid = false;
+        foreach (var field in toHide)
+        {
+            if (!TelefonchyCallService.IsInternalCallField(field.Name))
+                continue;
+            field.IsVisible = false;
+            hid = true;
+        }
+        if (hid)
             await _db.SaveChangesAsync();
 
         _cache.Remove($"fields:{tenantId}:{module.Id}");

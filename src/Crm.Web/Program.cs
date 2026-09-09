@@ -69,6 +69,7 @@ builder.Services.AddScoped<SupportService>();
 builder.Services.AddScoped<PurchasingService>();
 builder.Services.AddScoped<TenantIntegrationService>();
 builder.Services.AddScoped<AccountingPushJob>();
+builder.Services.AddSingleton<TelefonchyApiGate>();
 builder.Services.AddScoped<TelefonchyClient>();
 builder.Services.AddScoped<TelefonchyCallService>();
 builder.Services.AddScoped<TelefonchyWebhookJob>();
@@ -190,6 +191,10 @@ app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<TelefonchyCa
     "telefonchy-call-sync",
     job => job.SyncAllTenantsAsync(),
     "*/5 * * * *");
+app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<TelefonchyCallSyncJob>(
+    "telefonchy-recording-drain",
+    job => job.DrainAllTenantsAsync(),
+    "* * * * *");
 
 if (!app.Environment.IsDevelopment())
 {
