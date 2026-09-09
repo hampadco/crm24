@@ -4173,6 +4173,10 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
+                    b.Property<string>("TelefonchyExtension")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 

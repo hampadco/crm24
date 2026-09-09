@@ -53,6 +53,11 @@
                     <input asp-for="NewPassword" class="form-control" dir="ltr" autocomplete="new-password" />
                     <span asp-validation-for="NewPassword" class="text-danger small"></span>
                 </div>
+                <div class="col-md-6">
+                    <label asp-for="TelefonchyExtension" class="form-label"></label>
+                    <input asp-for="TelefonchyExtension" class="form-control" dir="ltr" placeholder="مثلاً 101" />
+                    <span asp-validation-for="TelefonchyExtension" class="text-danger small"></span>
+                </div>
                 <div class="col-md-6 d-flex flex-column justify-content-end gap-2">
                     <div class="form-check">
                         <input asp-for="IsTenantAdmin" class="form-check-input" />

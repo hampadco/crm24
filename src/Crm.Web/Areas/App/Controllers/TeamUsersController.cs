@@ -117,7 +117,8 @@ public class TeamUsersController : AppControllerBase
             Email = user.Email ?? "",
             CrmRoleId = user.CrmRoleId,
             IsTenantAdmin = user.IsTenantAdmin,
-            IsActive = user.IsActive
+            IsActive = user.IsActive,
+            TelefonchyExtension = user.TelefonchyExtension
         });
     }
 
@@ -191,6 +192,9 @@ public class TeamUsersController : AppControllerBase
         user.CrmRoleId = roleId;
         user.IsTenantAdmin = model.IsTenantAdmin;
         user.IsActive = model.IsActive;
+        user.TelefonchyExtension = string.IsNullOrWhiteSpace(model.TelefonchyExtension)
+            ? null
+            : model.TelefonchyExtension.Trim();
 
         var updateResult = await _userManager.UpdateAsync(user);
         if (!updateResult.Succeeded)

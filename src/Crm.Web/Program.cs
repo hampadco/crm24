@@ -69,12 +69,22 @@ builder.Services.AddScoped<SupportService>();
 builder.Services.AddScoped<PurchasingService>();
 builder.Services.AddScoped<TenantIntegrationService>();
 builder.Services.AddScoped<AccountingPushJob>();
+builder.Services.AddScoped<TelefonchyClient>();
+builder.Services.AddScoped<TelefonchyCallService>();
+builder.Services.AddScoped<TelefonchyWebhookJob>();
+builder.Services.AddScoped<TelefonchyCallSyncJob>();
+builder.Services.AddScoped<Crm.Core.Abstractions.ICallPopupNotifier, Crm.Web.Hubs.SignalRCallPopupNotifier>();
+builder.Services.AddScoped<Crm.Core.Abstractions.ICallRecordingStore, Crm.Web.Services.LocalCallRecordingStore>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<Crm.Core.Abstractions.ISmsSender, HttpSmsSender>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IMessengerSender, BaleMessengerSender>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IAccountingGateway, QueuedAccountingGateway>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IPaymentGateway, SandboxPaymentGateway>();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("telefonchy", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
 
 builder.Services.AddIdentityCore<CrmUser>(options =>
     {
@@ -174,6 +184,11 @@ app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<SupportServi
     "ticket-sla-check",
     service => service.CheckSlaBreachesAsync(),
     Cron.Hourly(30));
+
+app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<TelefonchyCallSyncJob>(
+    "telefonchy-call-sync",
+    job => job.SyncAllTenantsAsync(),
+    "*/5 * * * *");
 
 if (!app.Environment.IsDevelopment())
 {

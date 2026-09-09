@@ -231,6 +231,11 @@ public class RecordDetailViewModel
     /// <summary>قالب‌های چاپ فعال که با نقش کاربر اشتراک شده‌اند.</summary>
     public IReadOnlyList<PrintTemplateOption> PrintTemplates { get; set; } = [];
 
+    public bool CanClickToCall { get; set; }
+    public string? ClickToCallPhone { get; set; }
+    public bool HasCallRecording { get; set; }
+    public bool HasPendingRecording { get; set; }
+
     public string? LineDisplayValue(FieldDef field, Dictionary<string, string?> row)
     {
         row.TryGetValue(field.Name, out var value);

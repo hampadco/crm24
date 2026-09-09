@@ -106,6 +106,7 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         builder.Entity<CrmUser>(e =>
         {
             e.HasIndex(u => u.TenantId);
+            e.Property(u => u.TelefonchyExtension).HasMaxLength(32);
         });
 
         builder.Entity<Plan>(e =>

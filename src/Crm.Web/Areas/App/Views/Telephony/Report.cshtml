@@ -1,0 +1,117 @@
+@model Crm.Web.Areas.App.Controllers.CallReportViewModel
+@{
+    ViewData["PanelTitle"] = "گزارش تماس";
+}
+
+<h4 class="mb-4"><i class="bx bx-phone-call text-primary me-1"></i> گزارش تماس‌ها</h4>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">ورودی</div>
+            <h4 class="mb-0">@Model.IncomingCount.ToString("N0")</h4>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">خروجی</div>
+            <h4 class="mb-0">@Model.OutgoingCount.ToString("N0")</h4>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">بی‌پاسخ</div>
+            <h4 class="mb-0">@Model.NoAnswerCount.ToString("N0")</h4>
+        </div></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="card"><div class="card-body">
+            <div class="text-muted small">میانگین مکالمه</div>
+            <h4 class="mb-0">@Model.AvgTalkSeconds ثانیه</h4>
+        </div></div>
+    </div>
+</div>
+
+<form method="get" class="card mb-4">
+    <div class="card-body row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">از تاریخ</label>
+            <input type="text" name="from" value="@Model.From" class="form-control" dir="ltr" placeholder="1405/01/01" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">تا تاریخ</label>
+            <input type="text" name="to" value="@Model.To" class="form-control" dir="ltr" placeholder="1405/01/31" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">نوع</label>
+            <select name="direction" class="form-select">
+                <option value="">همه</option>
+                <option value="incoming">ورودی</option>
+                <option value="outgoing">خروجی</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">نتیجه</label>
+            <select name="result" class="form-select">
+                <option value="">همه</option>
+                <option value="answered">پاسخ داد</option>
+                <option value="noanswer">بی‌پاسخ</option>
+                <option value="busy">مشغول</option>
+                <option value="followup">پیگیری</option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">فیلتر</button>
+            <a class="btn btn-outline-secondary" href="/App/telephony/report?from=@Model.From&to=@Model.To&direction=@Model.Direction&result=@Model.Result&format=csv">Excel</a>
+        </div>
+    </div>
+</form>
+<script>
+    (function () {
+        var d = @Json.Serialize(Model.Direction);
+        var r = @Json.Serialize(Model.Result);
+        if (d) document.querySelector('select[name=direction]').value = d;
+        if (r) document.querySelector('select[name=result]').value = r;
+    })();
+</script>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>موضوع</th>
+                    <th>نوع</th>
+                    <th>نتیجه</th>
+                    <th>شماره</th>
+                    <th>داخلی</th>
+                    <th>مکالمه</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <td><a href="/App/m/calls/@row.Id">@row.Title</a></td>
+                    <td>@(row.Direction == "incoming" ? "ورودی" : "خروجی")</td>
+                    <td>@row.Result</td>
+                    <td dir="ltr">@row.Phone</td>
+                    <td dir="ltr">@row.Extension</td>
+                    <td>@row.TalkSeconds ثانیه</td>
+                    <td>
+                        @if (row.HasRecording)
+                        {
+                            <audio controls preload="none" src="/App/telephony/recording/@row.Id" style="height:32px;max-width:180px"></audio>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (Model.Rows.Count == 0)
+            {
+                <tr><td colspan="7" class="text-center text-muted py-4">تماسی در این بازه نیست.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

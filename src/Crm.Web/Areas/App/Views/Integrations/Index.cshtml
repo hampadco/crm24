@@ -69,8 +69,101 @@
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره تنظیمات</button>
+            @{
+                var origin = (string)(ViewBag.TelefonchyOrigin ?? "");
+                var secret = config.TelefonchyHookSecret ?? "";
+                var cdrUrl = $"{origin}/api/v1/telefonchy/cdr/{secret}";
+                var eventsUrl = $"{origin}/api/v1/telefonchy/events/{secret}";
+            }
+            <div class="card mb-4">
+                <div class="card-header"><h5 class="mb-0"><i class="bx bx-phone me-1"></i> تلفنچی</h5></div>
+                <div class="card-body row g-3">
+                    <div class="col-12">
+                        <label class="form-check">
+                            <input type="checkbox" name="TelefonchyEnabled" value="true" class="form-check-input" checked="@config.TelefonchyEnabled" />
+                            <span class="form-check-label">فعال‌سازی اتصال به تلفنچی</span>
+                        </label>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">آدرس وب‌سرویس</label>
+                        <input type="text" name="TelefonchyBaseUrl" value="@(config.TelefonchyBaseUrl ?? "https://panel.telefonchy.com/webservice/v1")" class="form-control" dir="ltr" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">شناسه سرویس (service_id)</label>
+                        <input type="text" name="TelefonchyServiceId" value="@config.TelefonchyServiceId" class="form-control" dir="ltr" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">توکن وب‌سرویس</label>
+                        <input type="password" name="TelefonchyToken" value="" class="form-control" dir="ltr" autocomplete="new-password" placeholder="@(string.IsNullOrWhiteSpace(config.TelefonchyToken) ? "" : "ذخیره شده — برای تغییر، مقدار جدید وارد کنید")" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">داخلی پیش‌فرض Click-to-Call</label>
+                        <input type="text" name="TelefonchyDefaultExten" value="@config.TelefonchyDefaultExten" class="form-control" dir="ltr" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-check">
+                            <input type="checkbox" name="TelefonchySyncEnabled" value="true" class="form-check-input" checked="@config.TelefonchySyncEnabled" />
+                            <span class="form-check-label">سینک دوره‌ای تماس‌ها</span>
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-check">
+                            <input type="checkbox" name="TelefonchyAutoLogCalls" value="true" class="form-check-input" checked="@config.TelefonchyAutoLogCalls" />
+                            <span class="form-check-label">ثبت خودکار در ماژول تماس</span>
+                        </label>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-check">
+                            <input type="checkbox" name="TelefonchyRecordingEnabled" value="true" class="form-check-input" checked="@config.TelefonchyRecordingEnabled" />
+                            <span class="form-check-label">پخش فایل ضبط مکالمه</span>
+                        </label>
+                    </div>
+                    <div class="col-12">
+                        <div class="alert alert-info mb-0">
+                            <div class="fw-semibold mb-2">آدرس‌های وب‌هوک برای پنل تلفنچی</div>
+                            <div class="small mb-2">ارسال اطلاعات تماس (CDR)</div>
+                            <code dir="ltr" class="user-select-all d-block mb-3">@cdrUrl</code>
+                            <div class="small mb-2">ارسال ایونت تماس</div>
+                            <code dir="ltr" class="user-select-all d-block">@eventsUrl</code>
+                            @if (config.TelefonchyLastSyncUtc is DateTime lastSync)
+                            {
+                                <div class="text-muted small mt-2">آخرین سینک: @PersianDateHelper.ToJalaliDate(lastSync)</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i> ذخیره تنظیمات</button>
+            </div>
         </form>
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <form asp-action="TestTelefonchy" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary"><i class="bx bx-check-circle me-1"></i> تست اتصال</button>
+            </form>
+            <form asp-action="TelefonchyExtens" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary"><i class="bx bx-list-ul me-1"></i> نمایش داخلی‌های سرویس</button>
+            </form>
+            <form asp-action="SyncTelefonchy" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-secondary"><i class="bx bx-refresh me-1"></i> سینک تاریخچه (۳۰ روز)</button>
+            </form>
+            <a href="/App/telephony/report" class="btn btn-outline-secondary"><i class="bx bx-bar-chart me-1"></i> گزارش تماس</a>
+        </div>
+        @if (TempData["TelefonchyExtens"] is string extensReport && !string.IsNullOrWhiteSpace(extensReport))
+        {
+            <div class="alert alert-secondary">
+                <div class="fw-semibold mb-2">داخلی‌های ثبت‌شده در تلفنچی</div>
+                <div class="small text-muted mb-2">
+                    مقدار «داخلی تلفنچی» هر کاربر باید یکی از شماره‌های زیر باشد، وگرنه تماس سریع خطای
+                    <span dir="ltr">Active operator was not found</span> می‌دهد.
+                </div>
+                <pre dir="ltr" class="mb-0 small bg-transparent border-0 p-0">@extensReport</pre>
+            </div>
+        }
     </div>
 
     <div class="col-lg-5">

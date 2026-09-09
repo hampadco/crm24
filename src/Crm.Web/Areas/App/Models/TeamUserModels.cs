@@ -52,6 +52,10 @@ public class TeamUserEditModel
     [MinLength(6, ErrorMessage = "رمز عبور حداقل ۶ کاراکتر.")]
     [Display(Name = "رمز عبور جدید (اختیاری)")]
     public string? NewPassword { get; set; }
+
+    [Display(Name = "داخلی تلفنچی")]
+    [MaxLength(32)]
+    public string? TelefonchyExtension { get; set; }
 }
 
 public class PortalUserEditModel

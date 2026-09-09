@@ -1,13 +1,13 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Hangfire;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
-using Crm.Web.Hubs;
 
 namespace Crm.Web.Controllers.Api;
 
@@ -21,6 +21,7 @@ public class ApiV1Controller : ControllerBase
 {
     private const int RateLimitPerMinute = 120;
     private static readonly ConcurrentDictionary<int, (int Count, DateTime WindowStart)> RateLimits = new();
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> HookRateLimits = new();
 
     private readonly CrmDbContext _db;
     private readonly ITenantContext _tenant;
@@ -230,62 +231,92 @@ public class ApiV1Controller : ControllerBase
         if (string.IsNullOrWhiteSpace(model.Caller))
             return BadRequest(new { error = "caller is required." });
 
-        var callsModule = await ResolveModuleAsync("calls");
-        if (callsModule is null)
-            return NotFound(new { error = "Calls module not found." });
-
-        // تطبیق شماره با مخاطبین (jsonb ->> mobile)
-        var contactsModule = await ResolveModuleAsync("contacts");
-        DynamicRecord? contact = null;
-        if (contactsModule is not null)
+        var calls = HttpContext.RequestServices.GetRequiredService<TelefonchyCallService>();
+        var dto = new TelefonchyCallDto
         {
-            contact = await _db.Records
-                .FromSqlInterpolated($"""
-                    SELECT * FROM "Records"
-                    WHERE "ModuleId" = {contactsModule.Id} AND "CustomData" ->> 'mobile' = {model.Caller.Trim()}
-                    """)
-                .AsNoTracking()
-                .FirstOrDefaultAsync();
+            Type = "incoming",
+            Event = "ringing",
+            Src = model.Caller.Trim(),
+            Dest = model.Called,
+            StartedAt = DateTime.Now
+        };
+        await calls.HandleRingingAsync(dto);
+        return Ok(new { ok = true });
+    }
+
+    /// <summary>وب‌هوک ایونت تماس تلفنچی (ringing / hangup).</summary>
+    [AllowAnonymous]
+    [HttpPost("telefonchy/events/{secret}")]
+    [RequestSizeLimit(256_000)]
+    public Task<IActionResult> TelefonchyEvent(string secret) =>
+        AcceptTelefonchyHookAsync(secret, isCdr: false);
+
+    /// <summary>وب‌هوک CDR تلفنچی — اطلاعات کامل تماس پس از اتمام.</summary>
+    [AllowAnonymous]
+    [HttpPost("telefonchy/cdr/{secret}")]
+    [RequestSizeLimit(256_000)]
+    public Task<IActionResult> TelefonchyCdr(string secret) =>
+        AcceptTelefonchyHookAsync(secret, isCdr: true);
+
+    private async Task<IActionResult> AcceptTelefonchyHookAsync(string secret, bool isCdr)
+    {
+        if (string.IsNullOrWhiteSpace(secret) || secret.Length < 16)
+            return NotFound();
+
+        if (!TryHookRateLimit(secret))
+            return StatusCode(429, new { error = "Rate limit exceeded." });
+
+        var integrations = HttpContext.RequestServices.GetRequiredService<TenantIntegrationService>();
+        var tenantId = await integrations.FindTenantIdByHookSecretAsync(secret);
+        if (tenantId is null)
+            return NotFound();
+
+        Request.EnableBuffering();
+        string json;
+        if (Request.HasFormContentType)
+        {
+            json = JsonSerializer.Serialize(Request.Form.ToDictionary(
+                kv => kv.Key,
+                kv => kv.Value.ToString()));
+        }
+        else
+        {
+            using var reader = new StreamReader(Request.Body, leaveOpen: true);
+            json = await reader.ReadToEndAsync();
+            Request.Body.Position = 0;
         }
 
-        var records = HttpContext.RequestServices.GetRequiredService<DynamicRecordService>();
-        var callName = contact is null
-            ? $"تماس ورودی از {model.Caller}"
-            : $"تماس ورودی از {contact.Title}";
-        var call = await records.CreateAsync(callsModule.Id, new Dictionary<string, string?>
-        {
-            ["name"] = callName,
-            ["contact"] = contact?.Id.ToString(),
-            ["direction"] = "incoming",
-            ["callAt"] = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm")
-        });
+        if (string.IsNullOrWhiteSpace(json))
+            json = "{}";
 
-        // پاپ‌آپ لحظه‌ای + اعلان برای کاربران Tenant
-        var tenantUsers = await _db.Users.AsNoTracking()
-            .Where(u => u.TenantId == apiKey!.TenantId && u.IsActive)
-            .Select(u => u.Id)
-            .ToListAsync();
+        var call = TelefonchyClient.ParseWebhookPayload(json);
+        var config = await integrations.GetAsync(tenantId);
+        if (!string.IsNullOrWhiteSpace(call?.WebserviceToken)
+            && !string.Equals(call.WebserviceToken, config.TelefonchyToken, StringComparison.Ordinal))
+            return StatusCode(403, new { error = "Invalid token." });
 
-        var hub = HttpContext.RequestServices.GetRequiredService<IHubContext<NotificationHub>>();
-        foreach (var userId in tenantUsers)
+        if (_tenant is TenantContext mutable)
         {
-            _db.Notifications.Add(new Notification
-            {
-                UserId = userId,
-                Title = "تماس ورودی",
-                Body = callName,
-                LinkUrl = $"/App/m/calls/{call.Id}/edit"
-            });
-            await hub.Clients.Group($"user-{userId}").SendAsync("incomingCall", new
-            {
-                caller = model.Caller,
-                contactId = contact?.Id,
-                contactTitle = contact?.Title,
-                callRecordId = call.Id
-            });
+            mutable.TenantId = tenantId;
+            mutable.IsTenantAdmin = true;
         }
-        await _db.SaveChangesAsync();
 
-        return Ok(new { callRecordId = call.Id, matchedContactId = contact?.Id });
+        if (isCdr)
+            BackgroundJob.Enqueue<TelefonchyWebhookJob>(j => j.ProcessCdrAsync(tenantId.Value, json));
+        else
+            BackgroundJob.Enqueue<TelefonchyWebhookJob>(j => j.ProcessEventAsync(tenantId.Value, json));
+
+        return Ok(new { status = "ok" });
+    }
+
+    private static bool TryHookRateLimit(string secret)
+    {
+        var now = DateTime.UtcNow;
+        var window = HookRateLimits.AddOrUpdate(secret,
+            _ => (1, now),
+            (_, current) => now - current.WindowStart > TimeSpan.FromMinutes(1)
+                ? (1, now)
+                : (current.Count + 1, current.WindowStart));
+        return window.Count <= RateLimitPerMinute;
     }
 }

@@ -14,12 +14,14 @@ public class IntegrationsController : AppControllerBase
     private readonly CrmDbContext _db;
     private readonly ITenantContext _tenant;
     private readonly TenantIntegrationService _integrations;
+    private readonly TelefonchyClient _telefonchy;
 
-    public IntegrationsController(CrmDbContext db, ITenantContext tenant, TenantIntegrationService integrations)
+    public IntegrationsController(CrmDbContext db, ITenantContext tenant, TenantIntegrationService integrations, TelefonchyClient telefonchy)
     {
         _db = db;
         _tenant = tenant;
         _integrations = integrations;
+        _telefonchy = telefonchy;
     }
 
     [HttpGet("/App/integrations")]
@@ -28,10 +30,17 @@ public class IntegrationsController : AppControllerBase
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
 
-        ViewBag.Config = await _integrations.GetAsync();
+        var config = await _integrations.GetAsync();
+        if (string.IsNullOrWhiteSpace(config.TelefonchyHookSecret))
+        {
+            config.TelefonchyHookSecret = TenantIntegrationService.NewHookSecret();
+            await _integrations.SaveAsync(config);
+        }
+
+        ViewBag.Config = config;
         ViewBag.ApiKeys = await _db.ApiKeys.AsNoTracking()
             .OrderByDescending(k => k.Id).ToListAsync();
-
+        ViewBag.TelefonchyOrigin = TelefonchyPublicOrigin();
         ViewData["Title"] = "یکپارچگی‌ها و API";
         return View();
     }
@@ -43,9 +52,98 @@ public class IntegrationsController : AppControllerBase
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
 
+        var existing = await _integrations.GetAsync();
+        if (string.IsNullOrWhiteSpace(config.SmtpPassword))
+            config.SmtpPassword = existing.SmtpPassword;
+        if (string.IsNullOrWhiteSpace(config.TelefonchyToken))
+            config.TelefonchyToken = existing.TelefonchyToken;
+        if (string.IsNullOrWhiteSpace(config.TelefonchyHookSecret))
+            config.TelefonchyHookSecret = existing.TelefonchyHookSecret;
+        if (string.IsNullOrWhiteSpace(config.TelefonchyHookSecret))
+            config.TelefonchyHookSecret = TenantIntegrationService.NewHookSecret();
+        config.TelefonchyLastSyncUtc = existing.TelefonchyLastSyncUtc;
+
         await _integrations.SaveAsync(config);
         TempData["Success"] = "تنظیمات یکپارچگی ذخیره شد.";
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/telefonchy/test")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestTelefonchy()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var page = await _telefonchy.GetCallsAsync(page: 1);
+        if (page is null)
+        {
+            TempData["Error"] = "اتصال به تلفنچی برقرار نشد. توکن و شناسه سرویس را بررسی کنید.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        TempData["Success"] = $"اتصال موفق بود. {page.TotalItems} تماس در گزارش تلفنچی دیده شد.";
+        TempData["TelefonchyExtens"] = await BuildExtensReportAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/telefonchy/extens")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TelefonchyExtens()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var report = await BuildExtensReportAsync();
+        if (report is null)
+            TempData["Error"] = "لیست داخلی‌ها از تلفنچی دریافت نشد. توکن وب‌سرویس را بررسی کنید.";
+        else
+            TempData["TelefonchyExtens"] = report;
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>داخلی‌های واقعی سرویس؛ مقدار «داخلی تلفنچی» کاربران باید از این لیست باشد.</summary>
+    private async Task<string?> BuildExtensReportAsync()
+    {
+        var services = await _telefonchy.GetServicesAsync();
+        if (services is null || services.Count == 0)
+            return null;
+
+        var lines = new List<string>();
+        foreach (var service in services)
+        {
+            var trunks = service.Trunks.Count > 0 ? string.Join(", ", service.Trunks) : "—";
+            lines.Add($"سرویس {service.ServiceId} | خطوط: {trunks}");
+            if (service.Extens.Count == 0)
+            {
+                lines.Add("    داخلی‌ای ثبت نشده است.");
+                continue;
+            }
+            foreach (var exten in service.Extens)
+                lines.Add($"    داخلی {exten.Number} — {exten.Name ?? "بی‌نام"}");
+        }
+        return string.Join("\n", lines);
+    }
+
+    [HttpPost("/App/integrations/telefonchy/sync")]
+    [ValidateAntiForgeryToken]
+    public IActionResult SyncTelefonchy()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+        if (_tenant.TenantId is not int tenantId)
+            return Forbid("Identity.Application");
+
+        Hangfire.BackgroundJob.Enqueue<TelefonchyCallSyncJob>(j => j.SyncTenantAsync(tenantId, true));
+        TempData["Success"] = "سینک تاریخچه تماس‌ها در صف قرار گرفت.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    private string TelefonchyPublicOrigin()
+    {
+        var host = Request.Host.Value ?? Request.Host.ToString();
+        var https = Request.IsHttps || host.Contains("bamacrm.ir", StringComparison.OrdinalIgnoreCase);
+        return $"{(https ? "https" : Request.Scheme)}://{host}";
     }
 
     [HttpPost("/App/integrations/api-keys/create")]

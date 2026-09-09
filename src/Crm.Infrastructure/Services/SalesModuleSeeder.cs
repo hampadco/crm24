@@ -121,6 +121,7 @@ public class SalesModuleSeeder
                 F("description", "توضیحات", FieldType.MultilineText, showInList: false)
             ]);
 
+        await EnsureCallTelephonyFieldsAsync(tenantId);
         await EnsureDemoLayoutsAndRelationsAsync(tenantId);
     }
 
@@ -136,6 +137,7 @@ public class SalesModuleSeeder
             new[] { "leads", "organizations", "contacts", "opportunities", "tasks", "events", "calls" }.Contains(m.Name)) == 7;
         if (hasAll)
         {
+            await EnsureCallTelephonyFieldsAsync(tenantId);
             var layoutsKey = $"sales-layouts-ok:{tenantId}";
             if (!_cache.TryGetValue(layoutsKey, out bool layoutsOk) || !layoutsOk)
             {
@@ -149,7 +151,6 @@ public class SalesModuleSeeder
         var adminProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
         var userProfile = await _db.Profiles.Where(p => p.TenantId == tenantId && !p.IsAdmin).Select(p => p.Id).FirstOrDefaultAsync();
         await SeedAsync(tenantId, adminProfile, userProfile);
-        await EnsureDemoLayoutsAndRelationsAsync(tenantId);
         _cache.Remove($"modules:{tenantId}");
         _cache.Set($"sales-layouts-ok:{tenantId}", true, TimeSpan.FromHours(24));
         _cache.Set(cacheKey, true, TimeSpan.FromHours(6));
@@ -202,6 +203,8 @@ public class SalesModuleSeeder
             await EnsureRelationAsync(tenantId, contactId2, oppId2, "فرصت‌های فروش", "مخاطب", "contact", RelationKind.OneToMany);
         if (contactsId is int contactId3 && callsId is int callId)
             await EnsureRelationAsync(tenantId, contactId3, callId, "تماس‌ها", "مخاطب", "contact", RelationKind.OneToMany);
+        if (leadsId is int leadId2 && callsId is int callId2)
+            await EnsureRelationAsync(tenantId, leadId2, callId2, "تماس‌ها", "سرنخ", "lead", RelationKind.OneToMany);
 
         await EnsureDemoDuplicateSettingsAsync(tenantId, modules);
 
@@ -337,6 +340,83 @@ public class SalesModuleSeeder
             LinkFieldName = linkFieldName
         });
         await _db.SaveChangesAsync();
+    }
+
+    /// <summary>فیلدهای یکپارچگی تلفنچی روی ماژول تماس — برای Tenantهای جدید و موجود.</summary>
+    public async Task EnsureCallTelephonyFieldsAsync(int tenantId)
+    {
+        var module = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "calls");
+        if (module is null)
+            return;
+
+        var existing = await _db.Fields
+            .Where(f => f.TenantId == tenantId && f.ModuleId == module.Id)
+            .Select(f => f.Name)
+            .ToListAsync();
+        var existingSet = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var specs = new FieldSpec[]
+        {
+            F("cuid", "شناسه تلفنچی", FieldType.Text, showInList: false),
+            F("callId", "شناسه رکورد تلفنچی", FieldType.Text, showInList: false),
+            F("requestId", "شناسه درخواست تماس سریع", FieldType.Text, showInList: false),
+            F("phoneNumber", "شماره طرف تماس", FieldType.Phone),
+            F("extension", "داخلی", FieldType.Text, showInList: false),
+            F("waitSeconds", "انتظار (ثانیه)", FieldType.Number, showInList: false),
+            F("talkSeconds", "مکالمه (ثانیه)", FieldType.Number, showInList: false),
+            F("recordingFileId", "شناسه فایل ضبط", FieldType.Text, showInList: false),
+            F("lead", "سرنخ", FieldType.Lookup, showInList: false, lookupModule: "leads")
+        };
+
+        var maxOrder = await _db.Fields
+            .Where(f => f.TenantId == tenantId && f.ModuleId == module.Id)
+            .Select(f => (int?)f.SortOrder)
+            .MaxAsync() ?? 0;
+
+        var block = await _db.FieldBlocks.FirstOrDefaultAsync(b =>
+            b.TenantId == tenantId && b.ModuleId == module.Id && b.Name == "telephony");
+        if (block is null)
+        {
+            block = new FieldBlock
+            {
+                TenantId = tenantId,
+                ModuleId = module.Id,
+                Name = "telephony",
+                Label = "اطلاعات تلفنچی",
+                SortOrder = 20
+            };
+            _db.FieldBlocks.Add(block);
+            await _db.SaveChangesAsync();
+        }
+
+        var added = false;
+        foreach (var spec in specs)
+        {
+            if (existingSet.Contains(spec.Name))
+                continue;
+            maxOrder++;
+            _db.Fields.Add(new FieldDef
+            {
+                TenantId = tenantId,
+                ModuleId = module.Id,
+                BlockId = block.Id,
+                Name = spec.Name,
+                Label = spec.Label,
+                Type = spec.Type,
+                IsCustom = false,
+                ShowInList = spec.ShowInList,
+                LookupModule = spec.LookupModule,
+                SortOrder = maxOrder
+            });
+            added = true;
+        }
+
+        if (added)
+            await _db.SaveChangesAsync();
+
+        _cache.Remove($"fields:{tenantId}:{module.Id}");
+        _cache.Remove($"blocks:{tenantId}:{module.Id}");
+        _cache.Remove($"modules:{tenantId}");
     }
 
     private async Task EnsureModuleAsync(

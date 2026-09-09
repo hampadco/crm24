@@ -4,37 +4,36 @@ overview: "اتصال کامل CRM به مرکز تلفن ابری تلفنچی:
 todos:
   - id: config
     content: افزودن تنظیمات تلفنچی به IntegrationConfig و کارت جدید در صفحه یکپارچگی‌ها + دکمه تست اتصال + ستون TelefonchyExtension روی CrmUser با مایگریشن
-    status: pending
+    status: completed
   - id: client
     content: ساخت TelefonchyClient در Crm.Infrastructure با متدهای GetCalls/GetCall/SmartCall/SmartCallStatus/GetRecording و فرمت تاریخ شمسی، ثبت در DI
-    status: pending
+    status: completed
   - id: fields
     content: افزودن فیلدهای تلفنی (cuid, phoneNumber, extension, waitSeconds, talkSeconds, recordingFileId, lead) به ماژول calls با متد idempotent در SalesModuleSeeder + ایندکس expression روی CustomData->>'cuid'
-    status: pending
+    status: completed
   - id: service
     content: "ساخت TelefonchyCallService: نرمال‌سازی شماره، تطبیق ماسک‌آگاه روی contacts/leads، Upsert رکورد تماس بر پایه cuid، و اعلان SignalR"
-    status: pending
+    status: completed
   - id: webhook
     content: افزودن دو endpoint وب‌هوک POST /api/v1/telefonchy/events/{secret} (ringing و hangup) و POST /api/v1/telefonchy/cdr/{secret} (اطلاعات کامل تماس پس از اتمام) با پاسخ فوری 200 و پردازش در Hangfire، و مهاجرت منطق voip/incoming به سرویس مشترک
-    status: pending
+    status: completed
   - id: popup
     content: بهبود پاپ‌آپ تماس ورودی در _PanelLayout.cshtml با نام مخاطب، شماره، لینک پرونده و ثبت مخاطب جدید + رویداد callStatus
-    status: pending
+    status: completed
   - id: sync
     content: ساخت TelefonchyCallSyncJob با اجرای هر ۵ دقیقه، پنجره همپوشان، صفحه‌بندی، ذخیره زمان آخرین سینک و دکمه سینک اولیه تاریخچه
-    status: pending
+    status: completed
   - id: c2c
     content: ساخت TelephonyController و قابلیت Click-to-Call با داخلی کارشناس، ثبت رکورد تماس خروجی، polling وضعیت، و دکمه تماس در Details.cshtml مخاطب/سرنخ
-    status: pending
+    status: completed
   - id: recording
     content: پروکسی پخش/دانلود فایل ضبط مکالمه با کنترل دسترسی، کش اختیاری در uploads و پخش‌کننده صوت روی رکورد تماس
-    status: pending
+    status: completed
   - id: report
     content: افزودن آمار تماس به داشبورد (ورودی/خروجی، بی‌پاسخ، میانگین مکالمه، برترین کارشناسان) و صفحه گزارش تماس با فیلتر و خروجی Excel
-    status: pending
+    status: completed
 isProject: false
 ---
-
 
 # اتصال CRM به تلفنچی (Telefonchy)
 

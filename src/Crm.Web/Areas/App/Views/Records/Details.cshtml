@@ -123,6 +123,15 @@
                     </button>
                 </form>
             }
+            @if (Model.CanClickToCall)
+            {
+                <button type="button" class="btn btn-outline-success btn-sm" id="crmClickToCall"
+                        data-module="@Model.Module.Name"
+                        data-id="@Model.Record.Id"
+                        data-phone="@Model.ClickToCallPhone">
+                    <i class="bx bx-phone-call me-1"></i> تماس
+                </button>
+            }
             @if (Model.CanEdit)
             {
                 <a asp-action="Edit" asp-route-moduleName="@Model.Module.Name" asp-route-id="@Model.Record.Id"
@@ -193,6 +202,32 @@
     </div>
 
     <partial name="_Alerts" />
+
+    @if (Model.HasCallRecording)
+    {
+        <div class="card mb-3">
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <i class="bx bx-microphone text-primary fs-3"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">ضبط مکالمه</div>
+                    <audio class="w-100 mt-1" controls preload="none" src="/App/telephony/recording/@Model.Record.Id"></audio>
+                </div>
+            </div>
+        </div>
+    }
+    else if (Model.HasPendingRecording)
+    {
+        <div class="card mb-3">
+            <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                <i class="bx bx-loader-alt bx-spin text-warning fs-3"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">در حال آماده‌سازی ضبط</div>
+                    <div class="text-muted small">تلفنچی هنوز شناسه فایل را نداده. این صفحه چند ثانیه دیگر خودش تازه می‌شود.</div>
+                </div>
+            </div>
+        </div>
+        <script>setTimeout(function () { location.reload(); }, 20000);</script>
+    }
 
     @if (highlights.Count > 0)
     {
@@ -1104,6 +1139,44 @@
 @section Scripts {
 <script>
 (function () {
+    var callBtn = document.getElementById('crmClickToCall');
+    if (callBtn) {
+        callBtn.addEventListener('click', function () {
+            if (callBtn.disabled) return;
+            callBtn.disabled = true;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]');
+            var body = new URLSearchParams();
+            body.set('moduleName', callBtn.getAttribute('data-module') || '');
+            body.set('recordId', callBtn.getAttribute('data-id') || '');
+            body.set('phone', callBtn.getAttribute('data-phone') || '');
+            if (token) body.set('__RequestVerificationToken', token.value);
+            fetch('/App/telephony/call', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+                body: body.toString()
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (res) {
+                  alert(res.j && res.j.message ? res.j.message : (res.ok ? 'درخواست تماس ارسال شد.' : 'تماس انجام نشد.'));
+                  if (res.ok && res.j.requestId) {
+                      var n = 0;
+                      var timer = setInterval(function () {
+                          n++;
+                          fetch('/App/telephony/call-status?requestId=' + encodeURIComponent(res.j.requestId))
+                              .then(function (r) { return r.json(); })
+                              .then(function (st) {
+                                  if (st.status === 'answered' || st.status === 'failed' || n >= 20)
+                                      clearInterval(timer);
+                              }).catch(function () { clearInterval(timer); });
+                      }, 3000);
+                  }
+              }).catch(function () {
+                  alert('ارتباط با سرور برقرار نشد.');
+              }).finally(function () {
+                  setTimeout(function () { callBtn.disabled = false; }, 8000);
+              });
+        });
+    }
+
     var root = document.querySelector('.crm-rd');
     if (!root) return;
 

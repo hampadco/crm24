@@ -247,7 +247,20 @@
                             .build();
 
                         connection.on("incomingCall", function (data) {
-                            var name = data.contactTitle || data.caller;
+                            var name = data.contactTitle || data.leadTitle || data.caller || 'شماره ناشناس';
+                            var phone = data.caller || '';
+                            var links = '';
+                            if (data.contactId) {
+                                links += '<a href="/App/m/contacts/' + data.contactId + '" class="btn btn-sm btn-primary me-1">مخاطب</a>';
+                            } else if (data.leadId) {
+                                links += '<a href="/App/m/leads/' + data.leadId + '" class="btn btn-sm btn-primary me-1">سرنخ</a>';
+                            } else if (phone) {
+                                links += '<a href="/App/m/contacts/create?mobile=' + encodeURIComponent(phone) + '" class="btn btn-sm btn-outline-primary me-1">ثبت مخاطب</a>';
+                            }
+                            if (data.callRecordId) {
+                                links += '<a href="/App/m/calls/' + data.callRecordId + '" class="btn btn-sm btn-outline-secondary">پرونده تماس</a>';
+                            }
+                            var header = (data.direction === 'outgoing' ? 'تماس خروجی' : 'تماس ورودی');
                             var wrapper = document.createElement("div");
                             wrapper.className = "position-fixed bottom-0 start-0 p-3";
                             wrapper.style.zIndex = "9999";
@@ -255,16 +268,26 @@
                                 '<div class="toast show" role="alert">' +
                                 '  <div class="toast-header bg-success text-white">' +
                                 '    <i class="bx bx-phone-incoming me-2"></i>' +
-                                '    <strong class="me-auto">تماس ورودی</strong>' +
+                                '    <strong class="me-auto">' + header + '</strong>' +
                                 '    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
                                 '  </div>' +
                                 '  <div class="toast-body">' +
-                                '    <div class="mb-2">' + name + ' <span dir="ltr">(' + data.caller + ')</span></div>' +
-                                '    <a href="/App/m/calls/' + data.callRecordId + '/edit" class="btn btn-sm btn-primary">ثبت نتیجه تماس</a>' +
+                                '    <div class="mb-2">' + name + ' <span dir="ltr">(' + phone + ')</span></div>' +
+                                '    ' + links +
                                 '  </div>' +
                                 '</div>';
                             document.body.appendChild(wrapper);
                             setTimeout(function () { wrapper.remove(); }, 30000);
+                        });
+
+                        connection.on("callStatus", function (data) {
+                            if (!data || !data.message) return;
+                            var note = document.createElement("div");
+                            note.className = "position-fixed top-0 start-50 translate-middle-x p-3";
+                            note.style.zIndex = "9999";
+                            note.innerHTML = '<div class="toast show"><div class="toast-body">' + data.message + '</div></div>';
+                            document.body.appendChild(note);
+                            setTimeout(function () { note.remove(); }, 8000);
                         });
 
                         connection.start().catch(function () { /* اتصال لحظه‌ای در دسترس نیست */ });

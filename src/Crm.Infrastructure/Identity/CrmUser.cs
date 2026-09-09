@@ -17,4 +17,7 @@ public class CrmUser : IdentityUser<int>
     public bool IsTenantAdmin { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; }
+
+    /// <summary>شماره داخلی تلفنچی برای Click-to-Call.</summary>
+    public string? TelefonchyExtension { get; set; }
 }

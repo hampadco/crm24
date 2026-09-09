@@ -29,6 +29,15 @@ public class DashboardViewModel
     public Dictionary<int, List<FieldDef>> PicklistFields { get; set; } = [];
     /// <summary>ویجت‌ها به‌صورت AJAX بعد از رندر اولیه لود می‌شوند.</summary>
     public bool DeferWidgets { get; set; } = true;
+    public CallDashboardStats? CallStats { get; set; }
+}
+
+public class CallDashboardStats
+{
+    public int IncomingToday { get; set; }
+    public int OutgoingToday { get; set; }
+    public int NoAnswerToday { get; set; }
+    public int AvgTalkSeconds { get; set; }
 }
 
 public class DashboardController : AppControllerBase
@@ -84,6 +93,45 @@ public class DashboardController : AppControllerBase
                 : null,
             DeferWidgets = true
         };
+
+        var callsModule = modules.FirstOrDefault(m => m.Name == "calls");
+        if (callsModule is not null)
+        {
+            var start = DateTime.UtcNow.Date;
+            var todays = await _db.Records.AsNoTracking()
+                .Where(r => r.ModuleId == callsModule.Id && r.CreatedAtUtc >= start)
+                .Select(r => r.CustomData)
+                .ToListAsync();
+            var incoming = 0;
+            var outgoing = 0;
+            var noanswer = 0;
+            var talkSum = 0;
+            var talkCount = 0;
+            foreach (var json in todays)
+            {
+                try
+                {
+                    var d = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string?>>(json) ?? new();
+                    var dir = d.GetValueOrDefault("direction");
+                    if (dir == "incoming") incoming++;
+                    else if (dir == "outgoing") outgoing++;
+                    if (d.GetValueOrDefault("result") == "noanswer") noanswer++;
+                    if (int.TryParse(d.GetValueOrDefault("talkSeconds"), out var ts) && ts > 0)
+                    {
+                        talkSum += ts;
+                        talkCount++;
+                    }
+                }
+                catch { /* نادیده */ }
+            }
+            model.CallStats = new CallDashboardStats
+            {
+                IncomingToday = incoming,
+                OutgoingToday = outgoing,
+                NoAnswerToday = noanswer,
+                AvgTalkSeconds = talkCount == 0 ? 0 : talkSum / talkCount
+            };
+        }
 
         // اسکلت ویجت‌ها بدون تجمیع سنگین — داده از /widgets-data می‌آید
         var widgets = await _db.DashboardWidgets.AsNoTracking()

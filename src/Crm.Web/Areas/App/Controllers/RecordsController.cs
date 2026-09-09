@@ -870,6 +870,34 @@ public class RecordsController : AppControllerBase
             PrintTemplates = await ListAccessiblePrintTemplatesAsync(module.Id)
         };
 
+        var integrations = HttpContext.RequestServices.GetRequiredService<TenantIntegrationService>();
+        var telConfig = await integrations.GetAsync();
+        if (telConfig.HasTelefonchy && module.Name is "contacts" or "leads")
+        {
+            var phone = values.GetValueOrDefault("mobile") ?? values.GetValueOrDefault("phone");
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                model.CanClickToCall = true;
+                model.ClickToCallPhone = phone;
+            }
+        }
+        if (telConfig.HasTelefonchy && telConfig.TelefonchyRecordingEnabled
+            && string.Equals(module.Name, "calls", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!TelefonchyCallService.HasRecording(values))
+            {
+                var callSvc = HttpContext.RequestServices.GetRequiredService<TelefonchyCallService>();
+                await callSvc.EnsureRecordingAsync(module.Id, record);
+                record = await _records.GetAsync(module.Id, id) ?? record;
+                values = DynamicRecordService.ParseData(record);
+                model.Record = record;
+                model.Values = values;
+            }
+
+            model.HasCallRecording = TelefonchyCallService.HasRecording(values);
+            model.HasPendingRecording = TelefonchyCallService.IsRecordingPending(values);
+        }
+
         var (lineBlock, lineModule, lineFields) = await _lineItems.GetLineBlockAsync(module.Id);
         if (lineBlock is not null && lineModule is not null && !string.IsNullOrWhiteSpace(lineBlock.LineLinkField))
         {

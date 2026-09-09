@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
@@ -27,13 +28,33 @@ public class IntegrationConfig
     // حسابداری (وب‌سرویس مقصد)
     public string? AccountingWebhookUrl { get; set; }
 
-    // VoIP سانترال
+    // VoIP سانترال (عمومی، غیر تلفنچی)
     public bool VoipEnabled { get; set; }
+
+    // تلفنچی
+    public bool TelefonchyEnabled { get; set; }
+    public string? TelefonchyBaseUrl { get; set; }
+    public string? TelefonchyToken { get; set; }
+    public string? TelefonchyServiceId { get; set; }
+    public string? TelefonchyHookSecret { get; set; }
+    public bool TelefonchySyncEnabled { get; set; } = true;
+    public bool TelefonchyAutoLogCalls { get; set; } = true;
+    public bool TelefonchyRecordingEnabled { get; set; } = true;
+    public string? TelefonchyDefaultExten { get; set; }
+    public DateTime? TelefonchyLastSyncUtc { get; set; }
 
     public bool HasSmtp => !string.IsNullOrWhiteSpace(SmtpHost);
     public bool HasSms => !string.IsNullOrWhiteSpace(SmsApiUrl);
     public bool HasBale => !string.IsNullOrWhiteSpace(BaleBotToken);
     public bool HasAccounting => !string.IsNullOrWhiteSpace(AccountingWebhookUrl);
+    public bool HasTelefonchy => TelefonchyEnabled
+        && !string.IsNullOrWhiteSpace(TelefonchyToken)
+        && !string.IsNullOrWhiteSpace(TelefonchyServiceId);
+
+    public string ResolvedTelefonchyBaseUrl =>
+        string.IsNullOrWhiteSpace(TelefonchyBaseUrl)
+            ? "https://panel.telefonchy.com/webservice/v1"
+            : TelefonchyBaseUrl.Trim().TrimEnd('/');
 }
 
 public class TenantIntegrationService
@@ -67,15 +88,35 @@ public class TenantIntegrationService
             : section.Deserialize<IntegrationConfig>() ?? new IntegrationConfig();
     }
 
-    public async Task SaveAsync(IntegrationConfig config)
+    public async Task SaveAsync(IntegrationConfig config, int? tenantId = null)
     {
-        if (_tenant.TenantId is not int tenantId)
-            throw new InvalidOperationException("Tenant context missing.");
+        var id = tenantId ?? _tenant.TenantId
+            ?? throw new InvalidOperationException("Tenant context missing.");
 
-        var tenant = await _db.Tenants.FirstAsync(t => t.Id == tenantId);
+        var tenant = await _db.Tenants.FirstAsync(t => t.Id == id);
         var root = JsonNode.Parse(tenant.Settings) as JsonObject ?? new JsonObject();
         root[SectionKey] = JsonSerializer.SerializeToNode(config);
         tenant.Settings = root.ToJsonString();
         await _db.SaveChangesAsync();
     }
+
+    public async Task<int?> FindTenantIdByHookSecretAsync(string secret)
+    {
+        if (string.IsNullOrWhiteSpace(secret))
+            return null;
+
+        var tenantId = await _db.Tenants
+            .FromSqlInterpolated($"""
+                SELECT * FROM "Tenants"
+                WHERE "Settings"::jsonb -> 'integrations' ->> 'TelefonchyHookSecret' = {secret.Trim()}
+                LIMIT 1
+                """)
+            .AsNoTracking()
+            .Select(t => (int?)t.Id)
+            .FirstOrDefaultAsync();
+        return tenantId;
+    }
+
+    public static string NewHookSecret() =>
+        Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
 }
