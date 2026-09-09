@@ -11,15 +11,18 @@ public class TelefonchyWebhookJob
     private readonly TelefonchyCallService _calls;
     private readonly TenantIntegrationService _integrations;
     private readonly ILogger<TelefonchyWebhookJob> _logger;
+    private readonly TelefonchyTraceService _trace;
 
     public TelefonchyWebhookJob(
         TelefonchyCallService calls,
         TenantIntegrationService integrations,
-        ILogger<TelefonchyWebhookJob> logger)
+        ILogger<TelefonchyWebhookJob> logger,
+        TelefonchyTraceService trace)
     {
         _calls = calls;
         _integrations = integrations;
         _logger = logger;
+        _trace = trace;
     }
 
     [AutomaticRetry(Attempts = 1)]
@@ -44,6 +47,8 @@ public class TelefonchyWebhookJob
         }
 
         var ev = (call.Event ?? "").Trim().ToLowerInvariant();
+        await _trace.WriteAsync(tenantId, TelefonchyTraceService.FromCall(
+            "job", "process-event", call, $"جاب رویداد: {ev}", payloadJson));
         if (ev == "recording.merged.ready")
         {
             BackgroundJob.Enqueue<TelefonchyCallSyncJob>(
@@ -85,11 +90,17 @@ public class TelefonchyWebhookJob
 
         if (string.Equals(call.Event, "recording.merged.ready", StringComparison.OrdinalIgnoreCase))
         {
+            await _trace.WriteAsync(tenantId, TelefonchyTraceService.FromCall(
+                "job", "recording-merged-ready", call, "وب‌هوک ضبط merged آماده شد", payloadJson));
             BackgroundJob.Enqueue<TelefonchyCallSyncJob>(
                 j => j.FetchMergedRecordingAsync(tenantId, call.Cuid, call.RecordId ?? call.CallId, 0));
             return;
         }
 
+        await _trace.WriteAsync(tenantId, TelefonchyTraceService.FromCall(
+            "job", "process-cdr", call,
+            $"جاب CDR: status={call.Status} talk={call.TalkSeconds} file_id={call.FileId}",
+            payloadJson));
         await _calls.HandleHangupOrCdrAsync(call, fetchDetails: string.IsNullOrWhiteSpace(call.FileId));
         if (LooksAnswered(call))
             ScheduleMergedFetch(tenantId, call, TimeSpan.FromSeconds(20));
@@ -125,19 +136,22 @@ public class TelefonchyCallSyncJob
     private readonly TelefonchyClient _client;
     private readonly TelefonchyCallService _calls;
     private readonly ILogger<TelefonchyCallSyncJob> _logger;
+    private readonly TelefonchyTraceService _trace;
 
     public TelefonchyCallSyncJob(
         CrmDbContext db,
         TenantIntegrationService integrations,
         TelefonchyClient client,
         TelefonchyCallService calls,
-        ILogger<TelefonchyCallSyncJob> logger)
+        ILogger<TelefonchyCallSyncJob> logger,
+        TelefonchyTraceService trace)
     {
         _db = db;
         _integrations = integrations;
         _client = client;
         _calls = calls;
         _logger = logger;
+        _trace = trace;
     }
 
     public async Task SyncAllTenantsAsync()
@@ -239,6 +253,15 @@ public class TelefonchyCallSyncJob
             return;
 
         _calls.BindTenant(tenantId);
+        await _trace.WriteAsync(tenantId, new TelefonchyTraceEntry
+        {
+            Kind = "job",
+            Action = "fetch-merged",
+            Cuid = cuid,
+            CallId = recordId,
+            Status = $"attempt-{attempt + 1}",
+            Summary = $"جاب دریافت ضبط merged attempt {attempt + 1}"
+        });
         var record = await _calls.FindCallRecordAsync(cuid, recordId);
         if (record is null)
         {

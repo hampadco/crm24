@@ -92,6 +92,7 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SavedListView> SavedListViews => Set<SavedListView>();
+    public DbSet<TelefonchyTrace> TelefonchyTraces => Set<TelefonchyTrace>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -439,6 +440,14 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         {
             e.Property(v => v.Definition).HasColumnType("jsonb");
             e.HasIndex(v => new { v.TenantId, v.ModuleId });
+        });
+
+        builder.Entity<TelefonchyTrace>(e =>
+        {
+            e.ToTable("TelefonchyTraces");
+            e.Property(t => t.Payload).HasColumnType("text");
+            e.HasIndex(t => new { t.TenantId, t.AtUtc });
+            e.HasQueryFilter(t => _tenant.TenantId == null || t.TenantId == _tenant.TenantId);
         });
 
         ApplyTenantAndSoftDeleteFilters(builder);

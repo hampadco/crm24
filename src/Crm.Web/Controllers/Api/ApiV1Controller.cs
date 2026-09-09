@@ -291,9 +291,20 @@ public class ApiV1Controller : ControllerBase
 
         var call = TelefonchyClient.ParseWebhookPayload(json);
         var config = await integrations.GetAsync(tenantId);
+        var trace = HttpContext.RequestServices.GetRequiredService<TelefonchyTraceService>();
         if (!string.IsNullOrWhiteSpace(call?.WebserviceToken)
             && !string.Equals(call.WebserviceToken, config.TelefonchyToken, StringComparison.Ordinal))
+        {
+            await trace.WriteAsync(tenantId, new TelefonchyTraceEntry
+            {
+                Kind = "webhook",
+                Action = isCdr ? "cdr-hook" : "events-hook",
+                Status = "403",
+                Summary = "وب‌هوک رد شد: توکن نامعتبر",
+                Payload = json
+            });
             return StatusCode(403, new { error = "Invalid token." });
+        }
 
         if (_tenant is TenantContext mutable)
         {
@@ -305,6 +316,21 @@ public class ApiV1Controller : ControllerBase
             BackgroundJob.Enqueue<TelefonchyWebhookJob>(j => j.ProcessCdrAsync(tenantId.Value, json));
         else
             BackgroundJob.Enqueue<TelefonchyWebhookJob>(j => j.ProcessEventAsync(tenantId.Value, json));
+
+        await trace.WriteAsync(tenantId, new TelefonchyTraceEntry
+        {
+            Kind = "webhook",
+            Action = isCdr ? "cdr-hook" : "events-hook",
+            Direction = call?.Direction,
+            Status = call?.Event ?? call?.Status,
+            Cuid = call?.Cuid,
+            CallId = call?.CallId ?? call?.RecordId,
+            Phone = call?.ExternalNumber,
+            Summary = isCdr
+                ? $"وب‌هوک CDR رسید — event={call?.Event} status={call?.Status} talk={call?.TalkSeconds}"
+                : $"وب‌هوک رویداد رسید — event={call?.Event} {call?.Src} → {call?.Dest}",
+            Payload = json
+        });
 
         return Ok(new { status = "ok" });
     }

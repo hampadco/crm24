@@ -3423,6 +3423,68 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("TagLinks");
                 });
 
+            modelBuilder.Entity("Crm.Core.Entities.TelefonchyTrace", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CallId")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("CrmRecordId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Cuid")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Direction")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("HttpStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Path")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("RequestId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Summary")
+                        .HasColumnType("text");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "AtUtc");
+
+                    b.ToTable("TelefonchyTraces", (string)null);
+                });
+
             modelBuilder.Entity("Crm.Core.Entities.Tenant", b =>
                 {
                     b.Property<int>("Id")

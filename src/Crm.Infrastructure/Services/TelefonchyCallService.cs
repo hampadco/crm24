@@ -24,6 +24,7 @@ public class TelefonchyCallService
     private readonly ICallRecordingStore _recordings;
     private readonly ILogger<TelefonchyCallService> _logger;
     private readonly ICallPopupNotifier _notifier;
+    private readonly TelefonchyTraceService _trace;
 
     public TelefonchyCallService(
         CrmDbContext db,
@@ -33,7 +34,8 @@ public class TelefonchyCallService
         TelefonchyClient client,
         ICallRecordingStore recordings,
         ILogger<TelefonchyCallService> logger,
-        ICallPopupNotifier notifier)
+        ICallPopupNotifier notifier,
+        TelefonchyTraceService trace)
     {
         _db = db;
         _tenant = tenant;
@@ -43,6 +45,7 @@ public class TelefonchyCallService
         _recordings = recordings;
         _logger = logger;
         _notifier = notifier;
+        _trace = trace;
     }
 
     public void BindTenant(int tenantId)
@@ -151,6 +154,8 @@ public class TelefonchyCallService
         if (IsInternalLeg(call))
         {
             _logger.LogDebug("Telefonchy: skipped internal leg to {Number}.", call.ExternalNumber);
+            await _trace.WriteAsync(TelefonchyTraceService.FromCall(
+                "call", "skip-internal", call, $"پای داخلی رد شد ({call.Src} → {call.Dest})"), ct);
             return null;
         }
 
@@ -170,10 +175,19 @@ public class TelefonchyCallService
             await _records.UpdateAsync(callsModule.Id, existing.Id, merged);
             existing.Title = merged.GetValueOrDefault("name") ?? existing.Title;
             existing.CustomData = JsonSerializer.Serialize(merged);
+            await _trace.WriteAsync(TelefonchyTraceService.FromCall(
+                "call", "upsert-update", call,
+                $"رکورد CRM #{existing.Id} به‌روز شد — {call.Event ?? call.Status} talk={call.TalkSeconds}",
+                JsonSerializer.Serialize(merged), existing.Id), ct);
             return existing;
         }
 
-        return await _records.CreateAsync(callsModule.Id, values);
+        var created = await _records.CreateAsync(callsModule.Id, values);
+        await _trace.WriteAsync(TelefonchyTraceService.FromCall(
+            "call", "upsert-create", call,
+            $"رکورد CRM #{created?.Id} ساخته شد — {call.Event ?? call.Status}",
+            JsonSerializer.Serialize(values), created?.Id), ct);
+        return created;
     }
 
     public enum CallRecordingState
@@ -514,6 +528,8 @@ public class TelefonchyCallService
 
     public async Task HandleRingingAsync(TelefonchyCallDto call, CancellationToken ct = default)
     {
+        await _trace.WriteAsync(TelefonchyTraceService.FromCall(
+            "call", "ringing", call, $"زنگ — {call.Direction} {call.Src} → {call.Dest}"), ct);
         var config = await _integrations.GetAsync();
         var matches = await ResolveMatchesAsync(call, ct);
         DynamicRecord? record = null;
@@ -524,6 +540,9 @@ public class TelefonchyCallService
 
     public async Task HandleHangupOrCdrAsync(TelefonchyCallDto call, bool fetchDetails, CancellationToken ct = default)
     {
+        await _trace.WriteAsync(TelefonchyTraceService.FromCall(
+            "call", call.Event ?? "hangup-or-cdr", call,
+            $"اتمام/جزئیات — status={call.Status} talk={call.TalkSeconds} wait={call.WaitSeconds} fetchDetails={fetchDetails}"), ct);
         var config = await _integrations.GetAsync();
         // مسیر جزئیات تماس فقط call_id (شناسه رکورد) را می‌پذیرد و با cuid ریدایرکت می‌دهد.
         var lookupId = !string.IsNullOrWhiteSpace(call.CallId)

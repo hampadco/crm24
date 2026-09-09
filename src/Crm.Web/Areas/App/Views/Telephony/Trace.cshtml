@@ -1,0 +1,124 @@
+@model Crm.Web.Areas.App.Controllers.TelefonchyTraceViewModel
+@using Crm.Web.Services
+@{
+    ViewData["PanelTitle"] = "لاگ تلفنچی";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+    <h4 class="mb-0"><i class="bx bx-terminal text-primary me-1"></i> لاگ تلفنچی</h4>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="/App/telephony/report" class="btn btn-outline-secondary btn-sm">گزارش تماس</a>
+        <a href="/App/integrations" class="btn btn-outline-secondary btn-sm">تنظیمات</a>
+        <form asp-action="ClearTrace" method="post" class="d-inline" data-confirm="همه لاگ‌های تلفنچی این Tenant پاک شود؟">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bx bx-trash me-1"></i> پاک‌کردن لاگ</button>
+        </form>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<p class="text-muted small mb-3">
+    هر وب‌هوک، تماس سریع، درخواست API و دریافت ضبط اینجا ثبت می‌شود.
+    قبل از هر سناریو لاگ را پاک کنید، سناریو را اجرا کنید، بعد همین صفحه را برای من بفرستید.
+</p>
+
+<form method="get" class="card mb-3">
+    <div class="card-body row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">نوع</label>
+            <select name="kind" class="form-select form-select-sm">
+                <option value="">همه</option>
+                @foreach (var k in new[] { "webhook", "job", "call", "api", "recording" })
+                {
+                    <option value="@k" selected="@(Model.Kind == k ? "selected" : null)">@k</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">جستجو</label>
+            <input type="text" name="q" value="@Model.Query" class="form-control form-control-sm" dir="ltr" placeholder="cuid, شماره، خلاصه، payload" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-check mt-4">
+                <input type="checkbox" name="live" value="true" class="form-check-input" @(Model.Live ? "checked" : null) />
+                <span class="form-check-label">تازه‌سازی خودکار</span>
+            </label>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">نمایش</button>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th style="width:9rem">زمان</th>
+                    <th>نوع</th>
+                    <th>عمل</th>
+                    <th>وضعیت</th>
+                    <th>شماره / cuid</th>
+                    <th>خلاصه</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @if (Model.Rows.Count == 0)
+            {
+                <tr><td colspan="7" class="text-muted text-center py-4">لاگی نیست. یک تماس بگیرید تا اینجا ظاهر شود.</td></tr>
+            }
+            @foreach (var row in Model.Rows)
+            {
+                var badge = row.Kind switch
+                {
+                    "webhook" => "primary",
+                    "call" => "success",
+                    "recording" => "warning",
+                    "api" => "info",
+                    _ => "secondary"
+                };
+                <tr>
+                    <td class="small" dir="ltr">@PersianDateHelper.ToJalaliDateTimeSeconds(row.AtUtc)</td>
+                    <td><span class="badge bg-@badge">@row.Kind</span></td>
+                    <td class="small" dir="ltr">@row.Action</td>
+                    <td class="small" dir="ltr">@(row.Status ?? row.Direction)</td>
+                    <td class="small" dir="ltr">
+                        @if (!string.IsNullOrWhiteSpace(row.Phone))
+                        {
+                            <div>@row.Phone</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(row.Cuid))
+                        {
+                            <div class="text-muted">@row.Cuid</div>
+                        }
+                        @if (row.CrmRecordId is int rid)
+                        {
+                            <a href="/App/m/calls/@rid">#@rid</a>
+                        }
+                    </td>
+                    <td class="small">@row.Summary</td>
+                    <td>
+                        @if (!string.IsNullOrWhiteSpace(row.Payload))
+                        {
+                            <details>
+                                <summary class="small">payload</summary>
+                                <pre class="small mb-0 p-2 bg-light" dir="ltr" style="max-height:280px;overflow:auto;white-space:pre-wrap">@row.Payload</pre>
+                            </details>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.Live)
+{
+    <script>
+        setTimeout(function () { location.reload(); }, 4000);
+    </script>
+}

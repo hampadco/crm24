@@ -1,0 +1,149 @@
+زمان	نوع	عمل	وضعیت	شماره / cuid	خلاصه	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727932.39328
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727633.38012
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787575535.2135815
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727460.37333
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727422.37204
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787576099.2137074
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787728001.39619
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787571695.2127547
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787576165.2137225
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727542.37635
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787571817.2127843
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787577424.2140544
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787563921.2103954
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727687.38275
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727961.39460
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727386.37078
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727819.38822
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787564192.2105040
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	recording	/calls/record-quality/merged	Failed	
+1787727656.38134
+Failed 167 بایت — دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787563921.2103954
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727422.37204
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787576099.2137074
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727687.38275
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787576165.2137225
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727819.38822
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787571817.2127843
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787577424.2140544
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727633.38012
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727961.39460
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727460.37333
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787575535.2135815
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787564192.2105040
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727542.37635
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727386.37078
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727656.38134
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787728001.39619
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787571695.2127547
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-5		جاب دریافت ضبط merged attempt 5	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6	
+1787727932.39328
+جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-4		جاب دریافت ضبط merged attempt 4	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6		جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۴۰	job	fetch-merged	attempt-6		جاب دریافت ضبط merged attempt 6	
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۲۴	call	smartcall	outgoing	
+09149501938
+#19644	تماس سریع رد شد: دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۲۴	api	GET /smartcall	ok		پاسخ تلفنچی 200 برای /smartcall	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۱۵	call	smartcall	outgoing	
+09149501938
+#19644	تماس سریع رد شد: دسترسی محدود شده است.	
+payload
+۱۴۰۵/۰۶/۱۸ ۲۲:۰۸:۱۵	api	GET /smartcall	ok		پاسخ تلفنچی 200 برای /smartcall	

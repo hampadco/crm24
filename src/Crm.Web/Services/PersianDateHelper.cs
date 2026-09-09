@@ -22,6 +22,14 @@ public static class PersianDateHelper
             $"{pc.GetYear(dt):0000}/{pc.GetMonth(dt):00}/{pc.GetDayOfMonth(dt):00} {dt.Hour:00}:{dt.Minute:00}");
     }
 
+    public static string ToJalaliDateTimeSeconds(DateTime dateTime)
+    {
+        var dt = ToIranTime(dateTime);
+        var pc = new PersianCalendar();
+        return PersianFormattingHelper.ToPersianDigits(
+            $"{pc.GetYear(dt):0000}/{pc.GetMonth(dt):00}/{pc.GetDayOfMonth(dt):00} {dt.Hour:00}:{dt.Minute:00}:{dt.Second:00}");
+    }
+
     /// <summary>مقدار ISO برای مقداردهی اولیه flatpickr (تاریخ) — به وقت ایران.</summary>
     public static string ToIsoDate(DateTime dateTime) => ToIranTime(dateTime).ToString("yyyy-MM-dd");
 

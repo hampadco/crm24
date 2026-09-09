@@ -83,6 +83,21 @@ public class TelephonyController : AppControllerBase
             return BadRequest(new { ok = false, message = "شماره تماس روی این پرونده خالی است." });
 
         var result = await _client.SmartCallAsync(exten, number);
+        await HttpContext.RequestServices.GetRequiredService<TelefonchyTraceService>().WriteAsync(new TelefonchyTraceEntry
+        {
+            Kind = "call",
+            Action = "smartcall",
+            Direction = "outgoing",
+            Status = result?.CallStatus,
+            Cuid = result?.Cuid,
+            RequestId = result?.RequestId,
+            Phone = number,
+            CrmRecordId = recordId,
+            Summary = result is { Ok: true }
+                ? $"تماس سریع از داخلی {exten} به {number} — {result.CallStatus}"
+                : $"تماس سریع رد شد: {result?.Message ?? result?.FailureReason}",
+            Payload = TelefonchyTraceService.ToJson(result)
+        });
         if (result is null || !result.Ok)
         {
             var raw = result?.Message ?? result?.FailureReason;
@@ -144,6 +159,16 @@ public class TelephonyController : AppControllerBase
             return BadRequest(new { ok = false });
 
         var result = await _client.GetSmartCallStatusAsync(requestId);
+        await HttpContext.RequestServices.GetRequiredService<TelefonchyTraceService>().WriteAsync(new TelefonchyTraceEntry
+        {
+            Kind = "call",
+            Action = "smartcall-status",
+            Status = result?.CallStatus,
+            Cuid = result?.Cuid,
+            RequestId = requestId,
+            Summary = $"وضعیت تماس سریع: {result?.CallStatus ?? "unknown"}",
+            Payload = TelefonchyTraceService.ToJson(result)
+        });
         if (result is null)
             return Ok(new { ok = false, status = "unknown" });
 
@@ -217,6 +242,15 @@ public class TelephonyController : AppControllerBase
 
         var data = DynamicRecordService.ParseData(record);
         var tenantId = _tenant.TenantId ?? 0;
+        await HttpContext.RequestServices.GetRequiredService<TelefonchyTraceService>().WriteAsync(new TelefonchyTraceEntry
+        {
+            Kind = "recording",
+            Action = "play",
+            Cuid = data.GetValueOrDefault("cuid"),
+            CallId = data.GetValueOrDefault("callId"),
+            CrmRecordId = callRecordId,
+            Summary = $"درخواست پخش ضبط رکورد #{callRecordId}"
+        });
 
         if (!TelefonchyCallService.HasRecording(data)
             || string.IsNullOrWhiteSpace(data.GetValueOrDefault("recordingFile")))
@@ -261,6 +295,53 @@ public class TelephonyController : AppControllerBase
             ? "audio/wav"
             : "audio/mpeg";
         return PhysicalFile(cached, contentType, enableRangeProcessing: true);
+    }
+
+    [HttpGet("/App/telephony/trace")]
+    public async Task<IActionResult> Trace(string? kind, string? q, bool live = false)
+    {
+        var module = await _metadata.GetModuleByNameAsync("calls");
+        if (module is null || !await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var query = _db.TelefonchyTraces.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(kind))
+            query = query.Where(t => t.Kind == kind);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            query = query.Where(t =>
+                (t.Summary != null && t.Summary.Contains(q))
+                || (t.Action != null && t.Action.Contains(q))
+                || (t.Cuid != null && t.Cuid.Contains(q))
+                || (t.Phone != null && t.Phone.Contains(q))
+                || (t.Payload != null && t.Payload.Contains(q)));
+        }
+
+        var rows = await query.OrderByDescending(t => t.Id).Take(400).ToListAsync();
+        ViewData["Title"] = "لاگ تلفنچی";
+        return View(new TelefonchyTraceViewModel
+        {
+            Kind = kind,
+            Query = q,
+            Live = live,
+            Rows = rows
+        });
+    }
+
+    [HttpPost("/App/telephony/trace/clear")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearTrace()
+    {
+        var module = await _metadata.GetModuleByNameAsync("calls");
+        if (module is null || !await _access.CanViewModuleAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var tid = _tenant.TenantId ?? 0;
+        var deleted = await _db.TelefonchyTraces.IgnoreQueryFilters()
+            .Where(t => t.TenantId == tid)
+            .ExecuteDeleteAsync();
+        TempData["Success"] = deleted == 0 ? "لاگی برای پاک‌کردن نبود." : $"{deleted} ردیف لاگ پاک شد.";
+        return RedirectToAction(nameof(Trace));
     }
 
     [HttpGet("/App/telephony/report")]
@@ -358,4 +439,12 @@ public class CallReportViewModel
     public int OutgoingCount { get; set; }
     public int NoAnswerCount { get; set; }
     public int AvgTalkSeconds { get; set; }
+}
+
+public class TelefonchyTraceViewModel
+{
+    public string? Kind { get; set; }
+    public string? Query { get; set; }
+    public bool Live { get; set; }
+    public List<TelefonchyTrace> Rows { get; set; } = [];
 }

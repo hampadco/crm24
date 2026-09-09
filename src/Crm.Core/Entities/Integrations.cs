@@ -50,3 +50,31 @@ public class PaymentTransaction : TenantEntity
     /// <summary>آدرس بازگشت پس از پرداخت.</summary>
     public string? ReturnUrl { get; set; }
 }
+
+/// <summary>لاگ خام رویدادها و درخواست‌های تلفنچی برای عیب‌یابی سناریوهای تماس.</summary>
+public class TelefonchyTrace
+{
+    public long Id { get; set; }
+    public int TenantId { get; set; }
+    public DateTime AtUtc { get; set; }
+
+    /// <summary>webhook / api / call / recording / job</summary>
+    public string Kind { get; set; } = "";
+
+    /// <summary>ringing / hangup / cdr / smartcall / upsert / merged ...</summary>
+    public string Action { get; set; } = "";
+
+    public string? Direction { get; set; }
+    public string? Status { get; set; }
+    public string? Cuid { get; set; }
+    public string? CallId { get; set; }
+    public string? RequestId { get; set; }
+    public string? Phone { get; set; }
+    public string? Summary { get; set; }
+    public string? Path { get; set; }
+    public int? HttpStatus { get; set; }
+    public int? CrmRecordId { get; set; }
+
+    /// <summary>بدنه خام JSON یا خلاصه پاسخ API.</summary>
+    public string? Payload { get; set; }
+}

@@ -73,6 +73,7 @@ builder.Services.AddScoped<TelefonchyClient>();
 builder.Services.AddScoped<TelefonchyCallService>();
 builder.Services.AddScoped<TelefonchyWebhookJob>();
 builder.Services.AddScoped<TelefonchyCallSyncJob>();
+builder.Services.AddScoped<TelefonchyTraceService>();
 builder.Services.AddScoped<Crm.Core.Abstractions.ICallPopupNotifier, Crm.Web.Hubs.SignalRCallPopupNotifier>();
 builder.Services.AddScoped<Crm.Core.Abstractions.ICallRecordingStore, Crm.Web.Services.LocalCallRecordingStore>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IEmailSender, SmtpEmailSender>();

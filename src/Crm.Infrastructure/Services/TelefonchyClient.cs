@@ -150,15 +150,18 @@ public class TelefonchyClient
     private readonly TenantIntegrationService _integrations;
     private readonly IHttpClientFactory _httpFactory;
     private readonly ILogger<TelefonchyClient> _logger;
+    private readonly TelefonchyTraceService _trace;
 
     public TelefonchyClient(
         TenantIntegrationService integrations,
         IHttpClientFactory httpFactory,
-        ILogger<TelefonchyClient> logger)
+        ILogger<TelefonchyClient> logger,
+        TelefonchyTraceService trace)
     {
         _integrations = integrations;
         _httpFactory = httpFactory;
         _logger = logger;
+        _trace = trace;
     }
 
     public async Task<TelefonchyCallPage?> GetCallsAsync(
@@ -467,6 +470,7 @@ public class TelefonchyClient
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Telefonchy recording HTTP {Status}.", (int)response.StatusCode);
+                await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "error", $"HTTP {(int)response.StatusCode}", 0, ct);
                 return new TelefonchyRecordingResult
                 {
                     Error = $"تلفنچی کد {(int)response.StatusCode} برگرداند."
@@ -475,13 +479,17 @@ public class TelefonchyClient
 
             var bytes = await response.Content.ReadAsByteArrayAsync(ct);
             if (bytes.Length == 0)
+            {
+                await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "empty", "پاسخ خالی", 0, ct);
                 return new TelefonchyRecordingResult { Error = "پاسخ تلفنچی خالی بود." };
+            }
 
             // این مسیر حتی در خطا هم HTTP 200 و Content-Type صوتی می‌دهد و
             // متن خطا را در بدنه JSON می‌فرستد. بدون این بررسی، فایل خراب کش می‌شود.
             if (TryReadJsonError(bytes, out var apiError))
             {
                 _logger.LogWarning("Telefonchy recording rejected: {Error}", apiError);
+                await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "rejected", apiError, bytes.Length, ct);
                 return new TelefonchyRecordingResult { Error = apiError };
             }
 
@@ -489,6 +497,7 @@ public class TelefonchyClient
             var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
                 ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
                 ?? $"{cuid}.mp3";
+            await TraceRecordingAsync("/calls/record", cuid, fileId, (int)response.StatusCode, "ready", $"{contentType} {bytes.Length}b {fileName}", bytes.Length, ct);
             return new TelefonchyRecordingResult
             {
                 Content = bytes,
@@ -539,56 +548,62 @@ public class TelefonchyClient
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             var bytes = await response.Content.ReadAsByteArrayAsync(ct);
             var jsonStatus = TryReadMergedStatus(bytes, out var jsonMessage);
+            var http = (int)response.StatusCode;
 
+            TelefonchyMergedRecordingResult result;
             if (response.StatusCode == System.Net.HttpStatusCode.Accepted
                 || string.Equals(jsonStatus, "processing", StringComparison.OrdinalIgnoreCase))
             {
-                return new TelefonchyMergedRecordingResult
+                result = new TelefonchyMergedRecordingResult
                 {
                     State = TelefonchyMergedRecordingState.Processing,
                     Message = jsonMessage ?? "فایل صوت در حال آماده‌سازی است."
                 };
             }
-
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound
                 || string.Equals(jsonStatus, "failed", StringComparison.OrdinalIgnoreCase)
                 || !string.IsNullOrWhiteSpace(jsonStatus))
             {
-                return new TelefonchyMergedRecordingResult
+                result = new TelefonchyMergedRecordingResult
                 {
                     State = TelefonchyMergedRecordingState.Failed,
                     Message = jsonMessage ?? "تلفنچی فایل صوتی این تماس را نداد."
                 };
             }
-
-            if (!response.IsSuccessStatusCode)
+            else if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Telefonchy merged recording HTTP {Status}.", (int)response.StatusCode);
-                return new TelefonchyMergedRecordingResult
+                _logger.LogWarning("Telefonchy merged recording HTTP {Status}.", http);
+                result = new TelefonchyMergedRecordingResult
                 {
                     State = TelefonchyMergedRecordingState.Failed,
-                    Message = $"تلفنچی کد {(int)response.StatusCode} برگرداند."
+                    Message = $"تلفنچی کد {http} برگرداند."
                 };
             }
-
-            if (bytes.Length == 0)
-                return new TelefonchyMergedRecordingResult
+            else if (bytes.Length == 0)
+            {
+                result = new TelefonchyMergedRecordingResult
                 {
                     State = TelefonchyMergedRecordingState.Failed,
                     Message = "پاسخ تلفنچی خالی بود."
                 };
-
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "audio/wav";
-            var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
-                ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
-                ?? $"{cuid}-merged.wav";
-            return new TelefonchyMergedRecordingResult
+            }
+            else
             {
-                State = TelefonchyMergedRecordingState.Ready,
-                Content = bytes,
-                ContentType = contentType,
-                FileName = fileName
-            };
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? "audio/wav";
+                var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+                    ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
+                    ?? $"{cuid}-merged.wav";
+                result = new TelefonchyMergedRecordingResult
+                {
+                    State = TelefonchyMergedRecordingState.Ready,
+                    Content = bytes,
+                    ContentType = contentType,
+                    FileName = fileName
+                };
+            }
+
+            await TraceRecordingAsync("/calls/record-quality/merged", cuid, recordId, http, result.State.ToString(), result.Message ?? result.FileName, bytes.Length, ct);
+            return result;
         }
         catch (Exception ex)
         {
@@ -600,6 +615,21 @@ public class TelefonchyClient
             };
         }
     }
+
+    private Task TraceRecordingAsync(
+        string path, string? cuid, string? extra, int? http, string state, string? message, int bytes, CancellationToken ct) =>
+        _trace.WriteAsync(new TelefonchyTraceEntry
+        {
+            Kind = "recording",
+            Action = path,
+            Path = path,
+            Cuid = cuid,
+            CallId = extra,
+            HttpStatus = http,
+            Status = state,
+            Summary = $"{state} {bytes} بایت — {message}",
+            Payload = message
+        }, ct);
 
     public static bool IsTrustedDownloadUrl(IntegrationConfig config, string? url)
     {
@@ -805,9 +835,23 @@ public class TelefonchyClient
             var client = _httpFactory.CreateClient("telefonchy");
             using var response = await client.SendAsync(request, ct);
             var body = await response.Content.ReadAsStringAsync(ct);
+            var status = (int)response.StatusCode;
+            await _trace.WriteAsync(new TelefonchyTraceEntry
+            {
+                Kind = "api",
+                Action = $"{method.Method} {path}",
+                Path = path,
+                HttpStatus = status,
+                Status = response.IsSuccessStatusCode ? "ok" : "error",
+                Summary = $"پاسخ تلفنچی {status} برای {path}",
+                Payload = path.Equals("/calls", StringComparison.OrdinalIgnoreCase)
+                    ? $"query={FormatQuery(query)}; bytes={body.Length}"
+                    : body
+            }, ct);
+
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Telefonchy HTTP {Status} on {Path}.", (int)response.StatusCode, path);
+                _logger.LogWarning("Telefonchy HTTP {Status} on {Path}.", status, path);
                 return null;
             }
 
@@ -816,8 +860,25 @@ public class TelefonchyClient
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Telefonchy request failed on {Path}.", path);
+            await _trace.WriteAsync(new TelefonchyTraceEntry
+            {
+                Kind = "api",
+                Action = $"{method.Method} {path}",
+                Path = path,
+                Status = "exception",
+                Summary = $"خطای ارتباط با {path}: {ex.Message}"
+            }, ct);
             return null;
         }
+    }
+
+    private static string FormatQuery(IReadOnlyDictionary<string, string?>? query)
+    {
+        if (query is null || query.Count == 0)
+            return "";
+        return string.Join("&", query
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+            .Select(kv => $"{kv.Key}={kv.Value}"));
     }
 
     private static HttpRequestMessage BuildRequest(
