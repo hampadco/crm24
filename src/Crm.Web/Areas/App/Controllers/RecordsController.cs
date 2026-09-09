@@ -385,9 +385,13 @@ public class RecordsController : AppControllerBase
             return Forbid("Identity.Application");
 
         var values = ExtractFieldValues(form);
+        var decided = await TryApplyDuplicateDecisionAsync(module, currentRecordId: null, values, form);
+        if (decided is not null)
+            return decided;
+        var skipDup = string.Equals(form["duplicateAction"], "force", StringComparison.OrdinalIgnoreCase);
         try
         {
-            var record = await _records.CreateAsync(module.Id, values);
+            var record = await _records.CreateAsync(module.Id, values, skipDuplicateCheck: skipDup);
             var tracked = await _db.Records.FirstAsync(r => r.Id == record.Id);
             await _docs.AssignNumberIfNeededAsync(module, tracked);
             await _lineItems.SaveFromFormAsync(module.Id, tracked.Id, form);
@@ -398,6 +402,7 @@ public class RecordsController : AppControllerBase
         {
             var model = await BuildFormModelAsync(module, recordId: null, values);
             model.Errors = new Dictionary<string, string>(ex.Errors);
+            model.Duplicates = ex.Duplicates;
             ViewData["Title"] = $"{module.SingularLabel} جدید";
             return View("Form", model);
         }
@@ -447,9 +452,13 @@ public class RecordsController : AppControllerBase
             return Forbid("Identity.Application");
 
         var values = ExtractFieldValues(form);
+        var decided = await TryApplyDuplicateDecisionAsync(module, id, values, form);
+        if (decided is not null)
+            return decided;
+        var skipDup = string.Equals(form["duplicateAction"], "force", StringComparison.OrdinalIgnoreCase);
         try
         {
-            await _records.UpdateAsync(module.Id, id, values);
+            await _records.UpdateAsync(module.Id, id, values, skipDuplicateCheck: skipDup);
             await _lineItems.SaveFromFormAsync(module.Id, id, form);
             TempData["Success"] = "تغییرات ذخیره شد.";
             return RedirectToAction(nameof(Details), new { moduleName, id });
@@ -458,6 +467,7 @@ public class RecordsController : AppControllerBase
         {
             var model = await BuildFormModelAsync(module, id, values);
             model.Errors = new Dictionary<string, string>(ex.Errors);
+            model.Duplicates = ex.Duplicates;
             ViewData["Title"] = $"ویرایش {module.SingularLabel}";
             return View("Form", model);
         }
@@ -897,6 +907,13 @@ public class RecordsController : AppControllerBase
             model.HasUnavailableRecording = !model.HasCallRecording && unavailable;
             model.HasPendingRecording = !model.HasCallRecording && !unavailable
                 && TelefonchyCallService.IsRecordingPending(values);
+        }
+
+        if (model.CanEdit
+            && string.Equals(module.Name, "calls", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(PhoneIdentity.FromRecord(values)))
+        {
+            model.CanCollectContact = true;
         }
 
         var (lineBlock, lineModule, lineFields) = await _lineItems.GetLineBlockAsync(module.Id);
@@ -2066,26 +2083,156 @@ public class RecordsController : AppControllerBase
         return RedirectToAction(nameof(Index), new { moduleName });
     }
 
-    /// <summary>تبدیل یک‌کلیکی سرنخ به مخاطب + سازمان + فرصت فروش.</summary>
-    [HttpPost("/App/m/leads/{id:int}/convert")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Convert(int id, [FromServices] LeadConversionService conversion)
+    /// <summary>ویزارد تبدیل سرنخ به مخاطب و فرصت.</summary>
+    [HttpGet("/App/m/leads/{id:int}/convert")]
+    public async Task<IActionResult> Convert(int id, [FromServices] ContactDirectory directory)
     {
         var leads = await _metadata.GetModuleByNameAsync("leads");
         if (leads is null || !await _access.CanEditAsync(leads.Id))
             return Forbid("Identity.Application");
 
-        var result = await conversion.ConvertAsync(id);
+        if (HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int tenantId)
+            await HttpContext.RequestServices.GetRequiredService<SalesModuleSeeder>().EnsureContactHubFieldsAsync(tenantId);
+
+        var model = await BuildLeadConvertModelAsync(id, directory);
+        if (model is null)
+            return NotFound();
+        return View(model);
+    }
+
+    [HttpPost("/App/m/leads/{id:int}/convert")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Convert(
+        int id,
+        int? existingContactId,
+        bool createOpportunity,
+        string? duplicateAction,
+        int? duplicateRecordId,
+        string? duplicateModuleName,
+        [FromServices] LeadConversionService conversion,
+        [FromServices] ContactDirectory directory)
+    {
+        var leads = await _metadata.GetModuleByNameAsync("leads");
+        if (leads is null || !await _access.CanEditAsync(leads.Id))
+            return Forbid("Identity.Application");
+
+        if (HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId is int tenantId)
+            await HttpContext.RequestServices.GetRequiredService<SalesModuleSeeder>().EnsureContactHubFieldsAsync(tenantId);
+
+        if (string.Equals(duplicateAction, "keep_existing", StringComparison.OrdinalIgnoreCase)
+            && duplicateRecordId is int keepId
+            && !string.IsNullOrWhiteSpace(duplicateModuleName))
+            return RedirectToAction(nameof(Details), new { moduleName = duplicateModuleName, id = keepId });
+
+        if (string.Equals(duplicateAction, "merge", StringComparison.OrdinalIgnoreCase)
+            && duplicateRecordId is int mergeId
+            && string.Equals(duplicateModuleName, "contacts", StringComparison.OrdinalIgnoreCase))
+            existingContactId = mergeId;
+
+        if (string.Equals(duplicateAction, "delete_existing", StringComparison.OrdinalIgnoreCase)
+            && duplicateRecordId is int delId
+            && !string.IsNullOrWhiteSpace(duplicateModuleName))
+        {
+            var dupModule = await _metadata.GetModuleByNameAsync(duplicateModuleName);
+            if (dupModule is not null && await _access.CanDeleteAsync(dupModule.Id))
+                await _records.DeleteAsync(dupModule.Id, delId);
+        }
+
+        var skipDup = string.Equals(duplicateAction, "force", StringComparison.OrdinalIgnoreCase);
+        var result = await conversion.ConvertAsync(id, existingContactId, createOpportunity, skipDup);
         if (!result.Success)
         {
             TempData["Error"] = result.Error;
-            return RedirectToAction(nameof(Details), new { moduleName = "leads", id });
+            var model = await BuildLeadConvertModelAsync(id, directory);
+            if (model is null)
+                return RedirectToAction(nameof(Convert), new { id });
+            model.Duplicates = result.Duplicates;
+            model.CanResolveDelete = await _access.CanDeleteAsync(leads.Id);
+            return View(model);
         }
 
-        TempData["Success"] = "سرنخ با موفقیت به مخاطب" +
-            (result.OrganizationId is not null ? " + سازمان" : "") +
-            (result.OpportunityId is not null ? " + فرصت فروش" : "") + " تبدیل شد.";
-        return RedirectToAction(nameof(Index), new { moduleName = "opportunities" });
+        TempData["Success"] = "سرنخ به مخاطب وصل شد" +
+            (result.OrganizationId is not null ? "، سازمان" : "") +
+            (result.OpportunityId is not null ? " و فرصت فروش" : "") +
+            ". سرنخ حذف نشد.";
+
+        if (result.OpportunityId is int oppId)
+            return RedirectToAction(nameof(Details), new { moduleName = "opportunities", id = oppId });
+        if (result.ContactId is int contactId)
+            return RedirectToAction(nameof(Details), new { moduleName = "contacts", id = contactId });
+        return RedirectToAction(nameof(Details), new { moduleName = "leads", id });
+    }
+
+    [HttpGet("/App/m/{moduleName}/{id:int}/collect-contact")]
+    public async Task<IActionResult> CollectContact(string moduleName, int id, [FromServices] ContactDirectory directory)
+    {
+        if (string.Equals(moduleName, "leads", StringComparison.OrdinalIgnoreCase))
+            return RedirectToAction(nameof(Convert), new { id });
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null || !await _access.CanEditAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var record = await _records.GetAsync(module.Id, id);
+        if (record is null)
+            return NotFound();
+
+        var data = DynamicRecordService.ParseData(record);
+        var phone = PhoneIdentity.FromRecord(data);
+        if (string.IsNullOrWhiteSpace(phone))
+        {
+            TempData["Error"] = "این رکورد شماره تماس ندارد.";
+            return RedirectToAction(nameof(Details), new { moduleName, id });
+        }
+
+        var linkedId = int.TryParse(data.GetValueOrDefault("contact"), out var cid) && cid > 0 ? cid : (int?)null;
+        return View(new CollectContactViewModel
+        {
+            ModuleName = module.Name,
+            ModuleLabel = module.PluralLabel,
+            RecordId = record.Id,
+            RecordTitle = record.Title,
+            Phone = phone,
+            LinkedContactId = linkedId,
+            MatchingContacts = await directory.FindContactsByPhoneAsync(phone)
+        });
+    }
+
+    [HttpPost("/App/m/{moduleName}/{id:int}/collect-contact")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CollectContact(
+        string moduleName,
+        int id,
+        int? existingContactId,
+        [FromServices] ContactDirectory directory)
+    {
+        if (string.Equals(moduleName, "leads", StringComparison.OrdinalIgnoreCase))
+            return RedirectToAction(nameof(Convert), new { id });
+
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null || !await _access.CanEditAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var record = await _records.GetAsync(module.Id, id);
+        if (record is null)
+            return NotFound();
+
+        try
+        {
+            var contact = await directory.CollectFromRecordAsync(module.Name, record, existingContactId);
+            TempData["Success"] = "مخاطب ثبت شد. اطلاعات خالی مخاطب از این رکورد پر شد.";
+            return RedirectToAction(nameof(Details), new { moduleName = "contacts", id = contact.Id });
+        }
+        catch (RecordValidationException ex)
+        {
+            TempData["Error"] = string.Join(" — ", ex.Errors.Values);
+            return RedirectToAction(nameof(CollectContact), new { moduleName, id });
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(CollectContact), new { moduleName, id });
+        }
     }
 
     [HttpPost("/App/m/{moduleName}/{id:int}/attachments")]
@@ -2331,8 +2478,119 @@ public class RecordsController : AppControllerBase
             LookupOptions = lookupOptions,
             LineFields = lineFields,
             LineItems = lineItems,
-            ProductOptions = products
+            ProductOptions = products,
+            CanResolveDelete = await _access.CanDeleteAsync(module.Id)
         };
+    }
+
+    private async Task<LeadConvertViewModel?> BuildLeadConvertModelAsync(int id, ContactDirectory directory)
+    {
+        var leads = await _metadata.GetModuleByNameAsync("leads");
+        if (leads is null)
+            return null;
+        var lead = await _records.GetAsync(leads.Id, id);
+        if (lead is null)
+            return null;
+
+        var data = DynamicRecordService.ParseData(lead);
+        var phone = PhoneIdentity.FromRecord(data);
+        var linkedId = int.TryParse(data.GetValueOrDefault("contact"), out var cid) && cid > 0 ? cid : (int?)null;
+        string? linkedTitle = null;
+        if (linkedId is int contactId)
+        {
+            var contacts = await _metadata.GetModuleByNameAsync("contacts");
+            if (contacts is not null)
+            {
+                var contact = await _records.GetAsync(contacts.Id, contactId);
+                linkedTitle = contact?.Title;
+            }
+        }
+
+        var already = string.Equals(data.GetValueOrDefault("status"), "converted", StringComparison.OrdinalIgnoreCase)
+                      || linkedId is not null;
+
+        var matches = (await directory.FindContactsByPhoneAsync(phone)).ToList();
+        if (linkedId is int knownId && matches.All(m => m.Id != knownId))
+        {
+            matches.Insert(0, new DirectoryPerson
+            {
+                Id = knownId,
+                Title = linkedTitle ?? $"مخاطب #{knownId}",
+                Phone = phone,
+                Email = null
+            });
+        }
+
+        return new LeadConvertViewModel
+        {
+            LeadId = lead.Id,
+            LeadTitle = data.GetValueOrDefault("name") ?? lead.Title,
+            Phone = phone,
+            Email = data.GetValueOrDefault("email"),
+            Company = data.GetValueOrDefault("company"),
+            AlreadyConverted = already,
+            LinkedContactId = linkedId,
+            LinkedContactTitle = linkedTitle,
+            MatchingContacts = matches,
+            MatchingLeads = await directory.FindLeadsByPhoneAsync(phone, excludeId: lead.Id),
+            CreateOpportunity = !already,
+            CanResolveDelete = await _access.CanDeleteAsync(leads.Id)
+        };
+    }
+
+    /// <summary>تصمیم کاربر روی رکورد تکراری: ادغام، نگه‌داشتن موجود، حذف موجود. force یعنی ادامه ذخیره.</summary>
+    private async Task<IActionResult?> TryApplyDuplicateDecisionAsync(
+        ModuleDef module, int? currentRecordId, Dictionary<string, string?> values, IFormCollection form)
+    {
+        var action = form["duplicateAction"].ToString();
+        if (string.IsNullOrWhiteSpace(action) || string.Equals(action, "force", StringComparison.OrdinalIgnoreCase))
+            return null;
+        if (!int.TryParse(form["duplicateRecordId"], out var dupId) || dupId <= 0)
+            return null;
+
+        var dupModuleName = form["duplicateModuleName"].ToString();
+        if (string.IsNullOrWhiteSpace(dupModuleName))
+            dupModuleName = module.Name;
+        var dupModule = await _metadata.GetModuleByNameAsync(dupModuleName);
+        if (dupModule is null)
+            return null;
+
+        if (string.Equals(action, "keep_existing", StringComparison.OrdinalIgnoreCase))
+            return RedirectToAction(nameof(Details), new { moduleName = dupModule.Name, id = dupId });
+
+        if (string.Equals(action, "merge", StringComparison.OrdinalIgnoreCase))
+        {
+            if (dupModule.Id != module.Id)
+            {
+                TempData["Error"] = "ادغام فقط با رکورد هم‌نوع ممکن است. موجود را مشاهده کنید یا رکورد جدید بسازید.";
+                return null;
+            }
+
+            await _records.MergeMissingFieldsAsync(dupModule.Id, dupId, values);
+            if (currentRecordId is int sourceId && sourceId != dupId)
+            {
+                var directory = HttpContext.RequestServices.GetRequiredService<ContactDirectory>();
+                await directory.CopyNotesAndAttachmentsAsync(module.Name, sourceId, dupModule.Name, dupId);
+                await _records.DeleteAsync(module.Id, sourceId);
+            }
+
+            TempData["Success"] = "با رکورد موجود یکی شد. فیلدهای خالی پر شدند.";
+            return RedirectToAction(nameof(Details), new { moduleName = dupModule.Name, id = dupId });
+        }
+
+        if (string.Equals(action, "delete_existing", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!await _access.CanDeleteAsync(dupModule.Id))
+            {
+                TempData["Error"] = "اجازه حذف رکورد موجود را ندارید.";
+                return null;
+            }
+
+            await _records.DeleteAsync(dupModule.Id, dupId);
+            return null;
+        }
+
+        return null;
     }
 
     /// <summary>مقادیر فیلدها از فرم — با پیشوند f_ تا با توکن‌های فرم قاطی نشود.</summary>

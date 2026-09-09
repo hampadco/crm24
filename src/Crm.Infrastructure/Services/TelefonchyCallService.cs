@@ -113,22 +113,7 @@ public class TelefonchyCallService
         return status is "unavailable" or "failed" or "expired" or "missing";
     }
 
-    public static string? CanonicalPhone(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw) || raw.Contains('*'))
-            return null;
-
-        var digits = new string(raw.Where(char.IsDigit).ToArray());
-        if (digits.Length == 0)
-            return null;
-        if (digits.StartsWith("0098", StringComparison.Ordinal))
-            digits = digits[4..];
-        else if (digits.StartsWith("98", StringComparison.Ordinal) && digits.Length > 10)
-            digits = digits[2..];
-        if (digits.StartsWith('0'))
-            digits = digits[1..];
-        return digits.Length >= 8 ? digits : null;
-    }
+    public static string? CanonicalPhone(string? raw) => PhoneIdentity.Canonical(raw);
 
     public static bool IsMasked(string? raw) =>
         !string.IsNullOrWhiteSpace(raw) && raw.Contains('*');

@@ -61,11 +61,7 @@
             }
             @if (canConvertLead)
             {
-                <form action="/App/m/leads/@Model.Id/convert" method="post" class="d-inline"
-                      data-confirm="این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-primary">تبدیل</button>
-                </form>
+                <a href="/App/m/leads/@Model.Id/convert" class="btn btn-outline-primary">تبدیل</a>
             }
             else if (canConvertDocument)
             {

@@ -34,10 +34,11 @@ public class SalesModuleSeeder
                 F("email", "ایمیل", FieldType.Email),
                 F("city", "شهر", FieldType.Text),
                 F("status", "وضعیت", FieldType.Picklist, defaultValue: "cold",
-                    picklist: [P("cold", "سرد", "#69809a"), P("warm", "گرم", "#fdac41"), P("hot", "مشتاق", "#ff5b5c"), P("qualified", "واجد شرایط", "#39da8a"), P("junk", "بی‌ارزش", "#495563")]),
+                    picklist: [P("cold", "سرد", "#69809a"), P("warm", "گرم", "#fdac41"), P("hot", "مشتاق", "#ff5b5c"), P("qualified", "واجد شرایط", "#39da8a"), P("converted", "تبدیل‌شده", "#696cff"), P("junk", "بی‌ارزش", "#495563")]),
                 F("source", "منبع آشنایی", FieldType.Picklist,
                     picklist: [P("website", "وب‌سایت"), P("referral", "معرفی"), P("ads", "تبلیغات"), P("social", "شبکه اجتماعی"), P("exhibition", "نمایشگاه"), P("call", "تماس ورودی")]),
                 F("doNotMessage", "عدم ارسال پیام", FieldType.Checkbox, showInList: false),
+                F("contact", "مخاطب", FieldType.Lookup, showInList: false, lookupModule: "contacts"),
                 F("description", "توضیحات", FieldType.MultilineText, showInList: false)
             ]);
 
@@ -65,6 +66,7 @@ public class SalesModuleSeeder
                 F("mobile", "موبایل", FieldType.Phone, unique: true),
                 F("phone", "تلفن ثابت", FieldType.Phone, showInList: false),
                 F("email", "ایمیل", FieldType.Email),
+                F("lead", "سرنخ", FieldType.Lookup, showInList: false, lookupModule: "leads"),
                 F("address", "نشانی", FieldType.MultilineText, showInList: false),
                 F("description", "توضیحات", FieldType.MultilineText, showInList: false)
             ]);
@@ -122,6 +124,7 @@ public class SalesModuleSeeder
             ]);
 
         await EnsureCallTelephonyFieldsAsync(tenantId);
+        await EnsureContactHubFieldsAsync(tenantId);
         await EnsureDemoLayoutsAndRelationsAsync(tenantId);
     }
 
@@ -138,6 +141,7 @@ public class SalesModuleSeeder
         if (hasAll)
         {
             await EnsureCallTelephonyFieldsAsync(tenantId);
+            await EnsureContactHubFieldsAsync(tenantId);
             var layoutsKey = $"sales-layouts-ok:{tenantId}";
             if (!_cache.TryGetValue(layoutsKey, out bool layoutsOk) || !layoutsOk)
             {
@@ -205,6 +209,10 @@ public class SalesModuleSeeder
             await EnsureRelationAsync(tenantId, contactId3, callId, "تماس‌ها", "مخاطب", "contact", RelationKind.OneToMany);
         if (leadsId is int leadId2 && callsId is int callId2)
             await EnsureRelationAsync(tenantId, leadId2, callId2, "تماس‌ها", "سرنخ", "lead", RelationKind.OneToMany);
+        if (contactsId is int contactId4 && leadsId is int leadId3)
+            await EnsureRelationAsync(tenantId, contactId4, leadId3, "سرنخ‌ها", "مخاطب", "contact", RelationKind.OneToMany);
+        if (leadsId is int leadId4 && contactsId is int contactId5)
+            await EnsureRelationAsync(tenantId, leadId4, contactId5, "مخاطبین", "سرنخ", "lead", RelationKind.OneToMany);
 
         await EnsureDemoDuplicateSettingsAsync(tenantId, modules);
 
@@ -440,6 +448,77 @@ public class SalesModuleSeeder
         _cache.Remove($"fields:{tenantId}:{module.Id}");
         _cache.Remove($"blocks:{tenantId}:{module.Id}");
         _cache.Remove($"modules:{tenantId}");
+    }
+
+    /// <summary>Lookup مخاطب روی سرنخ و سرنخ روی مخاطب + وضعیت تبدیل‌شده.</summary>
+    public async Task EnsureContactHubFieldsAsync(int tenantId)
+    {
+        var leads = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "leads");
+        var contacts = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "contacts");
+        if (leads is null || contacts is null)
+            return;
+
+        await EnsureLookupFieldAsync(tenantId, leads, "contact", "مخاطب", "contacts", showInList: false);
+        await EnsureLookupFieldAsync(tenantId, contacts, "lead", "سرنخ", "leads", showInList: false);
+
+        var statusField = await _db.Fields.FirstOrDefaultAsync(f =>
+            f.TenantId == tenantId && f.ModuleId == leads.Id && f.Name == "status");
+        if (statusField is not null)
+        {
+            var hasConverted = await _db.PicklistValues.AnyAsync(p =>
+                p.FieldId == statusField.Id && p.Value == "converted");
+            if (!hasConverted)
+            {
+                var order = await _db.PicklistValues
+                    .Where(p => p.FieldId == statusField.Id)
+                    .Select(p => (int?)p.SortOrder)
+                    .MaxAsync() ?? 0;
+                _db.PicklistValues.Add(new PicklistValue
+                {
+                    TenantId = tenantId,
+                    FieldId = statusField.Id,
+                    Value = "converted",
+                    Label = "تبدیل‌شده",
+                    Color = "#696cff",
+                    SortOrder = order + 1
+                });
+                await _db.SaveChangesAsync();
+            }
+        }
+
+        _cache.Remove($"fields:{tenantId}:{leads.Id}");
+        _cache.Remove($"fields:{tenantId}:{contacts.Id}");
+        _cache.Remove($"modules:{tenantId}");
+    }
+
+    private async Task EnsureLookupFieldAsync(
+        int tenantId, ModuleDef module, string name, string label, string lookupModule, bool showInList)
+    {
+        if (await _db.Fields.AnyAsync(f =>
+                f.TenantId == tenantId && f.ModuleId == module.Id && f.Name == name))
+            return;
+
+        var maxOrder = await _db.Fields
+            .Where(f => f.TenantId == tenantId && f.ModuleId == module.Id)
+            .Select(f => (int?)f.SortOrder)
+            .MaxAsync() ?? 0;
+        var mainBlock = await _db.FieldBlocks.FirstOrDefaultAsync(b =>
+            b.TenantId == tenantId && b.ModuleId == module.Id && b.Name == "main");
+
+        _db.Fields.Add(new FieldDef
+        {
+            TenantId = tenantId,
+            ModuleId = module.Id,
+            BlockId = mainBlock?.Id,
+            Name = name,
+            Label = label,
+            Type = FieldType.Lookup,
+            IsCustom = false,
+            ShowInList = showInList,
+            LookupModule = lookupModule,
+            SortOrder = maxOrder + 1
+        });
+        await _db.SaveChangesAsync();
     }
 
     private async Task EnsureModuleAsync(

@@ -124,6 +124,8 @@ public class RecordFormViewModel
     public int? RecordId { get; set; }
     public Dictionary<string, string?> Values { get; set; } = new();
     public Dictionary<string, string> Errors { get; set; } = new();
+    public IReadOnlyList<DuplicateHit> Duplicates { get; set; } = [];
+    public bool CanResolveDelete { get; set; }
 
     /// <summary>fieldName → گزینه‌های ماژول مقصد برای فیلدهای Lookup.</summary>
     public Dictionary<string, List<(int Id, string Title)>> LookupOptions { get; set; } = new();
@@ -236,6 +238,7 @@ public class RecordDetailViewModel
     public bool HasCallRecording { get; set; }
     public bool HasPendingRecording { get; set; }
     public bool HasUnavailableRecording { get; set; }
+    public bool CanCollectContact { get; set; }
 
     public string? LineDisplayValue(FieldDef field, Dictionary<string, string?> row)
     {
@@ -425,4 +428,32 @@ public class PrintTemplateOption
     public bool AllowWord { get; set; } = true;
     public string PageSize { get; set; } = "A4";
     public bool Landscape { get; set; }
+}
+
+public class LeadConvertViewModel
+{
+    public int LeadId { get; set; }
+    public string LeadTitle { get; set; } = "";
+    public string? Phone { get; set; }
+    public string? Email { get; set; }
+    public string? Company { get; set; }
+    public bool AlreadyConverted { get; set; }
+    public int? LinkedContactId { get; set; }
+    public string? LinkedContactTitle { get; set; }
+    public IReadOnlyList<DirectoryPerson> MatchingContacts { get; set; } = [];
+    public IReadOnlyList<DirectoryPerson> MatchingLeads { get; set; } = [];
+    public bool CreateOpportunity { get; set; } = true;
+    public IReadOnlyList<DuplicateHit> Duplicates { get; set; } = [];
+    public bool CanResolveDelete { get; set; }
+}
+
+public class CollectContactViewModel
+{
+    public string ModuleName { get; set; } = "";
+    public string ModuleLabel { get; set; } = "";
+    public int RecordId { get; set; }
+    public string RecordTitle { get; set; } = "";
+    public string? Phone { get; set; }
+    public int? LinkedContactId { get; set; }
+    public IReadOnlyList<DirectoryPerson> MatchingContacts { get; set; } = [];
 }

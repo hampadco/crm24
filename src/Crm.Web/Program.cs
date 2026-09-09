@@ -59,6 +59,7 @@ builder.Services.AddScoped<SalesModuleSeeder>();
 builder.Services.AddScoped<BusinessModuleSeeder>();
 builder.Services.AddScoped<DemoTenantSeeder>();
 builder.Services.AddScoped<LeadConversionService>();
+builder.Services.AddScoped<ContactDirectory>();
 builder.Services.AddScoped<FinanceService>();
 builder.Services.AddScoped<LineItemsService>();
 builder.Services.AddScoped<SalesDocumentService>();

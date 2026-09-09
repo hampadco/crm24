@@ -97,7 +97,10 @@ public class RecordImportExportService
             }
             catch (RecordValidationException ex)
             {
-                errors.Add($"ردیف {rowNumber}: {string.Join(" — ", ex.Errors.Values)}");
+                var where = ex.Duplicates.Count > 0
+                    ? string.Join(" — ", ex.Duplicates.Select(h => $"{h.Message} ← {h.DetailsUrl}"))
+                    : string.Join(" — ", ex.Errors.Values);
+                errors.Add($"ردیف {rowNumber}: {where}");
             }
         }
 

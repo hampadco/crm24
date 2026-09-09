@@ -11,29 +11,40 @@ public class LeadConversionResult
     public int? ContactId { get; init; }
     public int? OrganizationId { get; init; }
     public int? OpportunityId { get; init; }
+    public IReadOnlyList<DuplicateHit> Duplicates { get; init; } = [];
 }
 
 /// <summary>
-/// تبدیل یک‌کلیکی سرنخ به مخاطب + سازمان + فرصت فروش با نگاشت فیلدها.
-/// سرنخ پس از تبدیل به سطل بازیابی می‌رود (Audit با اکشن Convert).
+/// تبدیل سرنخ به مخاطب (موجود یا جدید) و در صورت نیاز فرصت فروش.
+/// سرنخ حذف نمی‌شود؛ به مخاطب وصل و وضعیت آن «تبدیل‌شده» می‌شود.
 /// </summary>
 public class LeadConversionService
 {
     private readonly CrmDbContext _db;
     private readonly MetadataService _metadata;
     private readonly DynamicRecordService _records;
+    private readonly ContactDirectory _directory;
     private readonly AuditService _audit;
 
     public LeadConversionService(
-        CrmDbContext db, MetadataService metadata, DynamicRecordService records, AuditService audit)
+        CrmDbContext db,
+        MetadataService metadata,
+        DynamicRecordService records,
+        ContactDirectory directory,
+        AuditService audit)
     {
         _db = db;
         _metadata = metadata;
         _records = records;
+        _directory = directory;
         _audit = audit;
     }
 
-    public async Task<LeadConversionResult> ConvertAsync(int leadRecordId, bool createOpportunity = true)
+    public async Task<LeadConversionResult> ConvertAsync(
+        int leadRecordId,
+        int? existingContactId = null,
+        bool createOpportunity = true,
+        bool skipDuplicateCheck = false)
     {
         var leadsModule = await _metadata.GetModuleByNameAsync("leads");
         var contactsModule = await _metadata.GetModuleByNameAsync("contacts");
@@ -50,8 +61,23 @@ public class LeadConversionService
         var data = DynamicRecordService.ParseData(lead);
         var name = data.GetValueOrDefault("name") ?? lead.Title;
         var company = data.GetValueOrDefault("company");
+        var phone = PhoneIdentity.FromRecord(data);
 
-        // ۱) سازمان (اگر نام شرکت داشت) — سازمان همنام موجود دوباره ساخته نمی‌شود
+        if (existingContactId is null && !string.IsNullOrWhiteSpace(phone))
+        {
+            var matches = await _directory.FindContactsByPhoneAsync(phone);
+            if (matches.Count == 1)
+                existingContactId = matches[0].Id;
+            else if (matches.Count > 1)
+            {
+                return new LeadConversionResult
+                {
+                    Success = false,
+                    Error = "چند مخاطب با همین شماره پیدا شد. یکی را در صفحه تبدیل انتخاب کنید."
+                };
+            }
+        }
+
         int? organizationId = null;
         if (!string.IsNullOrWhiteSpace(company))
         {
@@ -67,54 +93,96 @@ public class LeadConversionService
             }
             else
             {
-                var org = await _records.CreateAsync(organizationsModule.Id, new Dictionary<string, string?>
+                try
                 {
-                    ["name"] = company.Trim(),
-                    ["phone"] = data.GetValueOrDefault("phone"),
-                    ["city"] = data.GetValueOrDefault("city")
-                });
-                organizationId = org.Id;
+                    var org = await _records.CreateAsync(organizationsModule.Id, new Dictionary<string, string?>
+                    {
+                        ["name"] = company.Trim(),
+                        ["phone"] = data.GetValueOrDefault("phone"),
+                        ["city"] = data.GetValueOrDefault("city")
+                    }, excludeDuplicateRecordId: leadRecordId, skipDuplicateCheck: skipDuplicateCheck);
+                    organizationId = org.Id;
+                }
+                catch (RecordValidationException ex)
+                {
+                    return new LeadConversionResult
+                    {
+                        Success = false,
+                        Error = "سازمان ساخته نشد: " + string.Join(" — ", ex.Errors.Values),
+                        Duplicates = ex.Duplicates
+                    };
+                }
             }
         }
 
-        // ۲) مخاطب — نگاشت phone سرنخ به mobile مخاطب
         DynamicRecord contact;
         try
         {
-            contact = await _records.CreateAsync(contactsModule.Id, new Dictionary<string, string?>
-            {
-                ["name"] = name,
-                ["organization"] = organizationId?.ToString(),
-                ["mobile"] = data.GetValueOrDefault("phone"),
-                ["email"] = data.GetValueOrDefault("email"),
-                ["description"] = data.GetValueOrDefault("description")
-            });
+            contact = await _directory.EnsureContactAsync(
+                "leads", lead, data, existingContactId, organizationId,
+                excludeDuplicateRecordId: leadRecordId, skipDuplicateCheck: skipDuplicateCheck);
         }
         catch (RecordValidationException ex)
         {
             return new LeadConversionResult
             {
                 Success = false,
-                Error = "تبدیل ناموفق: " + string.Join(" — ", ex.Errors.Values)
+                Error = "تبدیل ناموفق: " + string.Join(" — ", ex.Errors.Values),
+                Duplicates = ex.Duplicates
             };
         }
+        catch (InvalidOperationException ex)
+        {
+            return new LeadConversionResult { Success = false, Error = ex.Message };
+        }
 
-        // ۳) فرصت فروش
         int? opportunityId = null;
         if (createOpportunity && opportunitiesModule is not null)
         {
-            var opp = await _records.CreateAsync(opportunitiesModule.Id, new Dictionary<string, string?>
+            try
             {
-                ["name"] = $"فرصت فروش {name}",
-                ["contact"] = contact.Id.ToString(),
-                ["organization"] = organizationId?.ToString(),
-                ["stage"] = "new"
-            });
-            opportunityId = opp.Id;
+                var opp = await _records.CreateAsync(opportunitiesModule.Id, new Dictionary<string, string?>
+                {
+                    ["name"] = $"فرصت فروش {name}",
+                    ["contact"] = contact.Id.ToString(),
+                    ["organization"] = organizationId?.ToString(),
+                    ["stage"] = "new",
+                    ["description"] = data.GetValueOrDefault("description")
+                });
+                opportunityId = opp.Id;
+                await _directory.CopyNotesAndAttachmentsAsync("leads", lead.Id, "opportunities", opp.Id);
+            }
+            catch (RecordValidationException ex)
+            {
+                return new LeadConversionResult
+                {
+                    Success = false,
+                    Error = "فرصت ساخته نشد: " + string.Join(" — ", ex.Errors.Values),
+                    ContactId = contact.Id,
+                    OrganizationId = organizationId,
+                    Duplicates = ex.Duplicates
+                };
+            }
         }
 
-        // ۴) بستن سرنخ (حذف نرم + Audit)
-        await _records.DeleteAsync(leadsModule.Id, leadRecordId);
+        data["contact"] = contact.Id.ToString();
+        data["status"] = "converted";
+        try
+        {
+            await _records.UpdateAsync(leadsModule.Id, leadRecordId, data);
+        }
+        catch (RecordValidationException ex)
+        {
+            return new LeadConversionResult
+            {
+                Success = false,
+                Error = "سرنخ به‌روز نشد: " + string.Join(" — ", ex.Errors.Values),
+                ContactId = contact.Id,
+                OrganizationId = organizationId,
+                OpportunityId = opportunityId
+            };
+        }
+
         _audit.Log("leads", leadRecordId, "Convert", new
         {
             ContactId = contact.Id,

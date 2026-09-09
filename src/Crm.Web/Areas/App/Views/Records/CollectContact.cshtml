@@ -1,0 +1,66 @@
+@model Crm.Web.Areas.App.Models.CollectContactViewModel
+@{
+    ViewData["PanelTitle"] = Model.ModuleLabel;
+    ViewData["Title"] = "ثبت مخاطب";
+    var hasMatches = Model.MatchingContacts.Count > 0;
+}
+
+<div class="crm-rd">
+    <div class="crm-rd-header">
+        <div class="crm-rd-header-main">
+            <div class="crm-rd-avatar" aria-hidden="true"><i class="bx bx-user-plus"></i></div>
+            <div>
+                <div class="crm-rd-breadcrumb">
+                    <a href="/App/m/@Model.ModuleName">@Model.ModuleLabel</a>
+                    <span>/</span>
+                    <a href="/App/m/@Model.ModuleName/@Model.RecordId">جزئیات</a>
+                    <span>/</span>
+                    <span>ثبت مخاطب</span>
+                </div>
+                <h1 class="crm-rd-title">ثبت مخاطب از «@Model.RecordTitle»</h1>
+                <p class="text-muted mb-0">شماره و نام این رکورد به مخاطب موجود وصل می‌شود یا مخاطب جدید می‌سازد. دادهٔ قبلی پاک نمی‌شود.</p>
+            </div>
+        </div>
+        <div class="crm-rd-actions">
+            <a href="/App/m/@Model.ModuleName/@Model.RecordId" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+        </div>
+    </div>
+
+    <partial name="_Alerts" />
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="text-muted small">شماره</div>
+            <div>@(Model.Phone ?? "—")</div>
+        </div>
+    </div>
+
+    <form method="post" asp-action="CollectContact" asp-route-moduleName="@Model.ModuleName" asp-route-id="@Model.RecordId">
+        @Html.AntiForgeryToken()
+        <div class="card mb-3">
+            <div class="card-body">
+                @if (hasMatches)
+                {
+                    <p class="text-muted">مخاطب موجود با همین شماره:</p>
+                    @foreach (var person in Model.MatchingContacts)
+                    {
+                        var selected = Model.LinkedContactId == person.Id || (Model.LinkedContactId is null && person.Id == Model.MatchingContacts[0].Id);
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="existingContactId" value="@person.Id" id="c-@person.Id" @(selected ? "checked" : null) />
+                            <label class="form-check-label" for="c-@person.Id">
+                                <a href="/App/m/contacts/@person.Id" target="_blank">@person.Title</a>
+                                <span class="text-muted">— @(person.Phone ?? "")</span>
+                            </label>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted mb-0">مخاطب جدیدی از روی این رکورد ساخته می‌شود.</p>
+                }
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success">ثبت مخاطب</button>
+        <a href="/App/m/@Model.ModuleName/@Model.RecordId" class="btn btn-label-secondary">انصراف</a>
+    </form>
+</div>

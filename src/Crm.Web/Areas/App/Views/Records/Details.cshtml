@@ -115,13 +115,15 @@
             </a>
             @if (string.Equals(Model.Module.Name, "leads", StringComparison.OrdinalIgnoreCase) && Model.CanEdit)
             {
-                <form asp-action="Convert" asp-route-id="@Model.Record.Id" method="post" class="d-inline"
-                      data-confirm="این سرنخ به مخاطب و فرصت فروش تبدیل شود؟">
-                    @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-success btn-sm">
-                        <i class="bx bx-transfer me-1"></i> تبدیل سرنخ
-                    </button>
-                </form>
+                <a href="/App/m/leads/@Model.Record.Id/convert" class="btn btn-success btn-sm">
+                    <i class="bx bx-transfer me-1"></i> تبدیل سرنخ
+                </a>
+            }
+            @if (Model.CanCollectContact)
+            {
+                <a href="/App/m/@Model.Module.Name/@Model.Record.Id/collect-contact" class="btn btn-outline-primary btn-sm">
+                    <i class="bx bx-user-plus me-1"></i> ثبت مخاطب
+                </a>
             }
             @if (Model.CanClickToCall)
             {

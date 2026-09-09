@@ -1,0 +1,117 @@
+@model Crm.Web.Areas.App.Models.LeadConvertViewModel
+@{
+    ViewData["PanelTitle"] = "سرنخ‌ها";
+    ViewData["Title"] = "تبدیل سرنخ";
+    var hasMatches = Model.MatchingContacts.Count > 0;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crm-record-form.css" asp-append-version="true" />
+}
+
+<div class="crm-rd">
+    <div class="crm-rd-header">
+        <div class="crm-rd-header-main">
+            <div class="crm-rd-avatar" aria-hidden="true"><i class="bx bx-transfer"></i></div>
+            <div>
+                <div class="crm-rd-breadcrumb">
+                    <a href="/App/m/leads">سرنخ‌ها</a>
+                    <span>/</span>
+                    <a href="/App/m/leads/@Model.LeadId">جزئیات</a>
+                    <span>/</span>
+                    <span>تبدیل</span>
+                </div>
+                <h1 class="crm-rd-title">تبدیل «@Model.LeadTitle»</h1>
+                <p class="text-muted mb-0">مخاطب مرکز هویت است. سرنخ حذف نمی‌شود و به همان مخاطب وصل می‌ماند.</p>
+            </div>
+        </div>
+        <div class="crm-rd-actions">
+            <a href="/App/m/leads/@Model.LeadId" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+        </div>
+    </div>
+
+    <partial name="_Alerts" />
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4"><div class="text-muted small">نام</div><div>@Model.LeadTitle</div></div>
+                <div class="col-md-4"><div class="text-muted small">موبایل</div><div>@(Model.Phone ?? "—")</div></div>
+                <div class="col-md-4"><div class="text-muted small">شرکت</div><div>@(Model.Company ?? "—")</div></div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.AlreadyConverted && Model.LinkedContactId is int linkedId)
+    {
+        <div class="alert alert-info">
+            این سرنخ قبلاً به مخاطب
+            <a href="/App/m/contacts/@linkedId">@(Model.LinkedContactTitle ?? $"#{linkedId}")</a>
+            وصل شده. می‌توانید فرصت جدید بسازید یا فیلدهای خالی مخاطب را از سرنخ کامل کنید.
+        </div>
+    }
+
+    @if (Model.MatchingLeads.Count > 0)
+    {
+        <div class="alert alert-warning">
+            سرنخ‌های دیگر با همین شماره:
+            @foreach (var other in Model.MatchingLeads)
+            {
+                <a href="/App/m/leads/@other.Id" class="ms-1">@other.Title</a>
+            }
+        </div>
+    }
+
+    <form method="post" asp-action="Convert" asp-route-id="@Model.LeadId">
+        @Html.AntiForgeryToken()
+        @if (Model.Duplicates.Count > 0)
+        {
+            var dupResolve = (Model.Duplicates, "leads", Model.CanResolveDelete);
+            <partial name="_DuplicateResolve" model="dupResolve" />
+        }
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h2 class="h5 mb-3">مخاطب</h2>
+                @if (hasMatches)
+                {
+                    <p class="text-muted">با این شماره مخاطب موجود پیدا شد. یکی را انتخاب کنید تا اطلاعات خالی‌اش از سرنخ پر شود.</p>
+                    @foreach (var person in Model.MatchingContacts)
+                    {
+                        var selected = Model.LinkedContactId == person.Id || (Model.LinkedContactId is null && person.Id == Model.MatchingContacts[0].Id);
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="existingContactId" value="@person.Id" id="c-@person.Id" @(selected ? "checked" : null) />
+                            <label class="form-check-label" for="c-@person.Id">
+                                <a href="/App/m/contacts/@person.Id" target="_blank">@person.Title</a>
+                                <span class="text-muted">— @(person.Phone ?? "بدون شماره") @(string.IsNullOrWhiteSpace(person.Email) ? "" : " / " + person.Email)</span>
+                            </label>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted mb-0">مخاطبی با این شماره نیست. با تأیید، مخاطب جدید از روی همین سرنخ ساخته می‌شود.</p>
+                    <input type="hidden" name="existingContactId" value="" />
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="createOpportunity" value="true" id="createOpportunity" @(Model.CreateOpportunity ? "checked" : null) />
+                    <label class="form-check-label" for="createOpportunity">فرصت فروش هم ساخته شود و به همین مخاطب وصل شود</label>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success">
+            <i class="bx bx-check me-1"></i> تأیید تبدیل
+        </button>
+        <a href="/App/m/leads/@Model.LeadId" class="btn btn-label-secondary">انصراف</a>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/crm-duplicate-resolve.js" asp-append-version="true"></script>
+}

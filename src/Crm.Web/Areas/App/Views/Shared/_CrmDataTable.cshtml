@@ -259,12 +259,12 @@
                                     </a>
                                     @if (Model.Module.Name == "leads" && Model.CanEdit)
                                     {
-                                        <form action="/App/m/leads/@record.Id/convert" method="post" class="d-inline" data-confirm="این سرنخ به مخاطب + سازمان + فرصت فروش تبدیل شود؟">
-                                            @Html.AntiForgeryToken()
-                                            <button type="submit" class="crm-dt-action" title="تبدیل سرنخ">
-                                                <i class="bx bx-transfer-alt"></i>
-                                            </button>
-                                        </form>
+                                        <a href="/App/m/leads/@record.Id/convert"
+                                           class="crm-dt-action"
+                                           title="تبدیل سرنخ"
+                                           aria-label="تبدیل سرنخ">
+                                            <i class="bx bx-transfer-alt"></i>
+                                        </a>
                                     }
                                     @if (Model.CanEdit)
                                     {

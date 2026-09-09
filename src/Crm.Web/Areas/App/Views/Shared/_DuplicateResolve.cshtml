@@ -1,0 +1,51 @@
+@model (IReadOnlyList<Crm.Infrastructure.Services.DuplicateHit> Hits, string CurrentModuleName, bool AllowDelete)
+@{
+    var hits = Model.Hits;
+    if (hits.Count == 0)
+        return;
+}
+<div class="crm-dup-resolve" role="alert">
+    <div class="crm-dup-resolve-head">
+        <i class="bx bx-error-circle"></i>
+        <div>
+            <strong>مقدار تکراری پیدا شد</strong>
+            <p class="mb-0">ببینید کجا استفاده شده و تصمیم بگیرید: ادغام، نگه‌داشتن موجود، ساخت جدید، یا حذف موجود.</p>
+        </div>
+    </div>
+    <input type="hidden" name="duplicateAction" id="dupAction" value="" />
+    <input type="hidden" name="duplicateRecordId" id="dupRecordId" value="" />
+    <input type="hidden" name="duplicateModuleName" id="dupModuleName" value="" />
+    <ul class="crm-dup-resolve-list">
+        @foreach (var hit in hits)
+        {
+            var sameModule = string.Equals(hit.ModuleName, Model.CurrentModuleName, StringComparison.OrdinalIgnoreCase);
+            <li class="crm-dup-resolve-item">
+                <div class="crm-dup-resolve-text">
+                    <div>@hit.Message</div>
+                    @if (hit.IsGlobal)
+                    {
+                        <div class="text-muted small">تکرار سراسری شماره تماس در کل CRM</div>
+                    }
+                </div>
+                <div class="crm-dup-resolve-actions">
+                    <a class="btn btn-sm btn-outline-primary" href="@hit.DetailsUrl" target="_blank" rel="noopener">مشاهده</a>
+                    <button type="button" class="btn btn-sm btn-label-secondary" data-dup-act="keep_existing"
+                            data-dup-id="@hit.RecordId" data-dup-mod="@hit.ModuleName">نگه داشتن موجود</button>
+                    @if (sameModule)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-success" data-dup-act="merge"
+                                data-dup-id="@hit.RecordId" data-dup-mod="@hit.ModuleName">ادغام در موجود</button>
+                    }
+                    <button type="button" class="btn btn-sm btn-outline-warning" data-dup-act="force"
+                            data-dup-id="@hit.RecordId" data-dup-mod="@hit.ModuleName">ساخت / ذخیره جدید</button>
+                    @if (Model.AllowDelete)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-dup-act="delete_existing"
+                                data-dup-id="@hit.RecordId" data-dup-mod="@hit.ModuleName"
+                                data-dup-confirm="رکورد موجود به سطل بازیابی برود و همین فرم ذخیره شود؟">حذف موجود</button>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+</div>

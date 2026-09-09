@@ -55,6 +55,10 @@
           asp-action="@(isEdit ? "Edit" : "Create")"
           asp-route-moduleName="@Model.Module.Name"
           asp-route-id="@Model.RecordId">
+        @if (Model.Duplicates.Count > 0)
+        {
+            <partial name="_DuplicateResolve" model="(Model.Duplicates, Model.Module.Name, Model.CanResolveDelete)" />
+        }
         <div class="crm-rf-body">
             <partial name="_DynamicForm" model="Model" />
         </div>
@@ -80,4 +84,5 @@
 @section Scripts {
     <script src="~/js/crm-form-deps.js" asp-append-version="true"></script>
     <script src="~/js/crm-line-items.js" asp-append-version="true"></script>
+    <script src="~/js/crm-duplicate-resolve.js" asp-append-version="true"></script>
 }

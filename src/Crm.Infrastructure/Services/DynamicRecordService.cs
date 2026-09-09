@@ -11,12 +11,34 @@ namespace Crm.Infrastructure.Services;
 public class RecordValidationException : Exception
 {
     public IReadOnlyDictionary<string, string> Errors { get; }
+    public IReadOnlyList<DuplicateHit> Duplicates { get; }
 
-    public RecordValidationException(IReadOnlyDictionary<string, string> errors)
+    public RecordValidationException(
+        IReadOnlyDictionary<string, string> errors,
+        IReadOnlyList<DuplicateHit>? duplicates = null)
         : base("Record validation failed.")
     {
         Errors = errors;
+        Duplicates = duplicates ?? [];
     }
+}
+
+public sealed class DuplicateHit
+{
+    public string FieldName { get; init; } = "";
+    public string FieldLabel { get; init; } = "";
+    public string? Value { get; init; }
+    public int ModuleId { get; init; }
+    public string ModuleName { get; init; } = "";
+    public string ModuleLabel { get; init; } = "";
+    public int RecordId { get; init; }
+    public string RecordTitle { get; init; } = "";
+    public bool IsGlobal { get; init; }
+
+    public string Message =>
+        $"مقدار «{FieldLabel}» در {ModuleLabel} «{RecordTitle}» (#{RecordId}) استفاده شده است.";
+
+    public string DetailsUrl => $"/App/m/{ModuleName}/{RecordId}";
 }
 
 /// <summary>
@@ -493,7 +515,8 @@ public class DynamicRecordService
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<DynamicRecord> CreateAsync(int moduleId, Dictionary<string, string?> values)
+    public async Task<DynamicRecord> CreateAsync(
+        int moduleId, Dictionary<string, string?> values, int? excludeDuplicateRecordId = null, bool skipDuplicateCheck = false)
     {
         var module = await _db.Modules.AsNoTracking().FirstAsync(m => m.Id == moduleId);
         var fields = await _metadata.GetFieldsAsync(moduleId);
@@ -501,7 +524,8 @@ public class DynamicRecordService
         var data = ValidateAndBuildData(fields, values);
         KeepIntegrationExtras(values, oldData: new Dictionary<string, string?>(), data);
         await ValidateLookupsAsync(fields, data);
-        await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: null);
+        if (!skipDuplicateCheck)
+            await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: excludeDuplicateRecordId);
 
         var record = new DynamicRecord
         {
@@ -521,7 +545,7 @@ public class DynamicRecordService
         return record;
     }
 
-    public async Task UpdateAsync(int moduleId, int id, Dictionary<string, string?> values)
+    public async Task UpdateAsync(int moduleId, int id, Dictionary<string, string?> values, bool skipDuplicateCheck = false)
     {
         var module = await _db.Modules.AsNoTracking().FirstAsync(m => m.Id == moduleId);
         var record = await _db.Records.FirstOrDefaultAsync(r => r.ModuleId == moduleId && r.Id == id)
@@ -536,7 +560,8 @@ public class DynamicRecordService
         var data = ValidateAndBuildData(fields, values);
         KeepIntegrationExtras(values, oldData, data);
         await ValidateLookupsAsync(fields, data);
-        await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: id);
+        if (!skipDuplicateCheck)
+            await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: id);
 
         var changes = data
             .Where(kv => (oldData.TryGetValue(kv.Key, out var old) ? old : null) != kv.Value)
@@ -556,6 +581,33 @@ public class DynamicRecordService
 
         if (changes.Count > 0)
             EnqueueWorkflows(moduleId, id, WorkflowTrigger.RecordUpdated);
+    }
+
+    /// <summary>فیلدهای خالی مقصد را از ورودی پر می‌کند؛ توضیح را اضافه می‌کند نه جایگزین.</summary>
+    public async Task MergeMissingFieldsAsync(int moduleId, int targetId, Dictionary<string, string?> incoming)
+    {
+        var target = await GetAsync(moduleId, targetId)
+            ?? throw new InvalidOperationException("Record not found.");
+        var data = ParseData(target);
+        foreach (var (key, value) in incoming)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+            if (string.Equals(key, "description", StringComparison.OrdinalIgnoreCase))
+            {
+                var current = data.GetValueOrDefault("description");
+                if (string.IsNullOrWhiteSpace(current))
+                    data["description"] = value;
+                else if (!current.Contains(value, StringComparison.Ordinal))
+                    data["description"] = current.TrimEnd() + "\n\n" + value;
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(data.GetValueOrDefault(key)))
+                data[key] = value;
+        }
+
+        await UpdateAsync(moduleId, targetId, data, skipDuplicateCheck: true);
     }
 
     /// <summary>کپی رکورد؛ عنوان با پسوند «(کپی)» و بدون تغییر مالک.</summary>
@@ -1063,16 +1115,56 @@ public class DynamicRecordService
             return;
 
         var errors = new Dictionary<string, string>();
+        var hits = new List<DuplicateHit>();
+        var modules = await _db.Modules.AsNoTracking()
+            .Select(m => new { m.Id, m.Name, m.SingularLabel })
+            .ToDictionaryAsync(m => m.Id);
+        var excludeIds = new HashSet<int>();
+        if (excludeRecordId is int self)
+            excludeIds.Add(self);
+        foreach (var key in new[] { "contact", "lead" })
+        {
+            if (data.TryGetValue(key, out var linkedRaw)
+                && int.TryParse(linkedRaw, out var linkedId)
+                && linkedId > 0)
+                excludeIds.Add(linkedId);
+        }
+
+        DuplicateHit? ToHit(FieldDef field, DynamicRecord record, int recordModuleId, bool global)
+        {
+            if (!modules.TryGetValue(recordModuleId, out var meta))
+                return null;
+            return new DuplicateHit
+            {
+                FieldName = field.Name,
+                FieldLabel = field.Label,
+                Value = data.GetValueOrDefault(field.Name),
+                ModuleId = recordModuleId,
+                ModuleName = meta.Name,
+                ModuleLabel = meta.SingularLabel,
+                RecordId = record.Id,
+                RecordTitle = string.IsNullOrWhiteSpace(record.Title) ? $"#{record.Id}" : record.Title,
+                IsGlobal = global
+            };
+        }
+
+        void AddHit(DuplicateHit hit)
+        {
+            if (hits.Any(h => h.RecordId == hit.RecordId && h.FieldName == hit.FieldName))
+                return;
+            hits.Add(hit);
+            errors[hit.FieldName] = hit.Message;
+        }
 
         if (module.DuplicateCheckEnabled)
         {
             var uniqueFields = fields.Where(f => f.IsUniqueCheck).ToList();
-            var mode = module.DuplicateMatchMode ?? "or";
+            var matchMode = module.DuplicateMatchMode ?? "or";
             var ignoreEmpty = module.DuplicateIgnoreEmpty;
 
             if (uniqueFields.Count > 0)
             {
-                if (string.Equals(mode, "and", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(matchMode, "and", StringComparison.OrdinalIgnoreCase))
                 {
                     var valued = uniqueFields
                         .Select(f => (Field: f, Value: data.TryGetValue(f.Name, out var v) ? v : null))
@@ -1083,7 +1175,7 @@ public class DynamicRecordService
                         ? valued.Count == uniqueFields.Count && valued.Count > 0
                         : uniqueFields.Count > 0;
 
-                    if (shouldCheck && (ignoreEmpty ? valued.Count > 0 : true))
+                    if (shouldCheck)
                     {
                         var pairs = ignoreEmpty
                             ? valued
@@ -1113,16 +1205,19 @@ public class DynamicRecordService
                                 }
                             }
 
-                            var duplicate = await _db.Records
+                            var found = await _db.Records
                                 .FromSqlRaw(sb.ToString(), args.ToArray())
-                                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                                .AnyAsync();
+                                .Where(r => !excludeIds.Contains(r.Id))
+                                .FirstOrDefaultAsync();
 
-                            if (duplicate)
+                            if (found is not null)
                             {
-                                var first = pairs[0].Field;
-                                errors[first.Name] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
-                                errors["_duplicate"] = "رکوردی با همین ترکیب فیلدهای یکتا از قبل وجود دارد.";
+                                foreach (var (field, _) in pairs)
+                                {
+                                    var hit = ToHit(field, found, moduleId, global: false);
+                                    if (hit is not null)
+                                        AddHit(hit);
+                                }
                             }
                         }
                     }
@@ -1135,31 +1230,39 @@ public class DynamicRecordService
                         if (ignoreEmpty && string.IsNullOrEmpty(value))
                             continue;
 
-                        bool duplicate;
+                        DynamicRecord? found;
                         if (string.IsNullOrEmpty(value))
                         {
-                            duplicate = await _db.Records
+                            found = await _db.Records
                                 .FromSqlInterpolated($"""
                                     SELECT * FROM "Records"
                                     WHERE "ModuleId" = {moduleId}
                                       AND ("CustomData" ->> {field.Name} IS NULL OR "CustomData" ->> {field.Name} = '')
                                     """)
-                                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                                .AnyAsync();
+                                .Where(r => !excludeIds.Contains(r.Id))
+                                .FirstOrDefaultAsync();
+                        }
+                        else if (field.Type == FieldType.Phone)
+                        {
+                            found = await FindPhoneRecordAsync(moduleId, field.Name, PhoneIdentity.SearchVariants(value), excludeIds);
                         }
                         else
                         {
-                            duplicate = await _db.Records
+                            found = await _db.Records
                                 .FromSqlInterpolated($"""
                                     SELECT * FROM "Records"
                                     WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {field.Name} = {value}
                                     """)
-                                .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                                .AnyAsync();
+                                .Where(r => !excludeIds.Contains(r.Id))
+                                .FirstOrDefaultAsync();
                         }
 
-                        if (duplicate)
-                            errors[field.Name] = $"رکوردی با همین «{field.Label}» از قبل وجود دارد.";
+                        if (found is not null)
+                        {
+                            var hit = ToHit(field, found, moduleId, global: false);
+                            if (hit is not null)
+                                AddHit(hit);
+                        }
                     }
                 }
             }
@@ -1173,30 +1276,23 @@ public class DynamicRecordService
                 if (!data.TryGetValue(field.Name, out var value) || string.IsNullOrWhiteSpace(value))
                     continue;
 
+                var variants = PhoneIdentity.SearchVariants(value);
                 var phoneFields = await _db.Fields.AsNoTracking()
                     .Where(f => f.Type == FieldType.Phone && (f.IsGlobalUniqueCheck || f.ModuleId == moduleId))
                     .Select(f => new { f.ModuleId, f.Name })
                     .ToListAsync();
 
-                // همه کلیدهای تلفن در CRM برای این مقدار
                 foreach (var group in phoneFields.GroupBy(f => f.ModuleId))
                 {
                     foreach (var pf in group)
                     {
-                        var hit = await _db.Records
-                            .FromSqlInterpolated($"""
-                                SELECT * FROM "Records"
-                                WHERE "ModuleId" = {group.Key} AND "CustomData" ->> {pf.Name} = {value}
-                                """)
-                            .Where(r => excludeRecordId == null || r.Id != excludeRecordId)
-                            .AnyAsync();
-
-                        if (hit)
-                        {
-                            errors[field.Name] = $"شماره «{field.Label}» در سطح CRM تکراری است.";
-                            errors["_duplicate"] = "شماره تماس در سطح کل CRM تکراری است.";
-                            break;
-                        }
+                        var found = await FindPhoneRecordAsync(group.Key, pf.Name, variants, excludeIds);
+                        if (found is null)
+                            continue;
+                        var hit = ToHit(field, found, group.Key, global: true);
+                        if (hit is not null)
+                            AddHit(hit);
+                        break;
                     }
                     if (errors.ContainsKey(field.Name))
                         break;
@@ -1204,8 +1300,35 @@ public class DynamicRecordService
             }
         }
 
+        if (hits.Count > 0)
+        {
+            errors["_duplicate"] = string.Join(" ", hits.Select(h => h.Message).Distinct());
+            throw new RecordValidationException(errors, hits);
+        }
+
         if (errors.Count > 0)
             throw new RecordValidationException(errors);
+    }
+
+    private async Task<DynamicRecord?> FindPhoneRecordAsync(
+        int moduleId, string fieldName, IReadOnlyList<string> variants, IReadOnlySet<int> excludeIds)
+    {
+        foreach (var variant in variants)
+        {
+            if (string.IsNullOrWhiteSpace(variant))
+                continue;
+            var hit = await _db.Records
+                .FromSqlInterpolated($"""
+                    SELECT * FROM "Records"
+                    WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {fieldName} = {variant}
+                    """)
+                .Where(r => !excludeIds.Contains(r.Id))
+                .FirstOrDefaultAsync();
+            if (hit is not null)
+                return hit;
+        }
+
+        return null;
     }
 
     private static string ResolveTitle(IReadOnlyList<FieldDef> fields, Dictionary<string, string?> data)
