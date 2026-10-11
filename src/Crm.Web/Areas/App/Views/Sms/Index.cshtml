@@ -1,0 +1,233 @@
+@using Crm.Core.Entities
+@using Crm.Infrastructure.Services
+@model SmsIndexModel
+@{
+    var templatesJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Templates.Select(t => new { t.Title, t.Body }));
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/sms.css" asp-append-version="true" />
+}
+
+<div class="sms-hero mb-4">
+    <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center">
+        <div>
+            <h4 class="mb-1"><i class="bx bx-message-rounded-dots text-primary me-1"></i> پیامک</h4>
+            <div class="text-muted">یک نفر یا یک فهرست از مخاطب، سرنخ، فرصت فروش و هر ماژول دیگری.</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            @if (Model.Ready)
+            {
+                <div class="sms-stat">
+                    <span>خط</span>
+                    <strong dir="ltr">@Model.FromDisplay</strong>
+                </div>
+                <div class="sms-stat">
+                    <span>موجودی</span>
+                    <strong>@(Model.CreditText ?? "—")</strong>
+                </div>
+            }
+            <a href="/App/integrations#sms" class="btn btn-outline-primary align-self-center">تنظیم پنل</a>
+        </div>
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+@if (Model.KavenegarSelected && !Model.Ready)
+{
+    <div class="alert alert-warning">کاوه‌نگار هنوز وصل نشده است. برای ارسال، در یکپارچگی‌ها آی‌پی‌پنل را انتخاب کنید.</div>
+}
+else if (!Model.Ready)
+{
+    <div class="card">
+        <div class="sms-empty">
+            <i class="bx bx-message-alt-x d-block mb-3"></i>
+            <h5>پنل پیامک خاموش است</h5>
+            <p class="text-muted mb-3">وقتی آی‌پی‌پنل فعال باشد، از همین صفحه برای هر رکوردی پیام تکی یا فله‌ای می‌رود.</p>
+            <a href="/App/integrations#sms" class="btn btn-primary">رفتن به تنظیمات</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <form asp-action="Send" method="post" class="card" id="sms-form">
+                @Html.AntiForgeryToken()
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">گیرنده‌ها</h5>
+                        <span class="badge bg-label-primary" id="sms-count">۰ نفر</span>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">از کدام فهرست</label>
+                            <select name="module" id="sms-module" class="form-select">
+                                <option value="">فقط شماره‌های دستی</option>
+                                @foreach (var module in Model.Modules)
+                                {
+                                    <option value="@module.Name">@module.Label</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label">جستجو در عنوان</label>
+                            <input type="search" name="q" id="sms-q" class="form-control" placeholder="نام شخص یا شرکت" />
+                        </div>
+                    </div>
+
+                    <div class="sms-list mb-2" id="sms-list">
+                        <div class="text-muted small p-3">یک فهرست را انتخاب کنید تا شماره‌ها بیاید.</div>
+                    </div>
+                    <label class="form-check mb-3">
+                        <input type="checkbox" name="allInModule" value="true" class="form-check-input" id="sms-all" />
+                        <span class="form-check-label">ارسال به همه شماره‌های همین فهرست (حداکثر ۱۰۰۰ نفر)</span>
+                    </label>
+
+                    <label class="form-label">شماره دستی</label>
+                    <textarea name="manualPhones" class="form-control mb-3" rows="2" dir="ltr" placeholder="0912... هر شماره در یک خط"></textarea>
+
+                    <label class="form-label">متن</label>
+                    @if (Model.Templates.Count > 0)
+                    {
+                        <select id="sms-template" class="form-select mb-2">
+                            <option value="">از قالب پیام استفاده نکن</option>
+                            @for (var i = 0; i < Model.Templates.Count; i++)
+                            {
+                                <option value="@i">@Model.Templates[i].Title</option>
+                            }
+                        </select>
+                    }
+                    <textarea name="message" id="sms-message" class="form-control" rows="5" required placeholder="سلام {name}"></textarea>
+                    <div class="d-flex justify-content-between text-muted small mt-1 mb-3">
+                        <span>برای نام هر نفر {name} را در متن بگذارید.</span>
+                        <span id="sms-chars">۰ نویسه</span>
+                    </div>
+
+                    <label class="form-label">زمان ارسال</label>
+                    <input type="datetime-local" name="schedule" class="form-control mb-3" />
+                    <div class="text-muted small mb-3">اگر خالی باشد همین حالا می‌رود.</div>
+
+                    <button type="submit" class="btn btn-primary" id="sms-submit">
+                        <i class="bx bx-send me-1"></i> ارسال
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="col-lg-5 sms-history">
+            <h5 class="mb-3">ارسال‌های اخیر</h5>
+            @if (Model.Recent.Count == 0)
+            {
+                <div class="text-muted">هنوز پیامی از CRM نرفته است.</div>
+            }
+            @foreach (var item in Model.Recent)
+            {
+                <a href="/App/sms/@item.Id" class="d-block mb-2">
+                    <div class="card">
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between gap-2 mb-1">
+                                <strong>@item.RecipientCount گیرنده</strong>
+                                <span class="badge @SmsLabels.Badge(item.Status)">@SmsLabels.Status(item.Status)</span>
+                            </div>
+                            <div class="text-muted small mb-1">@(item.Message.Length > 90 ? item.Message[..90] + "…" : item.Message)</div>
+                            <div class="text-muted small">@PersianDateHelper.ToJalaliDateTime(item.CreatedAtUtc)</div>
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    const templates = @Html.Raw(templatesJson);
+    const selected = new Map();
+    const list = document.getElementById('sms-list');
+    const moduleSelect = document.getElementById('sms-module');
+    const queryInput = document.getElementById('sms-q');
+    const count = document.getElementById('sms-count');
+    const message = document.getElementById('sms-message');
+    const chars = document.getElementById('sms-chars');
+    const form = document.getElementById('sms-form');
+    if (!form) { /* panel off */ }
+    else {
+        const fa = new Intl.NumberFormat('fa-IR');
+        function paintCount() {
+            const all = document.getElementById('sms-all').checked;
+            count.textContent = all ? 'همه فهرست' : fa.format(selected.size) + ' نفر';
+        }
+        function paintList(items) {
+            if (!moduleSelect.value) {
+                list.innerHTML = '<div class="text-muted small p-3">یک فهرست را انتخاب کنید تا شماره‌ها بیاید.</div>';
+                return;
+            }
+            if (!items.length) {
+                list.innerHTML = '<div class="text-muted small p-3">شماره‌ای پیدا نشد.</div>';
+                return;
+            }
+            list.innerHTML = items.map(item => {
+                const on = selected.has(String(item.id));
+                return `<label class="sms-person ${on ? 'is-on' : ''}">
+                    <input type="checkbox" data-id="${item.id}" data-title="${escapeAttr(item.title)}" data-phone="${escapeAttr(item.phone)}" ${on ? 'checked' : ''} />
+                    <span><strong>${escapeText(item.title)}</strong><small dir="ltr">${escapeText(item.phone)}</small></span>
+                </label>`;
+            }).join('');
+        }
+        function escapeText(value) {
+            return String(value ?? '').replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+        }
+        function escapeAttr(value) {
+            return escapeText(value).replace(/"/g, '&quot;');
+        }
+        async function loadAudience() {
+            if (!moduleSelect.value) { paintList([]); return; }
+            const url = '/App/sms/audience?module=' + encodeURIComponent(moduleSelect.value) + '&q=' + encodeURIComponent(queryInput.value || '');
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            const data = await response.json();
+            paintList(data.items || []);
+        }
+        let timer;
+        moduleSelect.addEventListener('change', () => { selected.clear(); paintCount(); loadAudience(); });
+        queryInput.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(loadAudience, 250); });
+        list.addEventListener('change', event => {
+            const box = event.target.closest('input[type="checkbox"]');
+            if (!box) return;
+            const id = box.dataset.id;
+            if (box.checked) selected.set(id, true);
+            else selected.delete(id);
+            box.closest('.sms-person')?.classList.toggle('is-on', box.checked);
+            paintCount();
+        });
+        document.getElementById('sms-all').addEventListener('change', paintCount);
+        document.getElementById('sms-template')?.addEventListener('change', event => {
+            const item = templates[Number(event.target.value)];
+            if (item) message.value = item.Body;
+            paintChars();
+        });
+        function paintChars() {
+            const length = message.value.length;
+            const part = /[^\u0000-\u007f]/.test(message.value) ? 70 : 160;
+            const parts = length === 0 ? 0 : Math.ceil(length / part);
+            chars.textContent = fa.format(length) + ' نویسه' + (parts ? ' · ' + fa.format(parts) + ' بخش' : '');
+        }
+        message.addEventListener('input', paintChars);
+        form.addEventListener('submit', () => {
+            form.querySelectorAll('input[data-picked]').forEach(el => el.remove());
+            selected.forEach((_, id) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'recordIds';
+                input.value = id;
+                input.dataset.picked = '1';
+                form.appendChild(input);
+            });
+        });
+        paintCount();
+        paintChars();
+    }
+</script>
+}

@@ -1,0 +1,77 @@
+@using Crm.Core.Entities
+@using Crm.Infrastructure.Services
+@model SmsDispatch
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/sms.css" asp-append-version="true" />
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <a href="/App/sms" class="text-muted small">بازگشت به پیامک</a>
+        <h4 class="mb-0 mt-1">جزئیات ارسال</h4>
+    </div>
+    <div class="d-flex gap-2">
+        <form asp-action="Refresh" asp-route-id="@Model.Id" method="post">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-primary"><i class="bx bx-refresh me-1"></i> به‌روزرسانی وضعیت</button>
+        </form>
+        @if (Model.Status is "queued" && Model.ScheduledUtc is DateTime when && when > DateTime.UtcNow.AddMinutes(5))
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" data-confirm="این ارسال لغو شود؟">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger">لغو زمان‌بندی</button>
+            </form>
+        }
+    </div>
+</div>
+
+<partial name="_Alerts" />
+
+<div class="sms-hero mb-4">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="sms-stat"><span>وضعیت</span><strong>@SmsLabels.Status(Model.Status)</strong></div>
+        <div class="sms-stat"><span>گیرنده</span><strong>@Model.RecipientCount</strong></div>
+        <div class="sms-stat"><span>خط</span><strong dir="ltr">@Model.FromNumber</strong></div>
+        <div class="sms-stat"><span>هزینه</span><strong>@(Model.Cost is decimal cost ? cost.ToString("N0") : "—")</strong></div>
+        <div class="sms-stat"><span>زمان</span><strong>@PersianDateHelper.ToJalaliDateTime(Model.ScheduledUtc ?? Model.CreatedAtUtc)</strong></div>
+    </div>
+    <div style="white-space:pre-wrap">@Model.Message</div>
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="text-danger small mt-2">@Model.Error</div>
+    }
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>گیرنده</th>
+                    <th>شماره</th>
+                    <th>وضعیت تحویل</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Recipients)
+                {
+                    <tr>
+                        <td>
+                            @if (row.RecordId is int recordId && !string.IsNullOrWhiteSpace(row.ModuleName))
+                            {
+                                <a href="/App/m/@row.ModuleName/@recordId">@(row.DisplayName ?? "رکورد")</a>
+                            }
+                            else
+                            {
+                                @(row.DisplayName ?? "شماره دستی")
+                            }
+                        </td>
+                        <td dir="ltr">@IpPanelSmsClient.Display(row.Phone)</td>
+                        <td><span class="badge @SmsLabels.Badge(row.DeliveryStatus)">@SmsLabels.Delivery(row.DeliveryStatus)</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

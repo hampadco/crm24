@@ -53,6 +53,7 @@ public class DynamicRecordService
     private readonly RecordAccessService _access;
     private readonly AuditService _audit;
     private readonly IBackgroundJobClient _jobs;
+    private readonly PartyLinkService _partyLinks;
 
     public DynamicRecordService(
         CrmDbContext db,
@@ -60,7 +61,8 @@ public class DynamicRecordService
         MetadataService metadata,
         RecordAccessService access,
         AuditService audit,
-        IBackgroundJobClient jobs)
+        IBackgroundJobClient jobs,
+        PartyLinkService partyLinks)
     {
         _db = db;
         _tenant = tenant;
@@ -68,6 +70,7 @@ public class DynamicRecordService
         _access = access;
         _audit = audit;
         _jobs = jobs;
+        _partyLinks = partyLinks;
     }
 
     /// <summary>اجرای async قوانین گردش‌کار پس از ایجاد/ویرایش رکورد.</summary>
@@ -516,13 +519,16 @@ public class DynamicRecordService
     }
 
     public async Task<DynamicRecord> CreateAsync(
-        int moduleId, Dictionary<string, string?> values, int? excludeDuplicateRecordId = null, bool skipDuplicateCheck = false)
+        int moduleId, Dictionary<string, string?> values, int? excludeDuplicateRecordId = null,
+        bool skipDuplicateCheck = false, bool skipPartyPropagate = false)
     {
         var module = await _db.Modules.AsNoTracking().FirstAsync(m => m.Id == moduleId);
         var fields = await _metadata.GetFieldsAsync(moduleId);
 
         var data = ValidateAndBuildData(fields, values);
         KeepIntegrationExtras(values, oldData: new Dictionary<string, string?>(), data);
+        if (!skipPartyPropagate)
+            await _partyLinks.EnrichFromLinkedPartiesAsync(fields, data);
         await ValidateLookupsAsync(fields, data);
         if (!skipDuplicateCheck)
             await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: excludeDuplicateRecordId);
@@ -542,10 +548,14 @@ public class DynamicRecordService
         await _db.SaveChangesAsync();
 
         EnqueueWorkflows(moduleId, record.Id, WorkflowTrigger.RecordCreated);
+        if (!skipPartyPropagate && PartyLinkService.HasPartyLookupValue(fields, data))
+            await _partyLinks.PropagateFromAsync(module.Name, record.Id);
         return record;
     }
 
-    public async Task UpdateAsync(int moduleId, int id, Dictionary<string, string?> values, bool skipDuplicateCheck = false)
+    public async Task UpdateAsync(
+        int moduleId, int id, Dictionary<string, string?> values,
+        bool skipDuplicateCheck = false, bool skipPartyPropagate = false)
     {
         var module = await _db.Modules.AsNoTracking().FirstAsync(m => m.Id == moduleId);
         var record = await _db.Records.FirstOrDefaultAsync(r => r.ModuleId == moduleId && r.Id == id)
@@ -559,6 +569,8 @@ public class DynamicRecordService
             ?? new Dictionary<string, string?>();
         var data = ValidateAndBuildData(fields, values);
         KeepIntegrationExtras(values, oldData, data);
+        if (!skipPartyPropagate)
+            await _partyLinks.EnrichFromLinkedPartiesAsync(fields, data);
         await ValidateLookupsAsync(fields, data);
         if (!skipDuplicateCheck)
             await CheckDuplicatesAsync(moduleId, fields, data, excludeRecordId: id);
@@ -581,6 +593,8 @@ public class DynamicRecordService
 
         if (changes.Count > 0)
             EnqueueWorkflows(moduleId, id, WorkflowTrigger.RecordUpdated);
+        if (!skipPartyPropagate && PartyLinkService.PartyLookupsChanged(fields, oldData, data))
+            await _partyLinks.PropagateFromAsync(module.Name, id);
     }
 
     /// <summary>فیلدهای خالی مقصد را از ورودی پر می‌کند؛ توضیح را اضافه می‌کند نه جایگزین.</summary>
@@ -661,7 +675,9 @@ public class DynamicRecordService
 
         var data = ParseData(record);
         var old = data.GetValueOrDefault(fieldName);
+        var oldData = new Dictionary<string, string?>(data);
         data[fieldName] = value;
+        await _partyLinks.EnrichFromLinkedPartiesAsync(fields, data);
         record.CustomData = JsonSerializer.Serialize(data);
 
         _audit.Log(module.Name, record.Id, "Update", new Dictionary<string, object?>
@@ -672,6 +688,8 @@ public class DynamicRecordService
 
         if (old != value)
             EnqueueWorkflows(moduleId, id, WorkflowTrigger.RecordUpdated);
+        if (PartyLinkService.PartyLookupsChanged(fields, oldData, data))
+            await _partyLinks.PropagateFromAsync(module.Name, id);
     }
 
     public async Task DeleteAsync(int moduleId, int id)

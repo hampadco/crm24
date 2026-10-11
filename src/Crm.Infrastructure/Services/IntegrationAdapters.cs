@@ -55,50 +55,6 @@ public class SmtpEmailSender : IEmailSender
     }
 }
 
-/// <summary>آداپتور پنل پیامک ایرانی — POST ساده به آدرس پیکربندی‌شده.</summary>
-public class HttpSmsSender : ISmsSender
-{
-    private readonly TenantIntegrationService _integrations;
-    private readonly IHttpClientFactory _httpFactory;
-    private readonly ILogger<HttpSmsSender> _logger;
-
-    public HttpSmsSender(TenantIntegrationService integrations, IHttpClientFactory httpFactory, ILogger<HttpSmsSender> logger)
-    {
-        _integrations = integrations;
-        _httpFactory = httpFactory;
-        _logger = logger;
-    }
-
-    public async Task<bool> SendAsync(string to, string text)
-    {
-        var config = await _integrations.GetAsync();
-        if (!config.HasSms)
-        {
-            _logger.LogInformation("SMS (no config) to={To}: {Text}", to, text);
-            return true;
-        }
-
-        try
-        {
-            var client = _httpFactory.CreateClient("sms");
-            var payload = new Dictionary<string, string>
-            {
-                ["receptor"] = to,
-                ["message"] = text,
-                ["sender"] = config.SmsFrom ?? "",
-                ["apikey"] = config.SmsApiKey ?? ""
-            };
-            var response = await client.PostAsync(config.SmsApiUrl, new FormUrlEncodedContent(payload));
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "SMS send failed to {To}", to);
-            return false;
-        }
-    }
-}
-
 /// <summary>آداپتور پیام‌رسان بله (Bot API سازگار با تلگرام).</summary>
 public class BaleMessengerSender : IMessengerSender
 {

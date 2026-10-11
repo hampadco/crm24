@@ -20,12 +20,15 @@ public class ContactDirectory
     private readonly CrmDbContext _db;
     private readonly MetadataService _metadata;
     private readonly DynamicRecordService _records;
+    private readonly PartyLinkService _partyLinks;
 
-    public ContactDirectory(CrmDbContext db, MetadataService metadata, DynamicRecordService records)
+    public ContactDirectory(
+        CrmDbContext db, MetadataService metadata, DynamicRecordService records, PartyLinkService partyLinks)
     {
         _db = db;
         _metadata = metadata;
         _records = records;
+        _partyLinks = partyLinks;
     }
 
     public async Task<IReadOnlyList<DirectoryPerson>> FindContactsByPhoneAsync(string? phone, CancellationToken ct = default)
@@ -241,6 +244,14 @@ public class ContactDirectory
 
         data["contact"] = contact.Id.ToString();
         await _records.UpdateAsync(module.Id, record.Id, data);
+
+        if (!string.Equals(moduleName, "leads", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(data.GetValueOrDefault("lead"), out var leadId)
+            && leadId > 0)
+        {
+            await _partyLinks.FillHubAndPropagateAsync("leads", leadId, contact.Id, organizationId, ct);
+        }
+
         return contact;
     }
 }

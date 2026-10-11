@@ -3083,6 +3083,150 @@ namespace Crm.Infrastructure.Migrations
                     b.ToTable("SlaPolicies");
                 });
 
+            modelBuilder.Entity("Crm.Core.Entities.SmsDispatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("Cost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FromNumber")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModuleName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OutboxIdsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RecipientCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ScheduledUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedAtUtc");
+
+                    b.ToTable("SmsDispatches");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.SmsRecipient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DeliveryStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("DispatchId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DisplayName")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModuleName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<int?>("RecordId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DispatchId");
+
+                    b.HasIndex("TenantId", "DispatchId");
+
+                    b.ToTable("SmsRecipients");
+                });
+
             modelBuilder.Entity("Crm.Core.Entities.Subscription", b =>
                 {
                     b.Property<int>("Id")
@@ -4665,6 +4809,17 @@ namespace Crm.Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("Crm.Core.Entities.SmsRecipient", b =>
+                {
+                    b.HasOne("Crm.Core.Entities.SmsDispatch", "Dispatch")
+                        .WithMany("Recipients")
+                        .HasForeignKey("DispatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dispatch");
+                });
+
             modelBuilder.Entity("Crm.Core.Entities.Subscription", b =>
                 {
                     b.HasOne("Crm.Core.Entities.Plan", "Plan")
@@ -4931,6 +5086,11 @@ namespace Crm.Infrastructure.Migrations
                     b.Navigation("Lines");
 
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.SmsDispatch", b =>
+                {
+                    b.Navigation("Recipients");
                 });
 
             modelBuilder.Entity("Crm.Core.Entities.Subscription", b =>

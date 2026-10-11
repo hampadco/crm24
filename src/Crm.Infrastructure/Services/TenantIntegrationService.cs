@@ -17,7 +17,9 @@ public class IntegrationConfig
     public string? SmtpPassword { get; set; }
     public string? SmtpFrom { get; set; }
 
-    // پنل پیامک ایرانی (الگوی Kavenegar-مانند)
+    /// <summary>خالی، ippanel، یا kavenegar. هر مستأجر فقط یکی.</summary>
+    public string? SmsProvider { get; set; }
+    public bool SmsEnabled { get; set; }
     public string? SmsApiUrl { get; set; }
     public string? SmsApiKey { get; set; }
     public string? SmsFrom { get; set; }
@@ -44,7 +46,25 @@ public class IntegrationConfig
     public DateTime? TelefonchyLastSyncUtc { get; set; }
 
     public bool HasSmtp => !string.IsNullOrWhiteSpace(SmtpHost);
-    public bool HasSms => !string.IsNullOrWhiteSpace(SmsApiUrl);
+    public bool IsIpPanel => string.Equals(SmsProvider, "ippanel", StringComparison.OrdinalIgnoreCase);
+    public bool IsKavenegar => string.Equals(SmsProvider, "kavenegar", StringComparison.OrdinalIgnoreCase);
+    public bool HasIpPanel => SmsEnabled && IsIpPanel
+        && !string.IsNullOrWhiteSpace(SmsApiKey)
+        && !string.IsNullOrWhiteSpace(SmsFrom);
+    public bool HasSms => HasIpPanel;
+
+    public string ResolvedIpPanelBaseUrl
+    {
+        get
+        {
+            var url = string.IsNullOrWhiteSpace(SmsApiUrl)
+                ? "https://edge.ippanel.com/v1"
+                : SmsApiUrl.Trim().TrimEnd('/');
+            if (url.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+                url = url[..^4];
+            return url;
+        }
+    }
     public bool HasBale => !string.IsNullOrWhiteSpace(BaleBotToken);
     public bool HasAccounting => !string.IsNullOrWhiteSpace(AccountingWebhookUrl);
     public bool HasTelefonchy => TelefonchyEnabled

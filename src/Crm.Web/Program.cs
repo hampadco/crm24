@@ -58,6 +58,7 @@ builder.Services.AddScoped<RolePermissionService>();
 builder.Services.AddScoped<SalesModuleSeeder>();
 builder.Services.AddScoped<BusinessModuleSeeder>();
 builder.Services.AddScoped<DemoTenantSeeder>();
+builder.Services.AddScoped<PartyLinkService>();
 builder.Services.AddScoped<LeadConversionService>();
 builder.Services.AddScoped<ContactDirectory>();
 builder.Services.AddScoped<FinanceService>();
@@ -78,8 +79,11 @@ builder.Services.AddScoped<TelefonchyCallSyncJob>();
 builder.Services.AddScoped<TelefonchyTraceService>();
 builder.Services.AddScoped<Crm.Core.Abstractions.ICallPopupNotifier, Crm.Web.Hubs.SignalRCallPopupNotifier>();
 builder.Services.AddScoped<Crm.Core.Abstractions.ICallRecordingStore, Crm.Web.Services.LocalCallRecordingStore>();
+builder.Services.AddScoped<IpPanelSmsClient>();
+builder.Services.AddScoped<SmsService>();
+builder.Services.AddScoped<SmsStatusJob>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IEmailSender, SmtpEmailSender>();
-builder.Services.AddScoped<Crm.Core.Abstractions.ISmsSender, HttpSmsSender>();
+builder.Services.AddScoped<Crm.Core.Abstractions.ISmsSender>(sp => sp.GetRequiredService<SmsService>());
 builder.Services.AddScoped<Crm.Core.Abstractions.IMessengerSender, BaleMessengerSender>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IAccountingGateway, QueuedAccountingGateway>();
 builder.Services.AddScoped<Crm.Core.Abstractions.IPaymentGateway, SandboxPaymentGateway>();
@@ -87,6 +91,10 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpClient("telefonchy", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(90);
+});
+builder.Services.AddHttpClient("ippanel", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
 });
 
 builder.Services.AddIdentityCore<CrmUser>(options =>
@@ -196,6 +204,10 @@ app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<TelefonchyCa
     "telefonchy-recording-drain",
     job => job.DrainAllTenantsAsync(),
     "* * * * *");
+app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<SmsStatusJob>(
+    "sms-delivery-refresh",
+    job => job.RefreshOpenAsync(),
+    "*/2 * * * *");
 
 if (!app.Environment.IsDevelopment())
 {

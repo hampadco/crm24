@@ -1,0 +1,72 @@
+.sms-hero {
+    background:
+        radial-gradient(1200px 180px at 100% 0%, rgba(105, 108, 255, .16), transparent 55%),
+        linear-gradient(180deg, rgba(105, 108, 255, .07), transparent);
+    border: 1px solid rgba(105, 108, 255, .16);
+    border-radius: 1rem;
+    padding: 1.25rem 1.35rem;
+}
+
+.sms-stat {
+    background: #fff;
+    border: 1px solid rgba(67, 89, 113, .12);
+    border-radius: .85rem;
+    padding: .7rem .9rem;
+    min-width: 9rem;
+}
+
+.sms-stat span {
+    display: block;
+    color: #8592a3;
+    font-size: .75rem;
+}
+
+.sms-stat strong {
+    font-size: .95rem;
+}
+
+.sms-list {
+    max-height: 22rem;
+    overflow: auto;
+    border: 1px solid rgba(67, 89, 113, .16);
+    border-radius: .85rem;
+    background: #fff;
+}
+
+.sms-person {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    padding: .7rem .9rem;
+    border-bottom: 1px solid rgba(67, 89, 113, .08);
+    cursor: pointer;
+    margin: 0;
+}
+
+.sms-person:last-child { border-bottom: 0; }
+.sms-person:hover,
+.sms-person.is-on { background: rgba(105, 108, 255, .07); }
+
+.sms-person small {
+    display: block;
+    color: #8592a3;
+}
+
+.sms-empty {
+    text-align: center;
+    padding: 3.5rem 1rem;
+}
+
+.sms-empty i {
+    font-size: 3rem;
+    color: #696cff;
+}
+
+.sms-history a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.sms-history a:hover .card {
+    border-color: rgba(105, 108, 255, .45);
+}

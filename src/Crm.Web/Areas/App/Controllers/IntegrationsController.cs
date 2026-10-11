@@ -15,13 +15,17 @@ public class IntegrationsController : AppControllerBase
     private readonly ITenantContext _tenant;
     private readonly TenantIntegrationService _integrations;
     private readonly TelefonchyClient _telefonchy;
+    private readonly SmsService _sms;
 
-    public IntegrationsController(CrmDbContext db, ITenantContext tenant, TenantIntegrationService integrations, TelefonchyClient telefonchy)
+    public IntegrationsController(
+        CrmDbContext db, ITenantContext tenant, TenantIntegrationService integrations,
+        TelefonchyClient telefonchy, SmsService sms)
     {
         _db = db;
         _tenant = tenant;
         _integrations = integrations;
         _telefonchy = telefonchy;
+        _sms = sms;
     }
 
     [HttpGet("/App/integrations")]
@@ -55,6 +59,10 @@ public class IntegrationsController : AppControllerBase
         var existing = await _integrations.GetAsync();
         if (string.IsNullOrWhiteSpace(config.SmtpPassword))
             config.SmtpPassword = existing.SmtpPassword;
+        if (string.IsNullOrWhiteSpace(config.SmsApiKey))
+            config.SmsApiKey = existing.SmsApiKey;
+        if (config.IsIpPanel && string.IsNullOrWhiteSpace(config.SmsApiUrl))
+            config.SmsApiUrl = "https://edge.ippanel.com/v1";
         if (string.IsNullOrWhiteSpace(config.TelefonchyToken))
             config.TelefonchyToken = existing.TelefonchyToken;
         if (string.IsNullOrWhiteSpace(config.TelefonchyHookSecret))
@@ -65,6 +73,23 @@ public class IntegrationsController : AppControllerBase
 
         await _integrations.SaveAsync(config);
         TempData["Success"] = "تنظیمات یکپارچگی ذخیره شد.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/sms/test")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestSms()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var credit = await _sms.GetCreditAsync();
+        if (!credit.Ok)
+            TempData["Error"] = credit.Error ?? "اتصال به آی‌پی‌پنل برقرار نشد.";
+        else
+            TempData["Success"] = credit.Credit is decimal amount
+                ? $"اتصال آی‌پی‌پنل برقرار است. موجودی: {amount:N0} ریال"
+                : "اتصال آی‌پی‌پنل برقرار است.";
         return RedirectToAction(nameof(Index));
     }
 

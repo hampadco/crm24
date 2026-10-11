@@ -27,6 +27,7 @@
         if (currentPath.StartsWith("/App/webforms", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/surveys", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/templates", StringComparison.OrdinalIgnoreCase)
+            || currentPath.StartsWith("/App/sms", StringComparison.OrdinalIgnoreCase)
             || Group("marketing").Any(IsActiveMod))
             return "marketing";
         if (currentPath.StartsWith("/App/kanban", StringComparison.OrdinalIgnoreCase)
@@ -126,6 +127,7 @@
                     <li><a href="/App/webforms" class="@(currentPath.StartsWith("/App/webforms") ? "is-active" : "")"><i class="bx bx-layout"></i>وب‌فرم‌ها</a></li>
                     <li><a href="/App/surveys" class="@(currentPath.StartsWith("/App/surveys") ? "is-active" : "")"><i class="bx bx-poll"></i>نظرسنجی‌ها</a></li>
                     <li><a href="/App/templates" class="@(currentPath.StartsWith("/App/templates") ? "is-active" : "")"><i class="bx bx-message-square-detail"></i>قالب‌های پیام</a></li>
+                    <li><a href="/App/sms" class="@(currentPath.StartsWith("/App/sms") ? "is-active" : "")"><i class="bx bx-message-rounded-dots"></i>پیامک</a></li>
                 </ul>
             </div>
 

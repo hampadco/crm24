@@ -219,8 +219,8 @@ public class WorkflowEngine
             case WorkflowActionType.SendSms:
             {
                 var to = Cfg("to");
-                await _sms.SendAsync(to, Cfg("text"));
-                return $"پیامک به {to} ارسال شد.";
+                var ok = await _sms.SendAsync(to, Cfg("text"));
+                return ok ? $"پیامک به {to} ارسال شد." : $"پیامک به {to} ارسال نشد.";
             }
 
             case WorkflowActionType.CreateTask:

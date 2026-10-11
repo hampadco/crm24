@@ -93,6 +93,8 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<SavedListView> SavedListViews => Set<SavedListView>();
     public DbSet<TelefonchyTrace> TelefonchyTraces => Set<TelefonchyTrace>();
+    public DbSet<SmsDispatch> SmsDispatches => Set<SmsDispatch>();
+    public DbSet<SmsRecipient> SmsRecipients => Set<SmsRecipient>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -448,6 +450,18 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
             e.Property(t => t.Payload).HasColumnType("text");
             e.HasIndex(t => new { t.TenantId, t.AtUtc });
             e.HasQueryFilter(t => _tenant.TenantId == null || t.TenantId == _tenant.TenantId);
+        });
+
+        builder.Entity<SmsDispatch>(e =>
+        {
+            e.Property(d => d.Cost).HasPrecision(18, 2);
+            e.HasIndex(d => new { d.TenantId, d.CreatedAtUtc });
+            e.HasMany(d => d.Recipients).WithOne(r => r.Dispatch).HasForeignKey(r => r.DispatchId).OnDelete(DeleteBehavior.Cascade);
+        });
+        builder.Entity<SmsRecipient>(e =>
+        {
+            e.Property(r => r.Phone).HasMaxLength(24);
+            e.HasIndex(r => new { r.TenantId, r.DispatchId });
         });
 
         ApplyTenantAndSoftDeleteFilters(builder);
