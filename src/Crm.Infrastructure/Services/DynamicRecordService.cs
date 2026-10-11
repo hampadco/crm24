@@ -518,6 +518,36 @@ public class DynamicRecordService
         return await query.FirstOrDefaultAsync();
     }
 
+    /// <summary>اگر یک فیلد تلفن چند شماره چسبیده داشته باشد، هر شماره را در خط جدا ذخیره می‌کند.</summary>
+    public async Task<DynamicRecord> SeparatePhoneNumbersAsync(DynamicRecord record)
+    {
+        var fields = await _metadata.GetFieldsAsync(record.ModuleId);
+        var data = ParseData(record);
+        var changed = false;
+        foreach (var field in fields.Where(f => f.Type == FieldType.Phone))
+        {
+            if (!data.TryGetValue(field.Name, out var raw) || string.IsNullOrWhiteSpace(raw))
+                continue;
+            var joined = PhoneIdentity.Join(PhoneIdentity.Split(raw));
+            if (joined.Length == 0 || joined == raw.Trim())
+                continue;
+            data[field.Name] = joined;
+            changed = true;
+        }
+
+        if (!changed)
+            return record;
+
+        var tracked = await _db.Records.FirstOrDefaultAsync(r => r.Id == record.Id && r.ModuleId == record.ModuleId);
+        if (tracked is null)
+            return record;
+
+        tracked.CustomData = JsonSerializer.Serialize(data);
+        await _db.SaveChangesAsync();
+        record.CustomData = tracked.CustomData;
+        return record;
+    }
+
     public async Task<DynamicRecord> CreateAsync(
         int moduleId, Dictionary<string, string?> values, int? excludeDuplicateRecordId = null,
         bool skipDuplicateCheck = false, bool skipPartyPropagate = false)
@@ -706,16 +736,85 @@ public class DynamicRecordService
         await _db.SaveChangesAsync();
     }
 
-    /// <summary>سطل بازیابی: رکوردهای حذف‌شده Tenant جاری.</summary>
-    public async Task<IReadOnlyList<DynamicRecord>> ListDeletedAsync(int take = 100) =>
-        await _db.Records
+    /// <summary>سطل بازیابی: رکوردهای حذف‌شده Tenant جاری، صفحه‌بندی‌شده.</summary>
+    public async Task<(IReadOnlyList<DynamicRecord> Items, int Total)> ListDeletedAsync(int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var query = _db.Records
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .Where(r => r.IsDeleted && r.TenantId == _tenant.TenantId)
+            .Where(r => r.IsDeleted && r.TenantId == _tenant.TenantId);
+        var total = await query.CountAsync();
+        var items = await query
             .OrderByDescending(r => r.DeletedAtUtc)
-            .Take(take)
+            .ThenByDescending(r => r.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Include(r => r.Module)
             .ToListAsync();
+        return (items, total);
+    }
+
+    /// <summary>حذف همیشگی رکوردهای داخل سطل. مسیر فایل پیوست‌ها برای پاک‌کردن از دیسک برمی‌گردد.</summary>
+    public async Task<(int Count, IReadOnlyList<string> FilePaths)> PurgeDeletedAsync(IReadOnlyCollection<int> ids)
+    {
+        if (ids.Count == 0 || _tenant.TenantId is not int tenantId)
+            return (0, []);
+
+        var wanted = ids.Distinct().Take(200).ToArray();
+        var records = await _db.Records
+            .IgnoreQueryFilters()
+            .Include(r => r.Module)
+            .Where(r => wanted.Contains(r.Id) && r.IsDeleted && r.TenantId == tenantId)
+            .ToListAsync();
+
+        var allowed = new List<DynamicRecord>();
+        foreach (var record in records)
+        {
+            if (await _access.CanDeleteAsync(record.ModuleId))
+                allowed.Add(record);
+        }
+        if (allowed.Count == 0)
+            return (0, []);
+
+        var paths = new List<string>();
+        foreach (var group in allowed.GroupBy(r => r.Module.Name))
+        {
+            var groupIds = group.Select(r => r.Id).ToArray();
+            var stored = await _db.Attachments
+                .IgnoreQueryFilters()
+                .Where(a => a.TenantId == tenantId && a.ModuleName == group.Key && groupIds.Contains(a.RecordId))
+                .Select(a => a.StoredPath)
+                .ToListAsync();
+            paths.AddRange(stored.Where(p => !string.IsNullOrWhiteSpace(p))!);
+
+            await _db.Notes.IgnoreQueryFilters()
+                .Where(n => n.TenantId == tenantId && n.ModuleName == group.Key && groupIds.Contains(n.RecordId))
+                .ExecuteDeleteAsync();
+            await _db.Attachments.IgnoreQueryFilters()
+                .Where(a => a.TenantId == tenantId && a.ModuleName == group.Key && groupIds.Contains(a.RecordId))
+                .ExecuteDeleteAsync();
+            await _db.TagLinks.IgnoreQueryFilters()
+                .Where(t => t.TenantId == tenantId && t.ModuleName == group.Key && groupIds.Contains(t.RecordId))
+                .ExecuteDeleteAsync();
+        }
+
+        var allIds = allowed.Select(r => r.Id).ToArray();
+        await _db.RecordLinks.IgnoreQueryFilters()
+            .Where(l => l.TenantId == tenantId && (allIds.Contains(l.LeftRecordId) || allIds.Contains(l.RightRecordId)))
+            .ExecuteDeleteAsync();
+
+        foreach (var record in allowed)
+            _audit.Log(record.Module.Name, record.Id, "Purge");
+        await _db.SaveChangesAsync();
+
+        await _db.Records.IgnoreQueryFilters()
+            .Where(r => allIds.Contains(r.Id) && r.TenantId == tenantId)
+            .ExecuteDeleteAsync();
+
+        return (allowed.Count, paths);
+    }
 
     public async Task RestoreAsync(int id)
     {
@@ -830,6 +929,11 @@ public class DynamicRecordService
                             continue;
                         }
                         break;
+                    case FieldType.Phone:
+                        value = PhoneIdentity.Join(PhoneIdentity.Split(value));
+                        if (string.IsNullOrEmpty(value))
+                            value = null;
+                        break;
                     case FieldType.Email when !value.Contains('@'):
                         errors[field.Name] = $"مقدار «{field.Label}» ایمیل معتبر نیست.";
                         continue;
@@ -851,7 +955,8 @@ public class DynamicRecordService
                     }
                 }
 
-                ApplyValidationRules(field, value, values, errors);
+                if (value is not null)
+                    ApplyValidationRules(field, value, values, errors);
                 if (errors.ContainsKey(field.Name))
                     continue;
             }
@@ -1262,7 +1367,8 @@ public class DynamicRecordService
                         }
                         else if (field.Type == FieldType.Phone)
                         {
-                            found = await FindPhoneRecordAsync(moduleId, field.Name, PhoneIdentity.SearchVariants(value), excludeIds);
+                            var variants = PhoneIdentity.Split(value).SelectMany(PhoneIdentity.SearchVariants).ToList();
+                            found = await FindPhonesAsync([moduleId], [field.Name], variants, excludeIds);
                         }
                         else
                         {
@@ -1289,31 +1395,27 @@ public class DynamicRecordService
         if (module.GlobalDuplicateEnabled)
         {
             var globalFields = fields.Where(f => f.IsGlobalUniqueCheck && f.Type == FieldType.Phone).ToList();
-            foreach (var field in globalFields)
+            if (globalFields.Count > 0)
             {
-                if (!data.TryGetValue(field.Name, out var value) || string.IsNullOrWhiteSpace(value))
-                    continue;
-
-                var variants = PhoneIdentity.SearchVariants(value);
                 var phoneFields = await _db.Fields.AsNoTracking()
                     .Where(f => f.Type == FieldType.Phone && (f.IsGlobalUniqueCheck || f.ModuleId == moduleId))
                     .Select(f => new { f.ModuleId, f.Name })
                     .ToListAsync();
+                var moduleIds = phoneFields.Select(f => f.ModuleId).Distinct().ToList();
+                var names = phoneFields.Select(f => f.Name).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
-                foreach (var group in phoneFields.GroupBy(f => f.ModuleId))
+                foreach (var field in globalFields)
                 {
-                    foreach (var pf in group)
-                    {
-                        var found = await FindPhoneRecordAsync(group.Key, pf.Name, variants, excludeIds);
-                        if (found is null)
-                            continue;
-                        var hit = ToHit(field, found, group.Key, global: true);
-                        if (hit is not null)
-                            AddHit(hit);
-                        break;
-                    }
-                    if (errors.ContainsKey(field.Name))
-                        break;
+                    if (!data.TryGetValue(field.Name, out var value) || string.IsNullOrWhiteSpace(value))
+                        continue;
+
+                    var variants = PhoneIdentity.Split(value).SelectMany(PhoneIdentity.SearchVariants).ToList();
+                    var found = await FindPhonesAsync(moduleIds, names, variants, excludeIds);
+                    if (found is null)
+                        continue;
+                    var hit = ToHit(field, found, found.ModuleId, global: true);
+                    if (hit is not null)
+                        AddHit(hit);
                 }
             }
         }
@@ -1328,25 +1430,41 @@ public class DynamicRecordService
             throw new RecordValidationException(errors);
     }
 
-    private async Task<DynamicRecord?> FindPhoneRecordAsync(
-        int moduleId, string fieldName, IReadOnlyList<string> variants, IReadOnlySet<int> excludeIds)
+    /// <summary>همهٔ شکل‌های یک شماره را در یک رفت‌وبرگشت با دیتابیس جستجو می‌کند.</summary>
+    private async Task<DynamicRecord?> FindPhonesAsync(
+        IReadOnlyCollection<int> moduleIds,
+        IReadOnlyCollection<string> fieldNames,
+        IReadOnlyCollection<string> variants,
+        IReadOnlySet<int> excludeIds)
     {
-        foreach (var variant in variants)
-        {
-            if (string.IsNullOrWhiteSpace(variant))
-                continue;
-            var hit = await _db.Records
-                .FromSqlInterpolated($"""
-                    SELECT * FROM "Records"
-                    WHERE "ModuleId" = {moduleId} AND "CustomData" ->> {fieldName} = {variant}
-                    """)
-                .Where(r => !excludeIds.Contains(r.Id))
-                .FirstOrDefaultAsync();
-            if (hit is not null)
-                return hit;
-        }
+        var ids = moduleIds.Where(id => id > 0).Distinct().ToArray();
+        var names = fieldNames
+            .Where(name => name.Length > 0 && name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var packed = string.Join("||", variants
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v.Trim())
+            .Distinct(StringComparer.Ordinal));
+        if (ids.Length == 0 || names.Length == 0 || packed.Length == 0)
+            return null;
 
-        return null;
+        var idList = string.Join(",", ids);
+        var nameList = string.Join(",", names.Select(name => $"'{name}'"));
+        var sql = $@"
+            SELECT * FROM ""Records""
+            WHERE ""ModuleId"" IN ({idList})
+              AND EXISTS (
+                SELECT 1
+                FROM unnest(ARRAY[{nameList}]::text[]) AS fname
+                CROSS JOIN LATERAL unnest(regexp_split_to_array(COALESCE(""CustomData"" ->> fname, ''), E'[\n\r,،;؛|]+')) AS part
+                WHERE btrim(part) = ANY(string_to_array({{0}}, '||'))
+              )";
+
+        return await _db.Records
+            .FromSqlRaw(sql, packed)
+            .Where(r => !excludeIds.Contains(r.Id))
+            .FirstOrDefaultAsync();
     }
 
     private static string ResolveTitle(IReadOnlyList<FieldDef> fields, Dictionary<string, string?> data)

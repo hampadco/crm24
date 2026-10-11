@@ -79,8 +79,12 @@ public class TelephonyController : AppControllerBase
         var number = phone;
         if (string.IsNullOrWhiteSpace(number))
             number = data.GetValueOrDefault("mobile") ?? data.GetValueOrDefault("phone");
-        if (string.IsNullOrWhiteSpace(number))
+        var chosen = PhoneIdentity.Split(number);
+        if (chosen.Count == 0)
             return BadRequest(new { ok = false, message = "شماره تماس روی این پرونده خالی است." });
+        if (chosen.Count > 1)
+            return BadRequest(new { ok = false, message = "چند شماره روی این پرونده است. یکی را برای تماس انتخاب کنید." });
+        number = chosen[0];
 
         var result = await _client.SmartCallAsync(exten, number);
         await HttpContext.RequestServices.GetRequiredService<TelefonchyTraceService>().WriteAsync(new TelefonchyTraceEntry

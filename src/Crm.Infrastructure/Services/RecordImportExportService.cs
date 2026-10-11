@@ -2,19 +2,22 @@ using System.Text;
 using ClosedXML.Excel;
 using Crm.Core.Abstractions;
 using Crm.Core.Entities;
+using Crm.Infrastructure.Data;
 
 namespace Crm.Infrastructure.Services;
 
 /// <summary>خروجی اکسل و ورود CSV برای ماژول‌های metadata-driven.</summary>
-public class RecordImportExportService
+public partial class RecordImportExportService
 {
     private readonly MetadataService _metadata;
     private readonly DynamicRecordService _records;
+    private readonly CrmDbContext _db;
 
-    public RecordImportExportService(MetadataService metadata, DynamicRecordService records)
+    public RecordImportExportService(MetadataService metadata, DynamicRecordService records, CrmDbContext db)
     {
         _metadata = metadata;
         _records = records;
+        _db = db;
     }
 
     public async Task<byte[]> ExportToExcelAsync(ModuleDef module, IReadOnlyList<DynamicRecord> records)

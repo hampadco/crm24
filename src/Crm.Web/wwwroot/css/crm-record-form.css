@@ -388,3 +388,11 @@
   gap: 0.4rem;
   margin-top: 0.65rem;
 }
+
+.crm-phone-row {
+  margin-bottom: 0.35rem;
+}
+
+.crm-phone-row .crm-rf-control {
+  direction: ltr;
+}

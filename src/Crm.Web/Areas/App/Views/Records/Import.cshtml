@@ -1,0 +1,168 @@
+@using Crm.Core.Entities
+@using Crm.Infrastructure.Services
+@model ImportMapViewModel
+<link rel="stylesheet" href="~/css/crm-import.css" asp-append-version="true" />
+
+<div class="crm-imp-page">
+    <div class="crm-imp-head">
+        <a href="/App/m/@Model.Module.Name" class="crm-imp-back">@Model.Module.PluralLabel</a>
+        <h1>ورود از اکسل</h1>
+    </div>
+
+    <partial name="_Alerts" />
+
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="alert alert-warning">@Model.Error</div>
+    }
+
+    @if (Model.Table is null)
+    {
+        <form asp-action="ImportPreview" asp-route-moduleName="@Model.Module.Name" method="post" enctype="multipart/form-data" class="crm-imp-drop">
+            @Html.AntiForgeryToken()
+            <div class="crm-imp-drop-mark" aria-hidden="true"></div>
+            <h2>فایل را انتخاب کنید</h2>
+            <p>ردیف اول باید عنوان ستون‌ها باشد. اکسل xlsx یا CSV.</p>
+            <input type="file" name="file" accept=".xlsx,.csv" required />
+            <button type="submit" class="btn btn-primary">ادامه و نگاشت ستون‌ها</button>
+        </form>
+    }
+    else
+    {
+        var required = Model.Fields.Where(f => f.IsRequired).Select(f => f.Label).ToList();
+        var groups = Model.Fields
+            .GroupBy(FieldGroup)
+            .OrderBy(g => GroupOrder(g.Key));
+
+        <div class="crm-imp-summary">
+            <div>
+                <strong>@Model.Table.RowCount.ToString("N0")</strong>
+                <span>ردیف</span>
+            </div>
+            <div>
+                <strong>@Model.Table.Columns.Count.ToString("N0")</strong>
+                <span>ستون</span>
+            </div>
+            @if (required.Count > 0)
+            {
+                <div class="crm-imp-summary-wide">
+                    <span>الزامی</span>
+                    <strong>@string.Join("، ", required)</strong>
+                </div>
+            }
+        </div>
+        @if (Model.Table.Truncated)
+        {
+            <div class="alert alert-warning">فقط @RecordImportExportService.MaxImportRows.ToString("N0") ردیف اول خوانده شد.</div>
+        }
+
+        <form asp-action="ImportCommit" asp-route-moduleName="@Model.Module.Name" method="post" data-crm-import-form>
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="token" value="@Model.Token" />
+            <div class="crm-imp-map">
+                @foreach (var column in Model.Table.Columns)
+                {
+                    var suggested = Model.Fields.FirstOrDefault(f => f.Name == column.SuggestedField);
+                    var isCheck = suggested?.Type == FieldType.Checkbox;
+                    <div class="crm-imp-row">
+                        <div class="crm-imp-col">
+                            <div class="crm-imp-col-name">@column.Header</div>
+                            <div class="crm-imp-samples">
+                                @if (column.Samples.Count == 0)
+                                {
+                                    <span class="crm-imp-empty">بدون نمونه</span>
+                                }
+                                else
+                                {
+                                    foreach (var sample in column.Samples)
+                                    {
+                                        <span>@sample</span>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <div class="crm-imp-arrow" aria-hidden="true"></div>
+                        <div class="crm-imp-target">
+                            <input type="hidden" name="column" value="@column.Index" />
+                            <select name="field" class="form-select crm-imp-field">
+                                <option value="">نادیده بگیر</option>
+                                @foreach (var group in groups)
+                                {
+                                    <optgroup label="@group.Key">
+                                        @foreach (var fieldDef in group.OrderBy(f => f.SortOrder))
+                                        {
+                                            var kind = fieldDef.Type == FieldType.Checkbox ? "check" : "value";
+                                            if (column.SuggestedField == fieldDef.Name)
+                                            {
+                                                <option value="@fieldDef.Name" data-kind="@kind" selected>@fieldDef.Label@(fieldDef.IsRequired ? " *" : "")</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@fieldDef.Name" data-kind="@kind">@fieldDef.Label@(fieldDef.IsRequired ? " *" : "")</option>
+                                            }
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                            <select name="flagMode" class="form-select crm-imp-flag"@Html.Raw(isCheck ? "" : " hidden")>
+                                @if (column.FlagMode == "words")
+                                {
+                                    <option value="filled">اگر سلول پر باشد، فعال است</option>
+                                    <option value="words" selected>بله و خیر، ۱ و ۰، درست و غلط</option>
+                                }
+                                else
+                                {
+                                    <option value="filled" selected>اگر سلول پر باشد، فعال است</option>
+                                    <option value="words">بله و خیر، ۱ و ۰، درست و غلط</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                }
+            </div>
+            <p class="crm-imp-note">چند ستون روی یک فیلد متنی با فاصله به هم می‌چسبند. چند شماره روی یک فیلد تماس جدا ذخیره می‌شوند. برای بله/خیر می‌توانید بگویید سلول پر یعنی فعال، یا مقدارهای بله و خیر خوانده شود.</p>
+            <div class="crm-imp-actions">
+                <button type="submit" class="btn btn-primary">تأیید و ورود</button>
+                <a href="/App/m/@Model.Module.Name/import" class="btn btn-outline-secondary">فایل دیگر</a>
+            </div>
+        </form>
+
+        <div id="crmImpScreen" class="crm-imp-screen" hidden>
+            <div class="crm-imp-card">
+                <div class="crm-imp-visual" aria-hidden="true">
+                    <div class="crm-imp-ring"></div>
+                    <div class="crm-imp-sheet">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                </div>
+                <h2>در حال ورود رکوردها</h2>
+                <p class="crm-imp-detail">لطفاً صبر کنید</p>
+                <div class="crm-imp-bar" aria-hidden="true"><div style="width:18%"></div></div>
+            </div>
+        </div>
+        <script src="~/js/crm-import-run.js" asp-append-version="true"></script>
+    }
+</div>
+
+@functions {
+    private static string FieldGroup(FieldDef field) => field.Type switch
+    {
+        FieldType.Checkbox => "بله / خیر",
+        FieldType.Picklist or FieldType.MultiPicklist => "فهرست",
+        FieldType.Phone or FieldType.Email or FieldType.Url => "تماس",
+        FieldType.Date or FieldType.DateTime => "تاریخ",
+        FieldType.Number or FieldType.Decimal or FieldType.Currency or FieldType.Percent => "عدد",
+        _ => "متن"
+    };
+
+    private static int GroupOrder(string name) => name switch
+    {
+        "متن" => 0,
+        "تماس" => 1,
+        "فهرست" => 2,
+        "بله / خیر" => 3,
+        "تاریخ" => 4,
+        "عدد" => 5,
+        _ => 6
+    };
+}

@@ -14,6 +14,11 @@
         rawDefault = DateTime.Today.ToString("yyyy-MM-dd");
     }
     var value = Model.Values.GetValueOrDefault(field.Name) ?? rawDefault;
+    var phoneNumbers = field.Type == FieldType.Phone
+        ? Crm.Infrastructure.Services.PhoneIdentity.Split(value).ToList()
+        : new List<string>();
+    if (field.Type == FieldType.Phone && phoneNumbers.Count == 0)
+        phoneNumbers.Add("");
     var hasError = Model.Errors.TryGetValue(field.Name, out var error);
     var inputClass = $"form-control crm-rf-control{(hasError ? " is-invalid" : "")}";
     var selectClass = $"form-select crm-rf-control{(hasError ? " is-invalid" : "")}";
@@ -149,9 +154,30 @@
                 break;
 
             case FieldType.Email:
-            case FieldType.Phone:
             case FieldType.Url:
                 <input type="text" dir="ltr" id="@name" name="@name" value="@value" class="@inputClass" readonly="@readOnly" maxlength="@(field.MaxLength)" />
+                break;
+
+            case FieldType.Phone:
+                <div class="crm-phones" data-crm-phones>
+                    @foreach (var phoneNumber in phoneNumbers)
+                    {
+                        <div class="crm-phone-row input-group">
+                            <input type="text" dir="ltr" value="@phoneNumber" class="@inputClass crm-phone-part" readonly="@readOnly" maxlength="@(field.MaxLength)" autocomplete="off" />
+                            @if (!readOnly)
+                            {
+                                <button type="button" class="btn btn-outline-secondary" data-crm-phone-remove title="حذف این شماره">
+                                    <i class="bx bx-x"></i>
+                                </button>
+                            }
+                        </div>
+                    }
+                    @if (!readOnly)
+                    {
+                        <button type="button" class="btn btn-link btn-sm px-0" data-crm-phone-add>شماره دیگر</button>
+                    }
+                    <input type="hidden" id="@name" name="@name" value="@string.Join('\n', phoneNumbers.Where(p => !string.IsNullOrWhiteSpace(p)))" />
+                </div>
                 break;
 
             default:

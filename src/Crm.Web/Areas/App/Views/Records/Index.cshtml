@@ -53,9 +53,9 @@
             </a>
             @if (Model.CanCreate)
             {
-                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-                    <i class="bx bx-upload me-1"></i> ورود CSV
-                </button>
+                <a asp-action="Import" asp-route-moduleName="@Model.Module.Name" class="btn btn-outline-secondary btn-sm">
+                    <i class="bx bx-upload me-1"></i> ورود از اکسل
+                </a>
                 <a asp-action="Create" asp-route-moduleName="@Model.Module.Name" class="btn btn-primary btn-sm">
                     <i class="bx bx-plus me-1"></i> ایجاد @Model.Module.SingularLabel
                 </a>
@@ -132,28 +132,6 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
                 <button type="submit" class="btn btn-primary">ذخیره</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="importModal" tabindex="-1">
-    <div class="modal-dialog">
-        <form asp-action="Import" asp-route-moduleName="@Model.Module.Name" method="post" enctype="multipart/form-data" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">ورود از فایل CSV</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted small">
-                    ردیف اول باید نام ستون‌ها باشد. ستون‌ها با نام سیستمی یا برچسب فیلد تطبیق داده می‌شوند:
-                    @string.Join("، ", Model.Fields.Select(f => f.Label))
-                </p>
-                <input type="file" name="file" class="form-control" accept=".csv" required />
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
-                <button type="submit" class="btn btn-primary">شروع ورود</button>
             </div>
         </form>
     </div>

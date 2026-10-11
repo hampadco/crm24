@@ -19,6 +19,9 @@ artifacts/
 appsettings.*.local.json
 **/appsettings.*.local.json
 
+## Uploaded import files
+src/Crm.Web/App_Data/imports/
+
 ## Node (future tooling)
 node_modules/
 

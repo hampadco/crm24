@@ -1,0 +1,27 @@
+@model ImportRunViewModel
+@{
+    ViewData["Title"] = "در حال ورود";
+}
+<link rel="stylesheet" href="~/css/crm-import.css" asp-append-version="true" />
+
+<div id="crmImpScreen" class="crm-imp-screen"
+     data-poll="/App/m/@Model.Module.Name/import/run/status?token=@Model.Token"
+     data-list="/App/m/@Model.Module.Name">
+    <div class="crm-imp-card">
+        <div class="crm-imp-visual" aria-hidden="true">
+            <div class="crm-imp-ring"></div>
+            <div class="crm-imp-sheet">
+                <span></span><span></span><span></span><span></span>
+            </div>
+        </div>
+        <h2 id="crmImpTitle">در حال ورود رکوردها</h2>
+        <p class="crm-imp-detail" id="crmImpDetail">@Model.Status.Processed از @Model.Status.Total ردیف</p>
+        <div class="crm-imp-bar" aria-hidden="true"><div id="crmImpBar"></div></div>
+        <div class="crm-imp-errors" id="crmImpErrors" hidden></div>
+        <div id="crmImpActions" class="mt-3" hidden>
+            <a id="crmImpList" class="btn btn-primary" href="/App/m/@Model.Module.Name">مشاهده رکوردها</a>
+        </div>
+    </div>
+</div>
+
+<script src="~/js/crm-import-run.js" asp-append-version="true"></script>

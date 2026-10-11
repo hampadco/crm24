@@ -125,14 +125,38 @@
                     <i class="bx bx-user-plus me-1"></i> ثبت مخاطب
                 </a>
             }
-            @if (Model.CanClickToCall)
+            @if (Model.CanClickToCall && Model.ClickToCallPhones.Count > 0)
             {
-                <button type="button" class="btn btn-outline-success btn-sm" id="crmClickToCall"
-                        data-module="@Model.Module.Name"
-                        data-id="@Model.Record.Id"
-                        data-phone="@Model.ClickToCallPhone">
-                    <i class="bx bx-phone-call me-1"></i> تماس
-                </button>
+                if (Model.ClickToCallPhones.Count == 1)
+                {
+                    <button type="button" class="btn btn-outline-success btn-sm crm-click-to-call"
+                            data-module="@Model.Module.Name"
+                            data-id="@Model.Record.Id"
+                            data-phone="@Model.ClickToCallPhones[0]">
+                        <i class="bx bx-phone-call me-1"></i> تماس
+                    </button>
+                }
+                else
+                {
+                    <div class="dropdown d-inline-block">
+                        <button type="button" class="btn btn-outline-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bx bx-phone-call me-1"></i> تماس
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            @foreach (var phone in Model.ClickToCallPhones)
+                            {
+                                <li>
+                                    <button type="button" class="dropdown-item crm-click-to-call" dir="ltr"
+                                            data-module="@Model.Module.Name"
+                                            data-id="@Model.Record.Id"
+                                            data-phone="@phone">
+                                        @phone
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
             }
             @if (Model.CanEdit)
             {
@@ -270,7 +294,7 @@
                             }
                             else if (field.Type == FieldType.Phone && display != "—")
                             {
-                                <a href="tel:@display" dir="ltr">@display</a>
+                                <partial name="_PhoneLinks" model="@(Model.Values.GetValueOrDefault(field.Name))" />
                             }
                             else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
                             {
@@ -312,6 +336,10 @@
                                             {
                                                 <a href="/App/m/@lookupMod/@lookupId">@display</a>
                                             }
+                                            else if (field.Type == FieldType.Phone && display != "—")
+                                            {
+                                                <partial name="_PhoneLinks" model="@(Model.Values.GetValueOrDefault(field.Name))" />
+                                            }
                                             else if (field.Type == FieldType.Picklist && Model.Values.TryGetValue(field.Name, out var pv) && pv is not null)
                                             {
                                                 var pick = field.PicklistValues.FirstOrDefault(p => p.Value == pv);
@@ -341,7 +369,16 @@
                                         var display = FormatFieldDisplay(field);
                                         <div class="crm-rd-kv-row">
                                             <dt>@field.Label</dt>
-                                            <dd>@display</dd>
+                                            <dd>
+                                                @if (field.Type == FieldType.Phone && display != "—")
+                                                {
+                                                    <partial name="_PhoneLinks" model="@(Model.Values.GetValueOrDefault(field.Name))" />
+                                                }
+                                                else
+                                                {
+                                                    @display
+                                                }
+                                            </dd>
                                         </div>
                                     }
                                 </dl>
@@ -499,6 +536,10 @@
                                         else if (field.Type == FieldType.Email && display != "—")
                                         {
                                             <a href="mailto:@display">@display</a>
+                                        }
+                                        else if (field.Type == FieldType.Phone && display != "—")
+                                        {
+                                            <partial name="_PhoneLinks" model="@(Model.Values.GetValueOrDefault(field.Name))" />
                                         }
                                         else if (field.Type == FieldType.MultilineText)
                                         {
@@ -1153,8 +1194,8 @@
 @section Scripts {
 <script>
 (function () {
-    var callBtn = document.getElementById('crmClickToCall');
-    if (callBtn) {
+    var callBtns = document.querySelectorAll('.crm-click-to-call');
+    callBtns.forEach(function (callBtn) {
         callBtn.addEventListener('click', function () {
             if (callBtn.disabled) return;
             callBtn.disabled = true;
@@ -1189,7 +1230,7 @@
                   setTimeout(function () { callBtn.disabled = false; }, 8000);
               });
         });
-    }
+    });
 
     var root = document.querySelector('.crm-rd');
     if (!root) return;

@@ -29,6 +29,7 @@
         <div class="crm-dt-selectbar-inner">
             <span class="crm-dt-selectbar-count">
                 <strong data-count>0</strong> مورد انتخاب شده
+                <span class="crm-dt-selectbar-hint">برای انتخاب بقیه، روی ردیف‌ها بکشید</span>
             </span>
             <div class="crm-dt-selectbar-actions">
                 @if (Model.CanDelete)
@@ -232,7 +233,7 @@
                                     }
                                     else if (field.Type == FieldType.Phone && !string.IsNullOrWhiteSpace(value))
                                     {
-                                        <a class="crm-dt-soft-link" href="tel:@value" dir="ltr">@value</a>
+                                        <partial name="_PhoneLinks" model="@value" />
                                     }
                                     else if (field.Type == FieldType.Url && !string.IsNullOrWhiteSpace(value))
                                     {

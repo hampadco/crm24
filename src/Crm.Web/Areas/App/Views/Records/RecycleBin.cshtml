@@ -6,7 +6,7 @@
     ViewData["PanelTitle"] = "سطل بازیابی";
     var af = Antiforgery.GetAndStoreTokens(Context);
     var afInput = $"<input type=\"hidden\" name=\"{af.FormFieldName}\" value=\"{af.RequestToken}\" />";
-    var rowNumber = 0;
+    var rowNumber = (Model.Page - 1) * Model.PageSize;
 
     var rows = Model.Records.Select(record =>
     {
@@ -14,11 +14,14 @@
         var deleted = record.DeletedAtUtc is DateTime d
             ? Crm.Web.Services.PersianDateHelper.ToJalaliDateTime(d)
             : "—";
+        var canPurge = Model.DeletableModuleIds.Contains(record.ModuleId);
         return new CrmTableRow
         {
             Id = record.Id.ToString(),
+            DeleteUrl = canPurge ? $"/App/recycle-bin/{record.Id}/purge?page={Model.Page}" : null,
+            DeleteConfirm = "این رکورد برای همیشه حذف شود؟ بازیابی دیگر ممکن نیست.",
             ExtraActionsHtml =
-                $"<form action=\"/App/recycle-bin/{record.Id}/restore\" method=\"post\" class=\"d-inline\">{afInput}" +
+                $"<form action=\"/App/recycle-bin/{record.Id}/restore?page={Model.Page}\" method=\"post\" class=\"d-inline\">{afInput}" +
                 "<button type=\"submit\" class=\"btn btn-sm btn-outline-success\"><i class=\"bx bx-undo me-1\"></i> بازیابی</button></form>",
             Cells = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -34,14 +37,18 @@
     {
         ListPath = "/App/recycle-bin",
         ShowSearchBox = false,
-        ShowFooter = false,
+        ShowColumnFilters = false,
+        ShowFilterBar = false,
+        CanDelete = Model.DeletableModuleIds.Count > 0,
+        BulkDeleteUrl = $"/App/recycle-bin/purge?page={Model.Page}",
+        BulkDeleteConfirm = "موارد انتخاب‌شده برای همیشه حذف شوند؟ بازیابی دیگر ممکن نیست.",
         EmptyMessage = "سطل بازیابی خالی است.",
         Columns =
         [
-            new CrmTableColumn { Key = "#", Label = "#" },
-            new CrmTableColumn { Key = "title", Label = "عنوان" },
-            new CrmTableColumn { Key = "module", Label = "ماژول" },
-            new CrmTableColumn { Key = "deleted", Label = "تاریخ حذف" }
+            new CrmTableColumn { Key = "#", Label = "#", Sortable = false, FilterKind = CrmTableFilterKind.None },
+            new CrmTableColumn { Key = "title", Label = "عنوان", Sortable = false, FilterKind = CrmTableFilterKind.None },
+            new CrmTableColumn { Key = "module", Label = "ماژول", Sortable = false, FilterKind = CrmTableFilterKind.None },
+            new CrmTableColumn { Key = "deleted", Label = "تاریخ حذف", Sortable = false, FilterKind = CrmTableFilterKind.None }
         ],
         Rows = rows
     };

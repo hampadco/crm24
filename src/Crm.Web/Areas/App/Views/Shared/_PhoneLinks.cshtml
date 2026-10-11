@@ -1,0 +1,17 @@
+@model string?
+@{
+    var phones = Crm.Infrastructure.Services.PhoneIdentity.Split(Model);
+}
+@if (phones.Count == 0)
+{
+    <text>—</text>
+}
+else
+{
+    <span class="crm-phone-list">
+        @foreach (var phone in phones)
+        {
+            <a class="crm-phone-link" href="tel:@phone" dir="ltr">@phone</a>
+        }
+    </span>
+}

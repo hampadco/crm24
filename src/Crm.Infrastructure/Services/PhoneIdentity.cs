@@ -20,6 +20,44 @@ public static class PhoneIdentity
         return digits.Length >= 8 ? digits : null;
     }
 
+    /// <summary>چند شماره داخل یک فیلد را جدا می‌کند؛ فاصله فقط وقتی هر تکه خودش شماره باشد.</summary>
+    public static IReadOnlyList<string> Split(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return [];
+
+        var result = new List<string>();
+        var chunks = raw.Split(['\n', '\r', ',', '،', ';', '؛', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var chunk in chunks)
+        {
+            var tokens = chunk.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tokens.Length > 1 && tokens.All(token => token.Count(char.IsDigit) >= 8))
+            {
+                foreach (var token in tokens)
+                    AddDistinct(result, token);
+            }
+            else
+            {
+                AddDistinct(result, chunk);
+            }
+        }
+
+        return result;
+    }
+
+    public static string Join(IEnumerable<string> phones) =>
+        string.Join('\n', phones.Select(phone => phone.Trim()).Where(phone => phone.Length > 0));
+
+    private static void AddDistinct(List<string> list, string phone)
+    {
+        var text = phone.Trim();
+        if (text.Length == 0)
+            return;
+        if (list.Any(existing => Same(existing, text) || existing.Equals(text, StringComparison.Ordinal)))
+            return;
+        list.Add(text);
+    }
+
     public static bool Same(string? a, string? b) =>
         Canonical(a) is { } left && Canonical(b) is { } right && left == right;
 

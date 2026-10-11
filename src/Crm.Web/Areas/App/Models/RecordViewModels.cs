@@ -185,6 +185,9 @@ public class RecordFormViewModel
 public class RecycleBinViewModel
 {
     public IReadOnlyList<DynamicRecord> Records { get; set; } = [];
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public HashSet<int> DeletableModuleIds { get; set; } = [];
 }
 
 public class RecordDetailViewModel
@@ -234,7 +237,7 @@ public class RecordDetailViewModel
     public IReadOnlyList<PrintTemplateOption> PrintTemplates { get; set; } = [];
 
     public bool CanClickToCall { get; set; }
-    public string? ClickToCallPhone { get; set; }
+    public IReadOnlyList<string> ClickToCallPhones { get; set; } = [];
     public bool HasCallRecording { get; set; }
     public bool HasPendingRecording { get; set; }
     public bool HasUnavailableRecording { get; set; }

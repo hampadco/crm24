@@ -31,6 +31,7 @@
             <div class="crm-dt-selectbar-inner">
                 <span class="crm-dt-selectbar-count">
                     <strong data-count>0</strong> مورد انتخاب شده
+                    <span class="crm-dt-selectbar-hint">برای انتخاب بقیه، روی ردیف‌ها بکشید</span>
                 </span>
                 <div class="crm-dt-selectbar-actions">
                     @if (Model.CanDelete && !string.IsNullOrWhiteSpace(Model.BulkDeleteUrl))
@@ -265,7 +266,7 @@
                 {
                     foreach (var row in Model.Rows)
                     {
-                        <tr data-record-id="@row.Id">
+                        <tr data-record-id="@row.Id" class="crm-dt-row">
                             @if (Model.SelectionEnabled)
                             {
                                 <td class="crm-dt-check">

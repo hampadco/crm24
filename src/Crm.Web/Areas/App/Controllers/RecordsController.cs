@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core.Entities;
@@ -25,6 +26,7 @@ public class RecordsController : AppControllerBase
     private readonly SalesDocumentService _docs;
     private readonly CrmDbContext _db;
     private readonly BusinessModuleSeeder _business;
+    private readonly IWebHostEnvironment _env;
 
     public RecordsController(
         MetadataService metadata,
@@ -37,7 +39,8 @@ public class RecordsController : AppControllerBase
         LineItemsService lineItems,
         SalesDocumentService docs,
         CrmDbContext db,
-        BusinessModuleSeeder business)
+        BusinessModuleSeeder business,
+        IWebHostEnvironment env)
     {
         _metadata = metadata;
         _records = records;
@@ -50,6 +53,7 @@ public class RecordsController : AppControllerBase
         _docs = docs;
         _db = db;
         _business = business;
+        _env = env;
     }
 
     [HttpGet("/App/m/{moduleName}")]
@@ -815,6 +819,8 @@ public class RecordsController : AppControllerBase
         if (record is null)
             return NotFound();
 
+        record = await _records.SeparatePhoneNumbersAsync(record);
+
         var fields = (await _metadata.GetFieldsAsync(module.Id))
             .Where(f => f.IsVisible && !TelefonchyCallService.IsInternalCallField(f.Name))
             .ToList();
@@ -886,11 +892,21 @@ public class RecordsController : AppControllerBase
         var telConfig = await integrations.GetAsync();
         if (telConfig.HasTelefonchy && module.Name is "contacts" or "leads")
         {
-            var phone = values.GetValueOrDefault("mobile") ?? values.GetValueOrDefault("phone");
-            if (!string.IsNullOrWhiteSpace(phone))
+            var phones = new List<string>();
+            foreach (var field in fields.Where(f => f.Type == FieldType.Phone))
+            {
+                values.TryGetValue(field.Name, out var raw);
+                foreach (var phone in PhoneIdentity.Split(raw))
+                {
+                    if (phones.Any(existing => PhoneIdentity.Same(existing, phone)))
+                        continue;
+                    phones.Add(phone);
+                }
+            }
+            if (phones.Count > 0)
             {
                 model.CanClickToCall = true;
-                model.ClickToCallPhone = phone;
+                model.ClickToCallPhones = phones;
             }
         }
         if (telConfig.HasTelefonchy && telConfig.TelefonchyRecordingEnabled
@@ -2039,6 +2055,301 @@ public class RecordsController : AppControllerBase
         return Redirect($"/App/m/{module.Name}/{id}#rel-m2m-{relationId}");
     }
 
+    [HttpGet("/App/m/{moduleName}/import")]
+    public async Task<IActionResult> Import(string moduleName, string? token)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanCreateAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var fields = await ImportFieldsAsync(module.Id);
+        var model = new ImportMapViewModel { Module = module, Fields = fields, Token = token };
+
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            if (OpenImport(token) is not { } stored)
+            {
+                TempData["Error"] = "فایل ورود پیدا نشد. دوباره بارگذاری کنید.";
+                return RedirectToAction(nameof(Import), new { moduleName });
+            }
+
+            try
+            {
+                await using var stream = System.IO.File.OpenRead(stored);
+                model.Table = RecordImportExportService.ReadTable(stream, stored);
+                RecordImportExportService.Suggest(fields, model.Table);
+            }
+            catch (InvalidOperationException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction(nameof(Import), new { moduleName });
+            }
+        }
+
+        ViewData["Title"] = "ورود از اکسل";
+        return View(model);
+    }
+
+    [HttpPost("/App/m/{moduleName}/import")]
+    [ValidateAntiForgeryToken]
+    [RequestSizeLimit(20_000_000)]
+    public async Task<IActionResult> ImportPreview(string moduleName, IFormFile? file)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanCreateAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        if (file is null || file.Length == 0)
+        {
+            TempData["Error"] = "فایلی انتخاب نشده است.";
+            return RedirectToAction(nameof(Import), new { moduleName });
+        }
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (ext is not ".xlsx" and not ".csv")
+        {
+            TempData["Error"] = "فقط فایل اکسل xlsx یا CSV پذیرفته می‌شود.";
+            return RedirectToAction(nameof(Import), new { moduleName });
+        }
+
+        var token = Guid.NewGuid().ToString("N");
+        var path = ImportFilePath(token, ext);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await using (var output = System.IO.File.Create(path))
+            await file.CopyToAsync(output);
+
+        try
+        {
+            await using var check = System.IO.File.OpenRead(path);
+            var table = RecordImportExportService.ReadTable(check, path);
+            if (table.RowCount == 0)
+                throw new InvalidOperationException("فایل ردیف داده‌ای ندارد.");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException)
+        {
+            System.IO.File.Delete(path);
+            TempData["Error"] = ex.Message;
+            return RedirectToAction(nameof(Import), new { moduleName });
+        }
+
+        SweepOldImports();
+        return RedirectToAction(nameof(Import), new { moduleName, token });
+    }
+
+    [HttpPost("/App/m/{moduleName}/import/commit")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ImportCommit(string moduleName, string token, int[] column, string[] field, string[]? flagMode)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanCreateAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var path = OpenImport(token);
+        if (path is null)
+        {
+            TempData["Error"] = "فایل ورود پیدا نشد. دوباره بارگذاری کنید.";
+            return RedirectToAction(nameof(Import), new { moduleName });
+        }
+
+        var fields = await ImportFieldsAsync(module.Id);
+        ImportTable table;
+        await using (var stream = System.IO.File.OpenRead(path))
+            table = RecordImportExportService.ReadTable(stream, path);
+        var columns = column ?? [];
+        var fieldsChosen = field ?? [];
+        var modes = flagMode ?? [];
+        var bindings = new List<ImportColumnBinding>();
+        var count = Math.Min(columns.Length, fieldsChosen.Length);
+        for (var i = 0; i < count; i++)
+        {
+            var chosen = string.IsNullOrWhiteSpace(fieldsChosen[i]) ? null : fieldsChosen[i].Trim();
+            var mode = i < modes.Length ? modes[i] : null;
+            bindings.Add(new ImportColumnBinding
+            {
+                Index = columns[i],
+                FieldName = chosen,
+                FlagMode = mode is "words" or "filled" ? mode : null
+            });
+        }
+
+        var missing = RecordImportExportService.MissingRequired(fields, bindings);
+        if (missing.Count > 0)
+        {
+            RecordImportExportService.Suggest(fields, table);
+            foreach (var columnInfo in table.Columns)
+            {
+                var chosen = bindings.FirstOrDefault(b => b.Index == columnInfo.Index);
+                if (chosen is not null)
+                {
+                    columnInfo.SuggestedField = chosen.FieldName;
+                    columnInfo.FlagMode = chosen.FlagMode;
+                }
+            }
+
+            ViewData["Title"] = "ورود از اکسل";
+            return View("Import", new ImportMapViewModel
+            {
+                Module = module,
+                Fields = fields,
+                Token = token,
+                Table = table,
+                Error = "این فیلدهای الزامی هنوز ستونی ندارند: " + string.Join("، ", missing.Select(f => f.Label))
+            });
+        }
+
+        var statusPath = ImportSidecar(path, token, ".status.json");
+        var existing = await RecordImportJob.ReadStatusAsync(statusPath);
+        if (existing is { State: "queued" or "running" or "done" })
+            return RedirectToAction(nameof(ImportRun), new { moduleName, token });
+
+        var jobPath = ImportSidecar(path, token, ".job.json");
+        await System.IO.File.WriteAllTextAsync(jobPath, System.Text.Json.JsonSerializer.Serialize(new ImportJobRequest
+        {
+            ModuleId = module.Id,
+            Bindings = bindings
+        }));
+
+        var tenant = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.TenantContext>();
+        var status = existing ?? new ImportRunStatus();
+        status.State = "queued";
+        status.Total = table.Rows.Count(row => !row.All(string.IsNullOrWhiteSpace));
+        status.Message = "ورود در صف سرور قرار گرفت.";
+        await RecordImportJob.WriteStatusAsync(statusPath, status);
+
+        Hangfire.BackgroundJob.Enqueue<RecordImportJob>(job =>
+            job.RunAsync(tenant.TenantId ?? 0, tenant.UserId ?? 0, path, jobPath, statusPath, null));
+
+        return RedirectToAction(nameof(ImportRun), new { moduleName, token });
+    }
+
+    [HttpGet("/App/m/{moduleName}/import/run")]
+    public async Task<IActionResult> ImportRun(string moduleName, string token)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanCreateAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var path = OpenImport(token);
+        var statusPath = path is null ? ImportStatusPath(token) : ImportSidecar(path, token, ".status.json");
+        if (statusPath is null)
+        {
+            TempData["Error"] = "این ورود پیدا نشد.";
+            return RedirectToAction(nameof(Import), new { moduleName });
+        }
+
+        var status = await RecordImportJob.ReadStatusAsync(statusPath);
+        if (status is null)
+        {
+            TempData["Error"] = "وضعیت ورود پیدا نشد. دوباره بارگذاری کنید.";
+            return RedirectToAction(nameof(Import), new { moduleName });
+        }
+
+        ViewData["Title"] = "در حال ورود";
+        return View(new ImportRunViewModel
+        {
+            Module = module,
+            Token = token,
+            Status = status
+        });
+    }
+
+    [HttpGet("/App/m/{moduleName}/import/run/status")]
+    public async Task<IActionResult> ImportRunStatus(string moduleName, string token)
+    {
+        var module = await _metadata.GetModuleByNameAsync(moduleName);
+        if (module is null)
+            return NotFound();
+        if (!await _access.CanCreateAsync(module.Id))
+            return Forbid("Identity.Application");
+
+        var path = OpenImport(token);
+        var statusPath = path is null ? ImportStatusPath(token) : ImportSidecar(path, token, ".status.json");
+        if (statusPath is null)
+            return NotFound();
+
+        var status = await RecordImportJob.ReadStatusAsync(statusPath);
+        if (status is null)
+            return NotFound();
+
+        return Json(new
+        {
+            state = status.State,
+            total = status.Total,
+            processed = status.Processed,
+            imported = status.Imported,
+            errorCount = status.ErrorCount,
+            errors = status.Errors,
+            message = status.Message
+        });
+    }
+
+    private async Task<List<FieldDef>> ImportFieldsAsync(int moduleId) =>
+        (await _metadata.GetFieldsAsync(moduleId))
+        .Where(RecordImportExportService.CanImport)
+        .ToList();
+
+    private string? OpenImport(string token)
+    {
+        if (token.Length != 32 || token.Any(c => !char.IsAsciiHexDigit(c)))
+            return null;
+        var tenantId = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId;
+        if (tenantId is null)
+            return null;
+        var dir = Path.Combine(ImportRoot, tenantId.Value.ToString());
+        if (!Directory.Exists(dir))
+            return null;
+        return Directory.GetFiles(dir, token + ".*")
+            .FirstOrDefault(file => file.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                                 || file.EndsWith(".csv", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string ImportSidecar(string dataPath, string token, string suffix) =>
+        Path.Combine(Path.GetDirectoryName(dataPath)!, token + suffix);
+
+    private string? ImportStatusPath(string token)
+    {
+        if (token.Length != 32 || token.Any(c => !char.IsAsciiHexDigit(c)))
+            return null;
+        var tenantId = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId;
+        if (tenantId is null)
+            return null;
+        var path = Path.Combine(ImportRoot, tenantId.Value.ToString(), token + ".status.json");
+        return System.IO.File.Exists(path) ? path : null;
+    }
+
+    private string ImportFilePath(string token, string ext)
+    {
+        var tenantId = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId
+            ?? throw new InvalidOperationException("Tenant context missing.");
+        return Path.Combine(ImportRoot, tenantId.ToString(), token + ext);
+    }
+
+    private string ImportRoot => Path.Combine(_env.ContentRootPath, "App_Data", "imports");
+
+    private void SweepOldImports()
+    {
+        if (!Directory.Exists(ImportRoot))
+            return;
+        var cutoff = DateTime.UtcNow.AddHours(-24);
+        foreach (var file in Directory.EnumerateFiles(ImportRoot, "*", SearchOption.AllDirectories))
+        {
+            try
+            {
+                if (System.IO.File.GetCreationTimeUtc(file) < cutoff)
+                    System.IO.File.Delete(file);
+            }
+            catch (IOException) { /* در حال استفاده */ }
+        }
+    }
+
     [HttpGet("/App/m/{moduleName}/export")]
     public async Task<IActionResult> Export(string moduleName, string? q)
     {
@@ -2054,33 +2365,6 @@ public class RecordsController : AppControllerBase
         return File(bytes,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"{module.Name}-{DateTime.Now:yyyyMMdd-HHmm}.xlsx");
-    }
-
-    [HttpPost("/App/m/{moduleName}/import")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Import(string moduleName, IFormFile? file)
-    {
-        var module = await _metadata.GetModuleByNameAsync(moduleName);
-        if (module is null)
-            return NotFound();
-
-        if (!await _access.CanCreateAsync(module.Id))
-            return Forbid("Identity.Application");
-
-        if (file is null || file.Length == 0)
-        {
-            TempData["Error"] = "فایل CSV انتخاب نشده است.";
-            return RedirectToAction(nameof(Index), new { moduleName });
-        }
-
-        await using var stream = file.OpenReadStream();
-        var (imported, errors) = await _importExport.ImportCsvAsync(module.Id, stream);
-
-        TempData["Success"] = $"{imported} رکورد وارد شد.";
-        if (errors.Count > 0)
-            TempData["Error"] = string.Join("\n", errors.Take(10));
-
-        return RedirectToAction(nameof(Index), new { moduleName });
     }
 
     /// <summary>ویزارد تبدیل سرنخ به مخاطب و فرصت.</summary>
@@ -2361,16 +2645,36 @@ public class RecordsController : AppControllerBase
     }
 
     [HttpGet("/App/recycle-bin")]
-    public async Task<IActionResult> RecycleBin()
+    public async Task<IActionResult> RecycleBin(int page = 1)
     {
-        var deleted = await _records.ListDeletedAsync();
+        const int pageSize = 20;
+        var (deleted, total) = await _records.ListDeletedAsync(page, pageSize);
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+        if (page > totalPages)
+            return RedirectToAction(nameof(RecycleBin), new { page = totalPages });
+
+        var deletable = new HashSet<int>();
+        foreach (var moduleId in deleted.Select(r => r.ModuleId).Distinct())
+        {
+            if (await _access.CanDeleteAsync(moduleId))
+                deletable.Add(moduleId);
+        }
+
         ViewData["Title"] = "سطل بازیابی";
-        return View(new RecycleBinViewModel { Records = deleted });
+        ViewBag.PagingAction = nameof(RecycleBin);
+        Crm.Web.Models.AppPaging.SetViewBag(ViewBag, total, Math.Min(page, totalPages), pageSize);
+        return View(new RecycleBinViewModel
+        {
+            Records = deleted,
+            Page = Math.Min(page, totalPages),
+            PageSize = pageSize,
+            DeletableModuleIds = deletable
+        });
     }
 
     [HttpPost("/App/recycle-bin/{id:int}/restore")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Restore(int id)
+    public async Task<IActionResult> Restore(int id, int page = 1)
     {
         try
         {
@@ -2382,7 +2686,50 @@ public class RecordsController : AppControllerBase
             TempData["Error"] = "رکورد یافت نشد.";
         }
 
-        return RedirectToAction(nameof(RecycleBin));
+        return RedirectToAction(nameof(RecycleBin), new { page });
+    }
+
+    [HttpPost("/App/recycle-bin/{id:int}/purge")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Purge(int id, int page = 1)
+    {
+        var (count, paths) = await _records.PurgeDeletedAsync([id]);
+        DeleteStoredFiles(paths);
+        TempData[count > 0 ? "Success" : "Error"] = count > 0
+            ? "رکورد برای همیشه حذف شد."
+            : "این رکورد حذف نشد.";
+        return RedirectToAction(nameof(RecycleBin), new { page });
+    }
+
+    [HttpPost("/App/recycle-bin/purge")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> PurgeMany(int[]? ids, int page = 1)
+    {
+        if (ids is null || ids.Length == 0)
+        {
+            TempData["Error"] = "موردی انتخاب نشده است.";
+            return RedirectToAction(nameof(RecycleBin), new { page });
+        }
+
+        var (count, paths) = await _records.PurgeDeletedAsync(ids);
+        DeleteStoredFiles(paths);
+        TempData[count > 0 ? "Success" : "Error"] = count > 0
+            ? $"{count} رکورد برای همیشه حذف شد."
+            : "هیچ رکوردی حذف نشد.";
+        return RedirectToAction(nameof(RecycleBin), new { page });
+    }
+
+    private void DeleteStoredFiles(IReadOnlyList<string> paths)
+    {
+        var root = Path.GetFullPath(_env.WebRootPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        foreach (var stored in paths)
+        {
+            var relative = stored.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var abs = Path.GetFullPath(Path.Combine(root, relative));
+            if (!abs.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !System.IO.File.Exists(abs))
+                continue;
+            try { System.IO.File.Delete(abs); } catch { /* فایل قفل است */ }
+        }
     }
 
     private async Task<RecordFormViewModel> BuildFormModelAsync(

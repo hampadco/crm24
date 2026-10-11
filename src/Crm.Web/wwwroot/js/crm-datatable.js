@@ -53,6 +53,7 @@
             if (n > 0) bar.removeAttribute('hidden');
             else bar.setAttribute('hidden', '');
         }
+        root.classList.toggle('is-selecting', n > 0);
 
         var holder = root.querySelector('[data-bulk-ids]');
         if (holder) {
@@ -286,6 +287,12 @@
         // کلیک روی ردیف → جزئیات (به‌جز چک‌باکس / لینک / دکمه / فرم)
         root.querySelectorAll('tbody tr[data-detail-url]').forEach(function (tr) {
             tr.addEventListener('click', function (e) {
+                if (root.dataset.crmDtIgnoreClick === '1') {
+                    delete root.dataset.crmDtIgnoreClick;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
                 if (e.defaultPrevented) return;
                 if (e.button !== 0) return;
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -321,7 +328,144 @@
 
         syncCheckAll(root);
         updateSelectionUi(root);
+        initDragSelect(root);
     }
+
+    function initDragSelect(root) {
+        var tbody = root.querySelector('tbody');
+        if (!tbody) return;
+        var drag = null;
+
+        function rows() {
+            return Array.prototype.slice.call(tbody.querySelectorAll('tr[data-record-id]'));
+        }
+
+        function rowAt(x, y) {
+            var el = document.elementFromPoint(x, y);
+            var tr = el && el.closest('tr[data-record-id]');
+            return tr && tbody.contains(tr) ? tr : null;
+        }
+
+        function applyRange(currentTr) {
+            var list = rows();
+            var current = list.indexOf(currentTr);
+            if (drag.startIndex < 0 || current < 0) return;
+            var lo = Math.min(drag.startIndex, current);
+            var hi = Math.max(drag.startIndex, current);
+            list.forEach(function (tr, index) {
+                var cb = tr.querySelector('.crm-dt-row-check');
+                if (!cb) return;
+                cb.checked = (index >= lo && index <= hi) || !!drag.base[cb.value];
+            });
+            syncCheckAll(root);
+            updateSelectionUi(root);
+        }
+
+        tbody.addEventListener('pointerdown', function (e) {
+            if (e.button !== 0) return;
+            if (selectedIds(root).length === 0) return;
+            var tr = e.target.closest('tr[data-record-id]');
+            if (!tr || !tbody.contains(tr)) return;
+            if (e.target.closest('a, button, input, label, select, textarea, form, .crm-dt-actions, .crm-dt-check')) return;
+            var base = {};
+            selectedIds(root).forEach(function (id) { base[id] = true; });
+            drag = {
+                x: e.clientX,
+                y: e.clientY,
+                moved: false,
+                pointerId: e.pointerId,
+                startIndex: rows().indexOf(tr),
+                base: base
+            };
+            try { tbody.setPointerCapture(e.pointerId); } catch (err) { /* مرورگر */ }
+        });
+
+        tbody.addEventListener('pointermove', function (e) {
+            if (!drag || e.pointerId !== drag.pointerId) return;
+            if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) < 6) return;
+            if (!drag.moved) {
+                drag.moved = true;
+                root.classList.add('is-drag-selecting');
+                document.body.classList.add('crm-dt-noselect');
+            }
+            e.preventDefault();
+            var over = rowAt(e.clientX, e.clientY);
+            if (over) applyRange(over);
+        });
+
+        function endDrag(e) {
+            if (!drag || (e && e.pointerId !== drag.pointerId)) return;
+            var moved = drag.moved;
+            drag = null;
+            root.classList.remove('is-drag-selecting');
+            document.body.classList.remove('crm-dt-noselect');
+            if (moved) {
+                root.dataset.crmDtIgnoreClick = '1';
+                window.setTimeout(function () { delete root.dataset.crmDtIgnoreClick; }, 80);
+            }
+        }
+
+        tbody.addEventListener('pointerup', endDrag);
+        tbody.addEventListener('pointercancel', endDrag);
+    }
+
+    function showTableLoader(title, detail) {
+        var screen = document.getElementById('crmDtLoader');
+        if (!screen) {
+            screen = document.createElement('div');
+            screen.id = 'crmDtLoader';
+            screen.className = 'crm-dt-loader';
+            screen.hidden = true;
+            screen.innerHTML =
+                '<div class="crm-dt-loader-card">' +
+                '<div class="crm-dt-loader-visual" aria-hidden="true">' +
+                '<div class="crm-dt-loader-ring"></div>' +
+                '<div class="crm-dt-loader-sheet"><span></span><span></span><span></span><span></span></div>' +
+                '</div>' +
+                '<h2 data-crm-dt-loader-title></h2>' +
+                '<p data-crm-dt-loader-detail></p>' +
+                '</div>';
+            document.body.appendChild(screen);
+        }
+        var titleEl = screen.querySelector('[data-crm-dt-loader-title]');
+        var detailEl = screen.querySelector('[data-crm-dt-loader-detail]');
+        if (titleEl) titleEl.textContent = title;
+        if (detailEl) detailEl.textContent = detail || '';
+        screen.hidden = false;
+    }
+
+    document.addEventListener('click', function (e) {
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+        var link = e.target.closest && e.target.closest('a');
+        if (!link || !link.closest('[data-crm-datatable]')) return;
+        if (link.closest('.page-item.disabled')) return;
+        var href = link.getAttribute('href');
+        if (!href || href === '#') return;
+        var paging = link.closest('.pagination');
+        var sorting = link.classList.contains('crm-dt-sort') || link.classList.contains('crm-dt-simple-sort');
+        if (!paging && !sorting) return;
+        showTableLoader(
+            paging ? 'در حال بارگذاری صفحه' : 'در حال مرتب‌سازی فهرست',
+            'تا آمدن صفحهٔ بعد صبر کنید'
+        );
+    });
+
+    document.addEventListener('submit', function (e) {
+        var form = e.target;
+        if (!form || !form.closest || !form.closest('[data-crm-datatable]')) return;
+        if (form.classList.contains('crm-dt-bulk-form')) {
+            showTableLoader('در حال حذف رکوردها', 'تا پایان حذف این صفحه باز می‌ماند');
+            return;
+        }
+        if (form.classList.contains('crm-dt-filter-form')) {
+            showTableLoader('در حال بارگذاری فهرست', 'تا آمدن نتیجه صبر کنید');
+        }
+    });
+
+    window.addEventListener('pageshow', function () {
+        var screen = document.getElementById('crmDtLoader');
+        if (screen) screen.hidden = true;
+    });
 
     document.addEventListener('click', function (e) {
         if (!activeOpUi) return;
