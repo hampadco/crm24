@@ -18,14 +18,103 @@
 
     @if (Model.Table is null)
     {
-        <form asp-action="ImportPreview" asp-route-moduleName="@Model.Module.Name" method="post" enctype="multipart/form-data" class="crm-imp-drop">
+        <form asp-action="ImportPreview" asp-route-moduleName="@Model.Module.Name" method="post" enctype="multipart/form-data" class="crm-imp-drop" data-crm-imp-drop>
             @Html.AntiForgeryToken()
+            <input type="file" name="file" accept=".xlsx,.csv" class="crm-imp-file" required />
             <div class="crm-imp-drop-mark" aria-hidden="true"></div>
-            <h2>فایل را انتخاب کنید</h2>
-            <p>ردیف اول باید عنوان ستون‌ها باشد. اکسل xlsx یا CSV.</p>
-            <input type="file" name="file" accept=".xlsx,.csv" required />
-            <button type="submit" class="btn btn-primary">ادامه و نگاشت ستون‌ها</button>
+            <h2>فایل را اینجا رها کنید</h2>
+            <p>ردیف اول باید عنوان ستون‌ها باشد.</p>
+            <div class="crm-imp-kinds"><span>XLSX</span><span>CSV</span></div>
+            <div class="crm-imp-picked" data-crm-imp-picked hidden>
+                <i class="bx bx-file"></i>
+                <span data-crm-imp-name></span>
+                <em data-crm-imp-size></em>
+            </div>
+            <p class="crm-imp-drop-error" data-crm-imp-error hidden>فقط فایل اکسل xlsx یا CSV.</p>
+            <div class="crm-imp-drop-actions">
+                <button type="button" class="crm-imp-browse" data-crm-imp-browse>انتخاب فایل</button>
+                <button type="submit" class="btn btn-primary" data-crm-imp-go disabled>ادامه و نگاشت ستون‌ها</button>
+            </div>
         </form>
+        <script>
+            (function () {
+                var form = document.querySelector('[data-crm-imp-drop]');
+                if (!form) return;
+                var input = form.querySelector('input[type="file"]');
+                var picked = form.querySelector('[data-crm-imp-picked]');
+                var nameEl = form.querySelector('[data-crm-imp-name]');
+                var sizeEl = form.querySelector('[data-crm-imp-size]');
+                var error = form.querySelector('[data-crm-imp-error]');
+                var go = form.querySelector('[data-crm-imp-go]');
+                var browse = form.querySelector('[data-crm-imp-browse]');
+
+                function allowed(file) {
+                    return /\.(xlsx|csv)$/i.test(file.name);
+                }
+
+                function sizeLabel(bytes) {
+                    if (bytes < 1024) return bytes.toLocaleString('fa-IR') + ' بایت';
+                    if (bytes < 1048576) return (bytes / 1024).toLocaleString('fa-IR', { maximumFractionDigits: 0 }) + ' کیلوبایت';
+                    return (bytes / 1048576).toLocaleString('fa-IR', { maximumFractionDigits: 1 }) + ' مگابایت';
+                }
+
+                function show(file) {
+                    error.hidden = true;
+                    if (!file) {
+                        form.classList.remove('is-ready');
+                        picked.hidden = true;
+                        go.disabled = true;
+                        return;
+                    }
+                    if (!allowed(file)) {
+                        input.value = '';
+                        form.classList.remove('is-ready');
+                        picked.hidden = true;
+                        go.disabled = true;
+                        error.hidden = false;
+                        return;
+                    }
+                    nameEl.textContent = file.name;
+                    sizeEl.textContent = sizeLabel(file.size);
+                    picked.hidden = false;
+                    form.classList.add('is-ready');
+                    go.disabled = false;
+                }
+
+                function take(file) {
+                    if (!file) return;
+                    if (!allowed(file)) {
+                        show(file);
+                        return;
+                    }
+                    var bag = new DataTransfer();
+                    bag.items.add(file);
+                    input.files = bag.files;
+                    show(file);
+                }
+
+                browse.addEventListener('click', function () { input.click(); });
+                input.addEventListener('change', function () { show(input.files && input.files[0]); });
+                form.addEventListener('dragover', function (event) {
+                    event.preventDefault();
+                    form.classList.add('is-over');
+                });
+                form.addEventListener('dragleave', function (event) {
+                    if (!form.contains(event.relatedTarget)) form.classList.remove('is-over');
+                });
+                form.addEventListener('drop', function (event) {
+                    event.preventDefault();
+                    form.classList.remove('is-over');
+                    var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+                    take(file);
+                });
+                form.addEventListener('submit', function (event) {
+                    if (input.files && input.files[0]) return;
+                    event.preventDefault();
+                    error.hidden = false;
+                });
+            })();
+        </script>
     }
     else
     {

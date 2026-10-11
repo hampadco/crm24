@@ -100,7 +100,7 @@ public class RecordsController : AppControllerBase
             catch (System.Text.Json.JsonException) { /* ignore bad json */ }
         }
 
-        var filters = ParseColumnFilters(Request.Query, listFields);
+        var filters = ParseColumnFilters(Request.Query, allVisible);
 
         // فیلترهای نما اگر در query فیلتر دستی نباشد
         if (activeView is not null && filters.Count == 0 && !string.IsNullOrWhiteSpace(activeView.FiltersJson))

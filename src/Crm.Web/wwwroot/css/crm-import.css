@@ -17,39 +17,146 @@
 .crm-imp-back:hover { color: #2f6fed; }
 
 .crm-imp-drop {
+  position: relative;
   background: #fff;
-  border: 1.5px dashed #c9d4e8;
-  border-radius: 1.1rem;
-  padding: 2.2rem 1.5rem;
+  border: 1.5px dashed #c5d4ea;
+  border-radius: 1.25rem;
+  padding: 2.4rem 1.5rem 1.7rem;
   text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.crm-imp-drop.is-over,
+.crm-imp-drop.is-ready {
+  border-style: solid;
+  border-color: #7aa2f7;
+  background: #f7faff;
+  box-shadow: 0 14px 32px rgba(47, 111, 237, 0.08);
 }
 
 .crm-imp-drop h2 {
-  font-size: 1.15rem;
-  margin: 0.6rem 0 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin: 0.85rem 0 0.3rem;
 }
 
 .crm-imp-drop p {
   color: #64748b;
-  margin-bottom: 1rem;
+  margin: 0 0 0.85rem;
 }
 
-.crm-imp-drop input[type="file"] {
-  display: block;
-  margin: 0 auto 1rem;
-  max-width: 360px;
+.crm-imp-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .crm-imp-drop-mark {
-  width: 54px;
-  height: 64px;
+  width: 4.2rem;
+  height: 4.2rem;
   margin: 0 auto;
-  border-radius: 0.55rem;
+  border-radius: 1.15rem;
   background:
-    linear-gradient(#fff, #fff) 10px 14px / 34px 3px no-repeat,
-    linear-gradient(#fff, #fff) 10px 22px / 28px 3px no-repeat,
-    linear-gradient(#fff, #fff) 10px 30px / 22px 3px no-repeat,
-    linear-gradient(180deg, #2f6fed, #6ea1ff);
+    linear-gradient(#fff, #fff) 1.15rem 1.35rem / 1.9rem 0.18rem no-repeat,
+    linear-gradient(#fff, #fff) 1.15rem 1.75rem / 1.45rem 0.18rem no-repeat,
+    linear-gradient(#fff, #fff) 1.15rem 2.15rem / 1.1rem 0.18rem no-repeat,
+    linear-gradient(180deg, #4c86f6, #2f6fed);
+  box-shadow: 0 10px 22px rgba(47, 111, 237, 0.22);
+}
+
+.crm-imp-kinds {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.crm-imp-kinds span {
+  background: #eef3fb;
+  color: #3d5f99;
+  border-radius: 999px;
+  padding: 0.18rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.crm-imp-picked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: min(100%, 28rem);
+  margin: 0 auto 0.9rem;
+  background: #fff;
+  border: 1px solid #d9e4f5;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  color: #16324f;
+  font-weight: 700;
+}
+
+.crm-imp-picked i {
+  color: #2f6fed;
+  font-size: 1.1rem;
+}
+
+.crm-imp-picked span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crm-imp-picked em {
+  font-style: normal;
+  color: #7b8fa3;
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.crm-imp-drop-error {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.crm-imp-drop-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.crm-imp-browse {
+  border: 1px solid #d5e0ea;
+  background: #fff;
+  color: #16324f;
+  font-weight: 800;
+  border-radius: 0.7rem;
+  padding: 0.48rem 0.95rem;
+}
+
+.crm-imp-browse:hover {
+  border-color: #7aa2f7;
+  color: #2f6fed;
+}
+
+.crm-imp-drop .btn-primary {
+  border: 0;
+  background: #2f6fed;
+  border-radius: 0.7rem;
+  font-weight: 800;
+  padding: 0.5rem 1rem;
+}
+
+.crm-imp-drop .btn-primary:disabled {
+  background: #c5d4ea;
+  opacity: 1;
 }
 
 .crm-imp-summary {

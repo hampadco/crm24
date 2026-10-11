@@ -15,11 +15,6 @@
     bool IsActiveMod(Crm.Core.Entities.ModuleDef m) =>
         currentPath.StartsWith($"/App/m/{m.Name}", StringComparison.OrdinalIgnoreCase);
 
-    var userName = User.FindFirst("crm:full_name")?.Value ?? User.Identity?.Name ?? "کاربر";
-    var userEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-        ?? User.FindFirst("email")?.Value
-        ?? (User.Identity?.Name is string n && n.Contains('@') ? n : "");
-
     string DetectActiveCat()
     {
         if (currentPath.StartsWith("/App/dashboard", StringComparison.OrdinalIgnoreCase) || currentPath.Equals("/App", StringComparison.OrdinalIgnoreCase))
@@ -64,15 +59,9 @@
 <div id="crm-topnav-backdrop" class="crm-topnav-backdrop" hidden></div>
 <aside id="crm-topnav-panel" class="crm-topnav-panel" hidden role="dialog" aria-label="منوی اصلی" aria-modal="true">
     <div class="crm-menu-header">
-        <div class="crm-menu-user">
-            <span class="crm-menu-avatar" aria-hidden="true"><i class="bx bx-user"></i></span>
-            <div class="crm-menu-user-meta">
-                <strong>@userName</strong>
-                @if (!string.IsNullOrEmpty(userEmail))
-                {
-                    <span dir="ltr">@userEmail</span>
-                }
-            </div>
+        <div class="crm-menu-brand">
+            <i class="bx bxs-grid-alt"></i>
+            <strong>@BrandingAccessor.Value.DisplayName</strong>
         </div>
         <button type="button" class="crm-menu-close" id="crmTopnavClose" aria-label="بستن منو">
             <i class="bx bx-x"></i>
@@ -88,10 +77,10 @@
                 <i class="bx bx-bullseye"></i><span>بازاریابی</span>
             </button>
             <button type="button" class="crm-menu-cat @(activeCat == "sales" ? "is-active" : "")" data-cat="sales">
-                <i class="bx bx-briefcase-alt-2"></i><span>فروش</span>
+                <i class="bx bx-cart"></i><span>فروش</span>
             </button>
             <button type="button" class="crm-menu-cat @(activeCat == "inventory" ? "is-active" : "")" data-cat="inventory">
-                <i class="bx bx-package"></i><span>موجودی</span>
+                <i class="bx bx-package"></i><span>موجودی و خرید</span>
             </button>
             <button type="button" class="crm-menu-cat @(activeCat == "support" ? "is-active" : "")" data-cat="support">
                 <i class="bx bx-support"></i><span>پشتیبانی</span>
@@ -109,7 +98,7 @@
 
         <div class="crm-menu-sub">
             <div class="crm-menu-pane @(activeCat == "dashboard" ? "is-active" : "")" data-pane="dashboard">
-                <h3 class="crm-menu-pane-title">داشبورد</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-home-circle"></i>داشبورد</h3>
                 <ul class="crm-menu-links">
                     <li><a href="/App/dashboard" class="@(currentPath.StartsWith("/App/dashboard") || currentPath.Equals("/App", StringComparison.OrdinalIgnoreCase) ? "is-active" : "")"><i class="bx bx-home-circle"></i>داشبورد اصلی</a></li>
                     <li><a href="/App/calendar"><i class="bx bx-calendar"></i>تقویم</a></li>
@@ -118,7 +107,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "marketing" ? "is-active" : "")" data-pane="marketing">
-                <h3 class="crm-menu-pane-title">بازاریابی</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-bullseye"></i>بازاریابی</h3>
                 <ul class="crm-menu-links">
                     @foreach (var m in Group("marketing"))
                     {
@@ -132,7 +121,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "sales" ? "is-active" : "")" data-pane="sales">
-                <h3 class="crm-menu-pane-title">فروش</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-cart"></i>فروش</h3>
                 <ul class="crm-menu-links">
                     @foreach (var m in Group("sales"))
                     {
@@ -142,7 +131,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "inventory" ? "is-active" : "")" data-pane="inventory">
-                <h3 class="crm-menu-pane-title">موجودی و خرید</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-package"></i>موجودی و خرید</h3>
                 <ul class="crm-menu-links">
                     @foreach (var m in Group("inventory"))
                     {
@@ -152,7 +141,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "support" ? "is-active" : "")" data-pane="support">
-                <h3 class="crm-menu-pane-title">پشتیبانی</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-support"></i>پشتیبانی</h3>
                 <ul class="crm-menu-links">
                     @foreach (var m in Group("support"))
                     {
@@ -164,7 +153,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "projects" ? "is-active" : "")" data-pane="projects">
-                <h3 class="crm-menu-pane-title">پروژه‌ها</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-briefcase"></i>پروژه‌ها</h3>
                 <ul class="crm-menu-links">
                     @foreach (var m in Group("projects"))
                     {
@@ -174,7 +163,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "tools" ? "is-active" : "")" data-pane="tools">
-                <h3 class="crm-menu-pane-title">ابزارها</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-wrench"></i>ابزارها</h3>
                 <ul class="crm-menu-links">
                     @foreach (var m in Group("tools"))
                     {
@@ -189,7 +178,7 @@
             </div>
 
             <div class="crm-menu-pane @(activeCat == "settings" ? "is-active" : "")" data-pane="settings">
-                <h3 class="crm-menu-pane-title">تنظیمات</h3>
+                <h3 class="crm-menu-pane-title"><i class="bx bx-cog"></i>تنظیمات</h3>
                 <ul class="crm-menu-links">
                     @if (Tenant.IsTenantAdmin)
                     {
