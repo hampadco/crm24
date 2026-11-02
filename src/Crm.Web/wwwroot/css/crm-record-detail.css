@@ -4,7 +4,7 @@
   --rd-border: #e2e8f0;
   --rd-muted: #64748b;
   --rd-text: #0f172a;
-  --rd-accent: #2f6fed;
+  --rd-accent: #5955D1;
   --rd-soft: #f8fafc;
   --rd-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.06);
   --rd-radius: 0.85rem;
@@ -753,4 +753,41 @@
 .crm-print-export a.btn.disabled {
   pointer-events: none;
   opacity: 0.45;
+}
+
+[data-bs-theme="dark"] .crm-rd {
+  --rd-border: rgba(255, 255, 255, 0.1);
+  --rd-muted: #a3a3a3;
+  --rd-text: #e8e8e8;
+  --rd-soft: #2a2a2a;
+  --rd-card-shadow: none;
+  color: var(--rd-text);
+}
+
+[data-bs-theme="dark"] .crm-rd-hcard,
+[data-bs-theme="dark"] .crm-rd-nav,
+[data-bs-theme="dark"] .crm-rd-card,
+[data-bs-theme="dark"] .crm-rd-block-card,
+[data-bs-theme="dark"] .crm-rd-timeline,
+[data-bs-theme="dark"] .crm-rd-empty,
+[data-bs-theme="dark"] .crm-rd-note-form,
+[data-bs-theme="dark"] .crm-rd-upload,
+[data-bs-theme="dark"] .crm-rd-note,
+[data-bs-theme="dark"] .crm-rd-rel-row {
+  background: #242424;
+  color: var(--rd-text);
+}
+
+[data-bs-theme="dark"] .crm-rd-activity:hover,
+[data-bs-theme="dark"] .crm-rd-file:hover {
+  background: #2e2e2e;
+}
+
+[data-bs-theme="dark"] .crm-rd-nav .nav-link {
+  color: #d8d8d8;
+}
+
+[data-bs-theme="dark"] .crm-rd-count {
+  background: #333;
+  color: #e8e8e8;
 }

@@ -1,0 +1,16 @@
+@model Crm.Web.Models.NxStatModel
+<div class="card h-100">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            <div class="avatar avatar-sm bg-primary-subtle text-primary rounded-circle me-2">
+                <i class="@Model.Icon"></i>
+            </div>
+            <h6 class="mb-0">@Model.Label</h6>
+        </div>
+        <h2 class="fw-bold mb-0">@Model.Value</h2>
+        @if (!string.IsNullOrWhiteSpace(Model.Href))
+        {
+            <a class="small d-inline-block mt-2" href="@Model.Href">@(Model.HrefText ?? "مشاهده")</a>
+        }
+    </div>
+</div>

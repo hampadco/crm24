@@ -298,3 +298,44 @@
         width: 260px;
     }
 }
+
+.crm-kanban-col {
+    background: var(--bs-primary-bg-subtle, #eeeefe);
+    border-radius: 12px;
+    padding: .75rem;
+}
+
+.crm-kanban-card {
+    border-radius: 12px;
+    border: 1px solid var(--bs-border-color, #e5e7eb);
+    background: var(--bs-body-bg, #fff);
+}
+
+[data-bs-theme="dark"] .crm-kanban-card {
+    background: #2a2a2a;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #e8e8e8;
+    box-shadow: none;
+}
+
+[data-bs-theme="dark"] .crm-kanban-col-body {
+    background: color-mix(in srgb, var(--kanban-col-color, #94a3b8) 22%, #1a1a1a);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .crm-kanban-expand {
+    background: #333;
+    color: #d0d0d0;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-bs-theme="dark"] .crm-kanban-card-title,
+[data-bs-theme="dark"] .crm-kanban-preview-value,
+[data-bs-theme="dark"] .crm-kanban-quick-field .value {
+    color: #ededed;
+}
+
+[data-bs-theme="dark"] .crm-kanban-card-actions,
+[data-bs-theme="dark"] .crm-kanban-preview-row {
+    border-color: rgba(255, 255, 255, 0.08);
+}

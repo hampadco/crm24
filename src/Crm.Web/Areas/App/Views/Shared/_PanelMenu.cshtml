@@ -1,5 +1,6 @@
 @inject Crm.Infrastructure.Services.MetadataService Metadata
 @inject Crm.Core.Abstractions.ITenantContext Tenant
+@using Crm.Web.Services
 @{
     var currentPath = Context.Request.Path.Value ?? "";
     var modules = (await Metadata.GetActiveModulesAsync())
@@ -15,9 +16,46 @@
     bool IsActiveMod(Crm.Core.Entities.ModuleDef m) =>
         currentPath.StartsWith($"/App/m/{m.Name}", StringComparison.OrdinalIgnoreCase);
 
+    string OnPath(string href) =>
+        currentPath.Equals(href, StringComparison.OrdinalIgnoreCase)
+        || currentPath.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase)
+            ? "active" : "";
+
+    string Icon(Crm.Core.Entities.ModuleDef m) => m.Name switch
+    {
+        "leads" => "fi-rr-user-add",
+        "campaigns" => "fi-rr-megaphone",
+        "contacts" => "fi-rr-address-book",
+        "organizations" => "fi-rr-building",
+        "opportunities" => "fi-rr-handshake",
+        "quotes" => "fi-rr-file-invoice",
+        "sales_orders" => "fi-rr-shopping-bag",
+        "invoices" => "fi-rr-receipt",
+        "payments" => "fi-rr-coin",
+        "commissions" => "fi-rr-percentage",
+        "pricebooks" => "fi-rr-tags",
+        "products" => "fi-rr-box",
+        "vendors" => "fi-rr-shop",
+        "purchase_orders" => "fi-rr-shopping-cart",
+        "warehouses" => "fi-rr-warehouse-alt",
+        "tickets" => "fi-rr-headset",
+        "contracts" => "fi-rr-document-signed",
+        "warranties" => "fi-rr-shield-check",
+        "services" => "fi-rr-life-ring",
+        "calls" => "fi-rr-phone-call",
+        "projects" => "fi-rr-briefcase",
+        "project_tasks" => "fi-rr-list-check",
+        "project_phases" => "fi-rr-layers",
+        "leaves" => "fi-rr-umbrella-beach",
+        "tasks" => "fi-rr-checkbox",
+        "events" => "fi-rr-calendar-day",
+        "documents" => "fi-rr-folder",
+        _ => "fi-rr-apps"
+    };
+
     string DetectActiveCat()
     {
-        if (currentPath.StartsWith("/App/dashboard", StringComparison.OrdinalIgnoreCase) || currentPath.Equals("/App", StringComparison.OrdinalIgnoreCase))
+        if (currentPath.StartsWith("/App/dashboard", StringComparison.OrdinalIgnoreCase) || currentPath.Equals("/App", StringComparison.OrdinalIgnoreCase) || currentPath.StartsWith("/App/reports", StringComparison.OrdinalIgnoreCase))
             return "dashboard";
         if (currentPath.StartsWith("/App/webforms", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/surveys", StringComparison.OrdinalIgnoreCase)
@@ -29,167 +67,186 @@
             || currentPath.StartsWith("/App/finance", StringComparison.OrdinalIgnoreCase)
             || Group("sales").Any(IsActiveMod))
             return "sales";
+        if (Group("inventory").Any(IsActiveMod)) return "inventory";
         if (currentPath.StartsWith("/App/kb", StringComparison.OrdinalIgnoreCase)
             || currentPath.StartsWith("/App/portal-users", StringComparison.OrdinalIgnoreCase)
             || Group("support").Any(IsActiveMod))
             return "support";
-        if (Group("inventory").Any(IsActiveMod)) return "inventory";
-        if (Group("projects").Any(IsActiveMod)) return "projects";
-        if (currentPath.StartsWith("/App/calendar", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/workflows", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/approvals", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/reports", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/recycle-bin", StringComparison.OrdinalIgnoreCase)
-            || Group("tools").Any(IsActiveMod))
-            return "tools";
-        if (currentPath.StartsWith("/App/customize", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/print-templates", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/access", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/team-users", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/integrations", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/subscription", StringComparison.OrdinalIgnoreCase)
-            || currentPath.StartsWith("/App/help", StringComparison.OrdinalIgnoreCase))
-            return "settings";
-        return "dashboard";
+        if (currentPath.StartsWith("/App/projects", StringComparison.OrdinalIgnoreCase)
+            || Group("projects").Any(IsActiveMod)
+            || modules.Any(m => m.Name is "tasks" or "events" or "documents" && IsActiveMod(m)))
+            return "work";
+        return "settings";
     }
 
     var activeCat = DetectActiveCat();
+    var cats = new (string Id, string Icon, string Title, int Badge)[]
+    {
+        ("dashboard", "fi-br-house-blank", "داشبورد", 0),
+        ("marketing", "fi-br-megaphone", "بازاریابی", 0),
+        ("sales", "fi-br-shopping-cart", "فروش", 0),
+        ("inventory", "fi-br-box", "خرید و موجودی", 0),
+        ("support", "fi-br-headset", "پشتیبانی", 0),
+        ("work", "fi-br-briefcase", "کارها", 0),
+        ("settings", "fi-br-settings", "تنظیمات", 0)
+    };
 }
-@* کشوی منو از راست — الگوی دو پنل (دسته + زیرمنو) *@
-<div id="crm-topnav-backdrop" class="crm-topnav-backdrop" hidden></div>
-<aside id="crm-topnav-panel" class="crm-topnav-panel" hidden role="dialog" aria-label="منوی اصلی" aria-modal="true">
-    <div class="crm-menu-header">
-        <div class="crm-menu-brand">
-            <i class="bx bxs-grid-alt"></i>
-            <strong>@BrandingAccessor.Value.DisplayName</strong>
-        </div>
-        <button type="button" class="crm-menu-close" id="crmTopnavClose" aria-label="بستن منو">
-            <i class="bx bx-x"></i>
-        </button>
+@await Component.InvokeAsync("MenuBadges")
+@{
+    var badges = Context.Items["MenuBadges"] as MenuBadgeCounts ?? new MenuBadgeCounts();
+    cats = new (string Id, string Icon, string Title, int Badge)[]
+    {
+        ("dashboard", "fi-br-house-blank", "داشبورد", 0),
+        ("marketing", "fi-br-megaphone", "بازاریابی", 0),
+        ("sales", "fi-br-shopping-cart", "فروش", 0),
+        ("inventory", "fi-br-box", "خرید و موجودی", 0),
+        ("support", "fi-br-headset", "پشتیبانی", badges.Tickets),
+        ("work", "fi-br-briefcase", "کارها", badges.Work),
+        ("settings", "fi-br-settings", "تنظیمات", 0)
+    };
+
+    string BadgeHtml(int count) => count > 0
+        ? $"<span class=\"nx-menu-badge\">{(count > 99 ? "۹۹+" : count.ToFa())}</span>"
+        : "";
+}
+<aside class="app-menubar-tabs" id="appMenubar">
+    <div class="app-navbar-brand">
+        <a class="navbar-brand-logo" href="/App/dashboard">
+            <img src="~/nexlink/images/logo.svg" alt="@BrandingAccessor.Value.LatinName" />
+        </a>
     </div>
-
-    <div class="crm-menu-body">
-        <nav class="crm-menu-cats" aria-label="دسته‌های منو">
-            <button type="button" class="crm-menu-cat @(activeCat == "dashboard" ? "is-active" : "")" data-cat="dashboard">
-                <i class="bx bx-home-circle"></i><span>داشبورد</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "marketing" ? "is-active" : "")" data-cat="marketing">
-                <i class="bx bx-bullseye"></i><span>بازاریابی</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "sales" ? "is-active" : "")" data-cat="sales">
-                <i class="bx bx-cart"></i><span>فروش</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "inventory" ? "is-active" : "")" data-cat="inventory">
-                <i class="bx bx-package"></i><span>موجودی و خرید</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "support" ? "is-active" : "")" data-cat="support">
-                <i class="bx bx-support"></i><span>پشتیبانی</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "projects" ? "is-active" : "")" data-cat="projects">
-                <i class="bx bx-briefcase"></i><span>پروژه‌ها</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "tools" ? "is-active" : "")" data-cat="tools">
-                <i class="bx bx-wrench"></i><span>ابزارها</span>
-            </button>
-            <button type="button" class="crm-menu-cat @(activeCat == "settings" ? "is-active" : "")" data-cat="settings">
-                <i class="bx bx-cog"></i><span>تنظیمات</span>
-            </button>
-        </nav>
-
-        <div class="crm-menu-sub">
-            <div class="crm-menu-pane @(activeCat == "dashboard" ? "is-active" : "")" data-pane="dashboard">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-home-circle"></i>داشبورد</h3>
-                <ul class="crm-menu-links">
-                    <li><a href="/App/dashboard" class="@(currentPath.StartsWith("/App/dashboard") || currentPath.Equals("/App", StringComparison.OrdinalIgnoreCase) ? "is-active" : "")"><i class="bx bx-home-circle"></i>داشبورد اصلی</a></li>
-                    <li><a href="/App/calendar"><i class="bx bx-calendar"></i>تقویم</a></li>
-                    <li><a href="/App/reports"><i class="bx bx-bar-chart-alt-2"></i>گزارش‌ها</a></li>
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "marketing" ? "is-active" : "")" data-pane="marketing">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-bullseye"></i>بازاریابی</h3>
-                <ul class="crm-menu-links">
-                    @foreach (var m in Group("marketing"))
-                    {
-                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
-                    }
-                    <li><a href="/App/webforms" class="@(currentPath.StartsWith("/App/webforms") ? "is-active" : "")"><i class="bx bx-layout"></i>وب‌فرم‌ها</a></li>
-                    <li><a href="/App/surveys" class="@(currentPath.StartsWith("/App/surveys") ? "is-active" : "")"><i class="bx bx-poll"></i>نظرسنجی‌ها</a></li>
-                    <li><a href="/App/templates" class="@(currentPath.StartsWith("/App/templates") ? "is-active" : "")"><i class="bx bx-message-square-detail"></i>قالب‌های پیام</a></li>
-                    <li><a href="/App/sms" class="@(currentPath.StartsWith("/App/sms") ? "is-active" : "")"><i class="bx bx-message-rounded-dots"></i>پیامک</a></li>
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "sales" ? "is-active" : "")" data-pane="sales">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-cart"></i>فروش</h3>
-                <ul class="crm-menu-links">
-                    @foreach (var m in Group("sales"))
-                    {
-                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
-                    }
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "inventory" ? "is-active" : "")" data-pane="inventory">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-package"></i>موجودی و خرید</h3>
-                <ul class="crm-menu-links">
-                    @foreach (var m in Group("inventory"))
-                    {
-                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
-                    }
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "support" ? "is-active" : "")" data-pane="support">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-support"></i>پشتیبانی</h3>
-                <ul class="crm-menu-links">
-                    @foreach (var m in Group("support"))
-                    {
-                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
-                    }
-                    <li><a href="/App/kb" class="@(currentPath.StartsWith("/App/kb") ? "is-active" : "")"><i class="bx bx-book-open"></i>پایگاه دانش</a></li>
-                    <li><a href="/App/portal-users" class="@(currentPath.StartsWith("/App/portal-users") ? "is-active" : "")"><i class="bx bx-user-circle"></i>کاربران پورتال</a></li>
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "projects" ? "is-active" : "")" data-pane="projects">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-briefcase"></i>پروژه‌ها</h3>
-                <ul class="crm-menu-links">
-                    @foreach (var m in Group("projects"))
-                    {
-                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
-                    }
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "tools" ? "is-active" : "")" data-pane="tools">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-wrench"></i>ابزارها</h3>
-                <ul class="crm-menu-links">
-                    @foreach (var m in Group("tools"))
-                    {
-                        <li><a href="@ModHref(m)" class="@(IsActiveMod(m) ? "is-active" : "")"><i class="bx @(m.Icon)"></i>@m.PluralLabel</a></li>
-                    }
-                    <li><a href="/App/calendar" class="@(currentPath.StartsWith("/App/calendar") ? "is-active" : "")"><i class="bx bx-calendar"></i>تقویم</a></li>
-                    <li><a href="/App/workflows" class="@(currentPath.StartsWith("/App/workflows") ? "is-active" : "")"><i class="bx bx-git-branch"></i>گردش‌کار</a></li>
-                    <li><a href="/App/approvals" class="@(currentPath.StartsWith("/App/approvals") ? "is-active" : "")"><i class="bx bx-check-shield"></i>تأییدیه‌ها</a></li>
-                    <li><a href="/App/reports" class="@(currentPath.StartsWith("/App/reports") ? "is-active" : "")"><i class="bx bx-bar-chart-alt-2"></i>گزارش‌ساز</a></li>
-                    <li><a href="/App/recycle-bin" class="@(currentPath.StartsWith("/App/recycle-bin") ? "is-active" : "")"><i class="bx bx-recycle"></i>سطل بازیابی</a></li>
-                </ul>
-            </div>
-
-            <div class="crm-menu-pane @(activeCat == "settings" ? "is-active" : "")" data-pane="settings">
-                <h3 class="crm-menu-pane-title"><i class="bx bx-cog"></i>تنظیمات</h3>
-                <ul class="crm-menu-links">
-                    @if (Tenant.IsTenantAdmin)
-                    {
-                        <li><a href="/App/customize" class="@(currentPath.StartsWith("/App/customize") ? "is-active" : "")"><i class="bx bx-customize"></i>سفارشی‌سازی ماژول</a></li>
-                        <li><a href="/App/print-templates" class="@(currentPath.StartsWith("/App/print-templates") ? "is-active" : "")"><i class="bx bx-printer"></i>قالب‌های چاپ</a></li>
-                        <li><a href="/App/access" class="@(currentPath.StartsWith("/App/access") || currentPath.StartsWith("/App/team-users") ? "is-active" : "")"><i class="bx bx-user-circle"></i>مدیریت کاربر</a></li>
-                    }
-                    <li><a href="/App/integrations" class="@(currentPath.StartsWith("/App/integrations") ? "is-active" : "")"><i class="bx bx-plug"></i>یکپارچگی‌ها و API</a></li>
-                    <li><a href="/App/subscription" class="@(currentPath.StartsWith("/App/subscription") ? "is-active" : "")"><i class="bx bx-badge-check"></i>اشتراک و تمدید</a></li>
-                    <li><a href="/App/help" class="@(currentPath.StartsWith("/App/help") ? "is-active" : "")"><i class="bx bx-book-open"></i>مرکز آموزش</a></li>
-                </ul>
+    <div class="app-navbar-tabs" data-simplebar>
+        <ul class="nav" role="tablist">
+            @foreach (var cat in cats)
+            {
+                var on = activeCat == cat.Id;
+                <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="@cat.Title">
+                    <a class="menu-link @(on ? "active" : "")" href="#nx-@cat.Id" data-bs-toggle="tab" role="tab" aria-selected="@(on ? "true" : "false")">
+                        <i class="fi @cat.Icon"></i>
+                        @Html.Raw(BadgeHtml(cat.Badge))
+                    </a>
+                </li>
+            }
+            <li class="nav-item-hr"></li>
+            <li class="nav-item mt-auto">
+                <a class="menu-link @OnPath("/App/calendar")" href="/App/calendar" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="تقویم">
+                    <i class="fi fi-br-calendar"></i>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="menu-link @OnPath("/App/approvals")" href="/App/approvals" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="تأییدیه‌ها">
+                    <i class="fi fi-br-check"></i>
+                    @Html.Raw(BadgeHtml(badges.Approvals))
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="app-tab-content">
+        <div class="app-side-brands">
+            <a class="navbar-brand-text" href="/App/dashboard">@BrandingAccessor.Value.LatinName</a>
+        </div>
+        <div class="app-content-inner">
+            <div class="tab-content">
+                <div class="tab-pane fade @(activeCat == "dashboard" ? "show active" : "")" id="nx-dashboard">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">داشبورد</span></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/dashboard")" href="/App/dashboard"><i class="fi fi-rr-house-blank"></i><span class="menu-label">داشبورد اصلی</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/reports")" href="/App/reports"><i class="fi fi-rr-chart-histogram"></i><span class="menu-label">گزارش‌ها</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(activeCat == "marketing" ? "show active" : "")" id="nx-marketing">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">بازاریابی</span></li>
+                            @foreach (var m in Group("marketing"))
+                            {
+                                <li class="menu-item"><a class="menu-link @(IsActiveMod(m) ? "active" : "")" href="@ModHref(m)"><i class="@Icon(m)"></i><span class="menu-label">@m.PluralLabel</span></a></li>
+                            }
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/webforms")" href="/App/webforms"><i class="fi fi-rr-form"></i><span class="menu-label">وب‌فرم‌ها</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/surveys")" href="/App/surveys"><i class="fi fi-rr-comment-alt"></i><span class="menu-label">نظرسنجی‌ها</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/templates")" href="/App/templates"><i class="fi fi-rr-comment"></i><span class="menu-label">قالب‌های پیام</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/sms")" href="/App/sms"><i class="fi fi-rr-comment-sms"></i><span class="menu-label">پیامک</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(activeCat == "sales" ? "show active" : "")" id="nx-sales">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">فروش</span></li>
+                            @foreach (var m in Group("sales"))
+                            {
+                                <li class="menu-item"><a class="menu-link @(IsActiveMod(m) ? "active" : "")" href="@ModHref(m)"><i class="@Icon(m)"></i><span class="menu-label">@m.PluralLabel</span></a></li>
+                            }
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/kanban/opportunities")" href="/App/kanban/opportunities"><i class="fi fi-rr-columns-3"></i><span class="menu-label">کاریز فروش</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/finance")" href="/App/finance"><i class="fi fi-rr-chart-line-up"></i><span class="menu-label">مالی</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(activeCat == "inventory" ? "show active" : "")" id="nx-inventory">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">خرید و موجودی</span></li>
+                            @foreach (var m in Group("inventory"))
+                            {
+                                <li class="menu-item"><a class="menu-link @(IsActiveMod(m) ? "active" : "")" href="@ModHref(m)"><i class="@Icon(m)"></i><span class="menu-label">@m.PluralLabel</span></a></li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(activeCat == "support" ? "show active" : "")" id="nx-support">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">پشتیبانی</span></li>
+                            @foreach (var m in Group("support"))
+                            {
+                                var mark = m.Name == "tickets" ? badges.Tickets : 0;
+                                <li class="menu-item"><a class="menu-link @(IsActiveMod(m) ? "active" : "")" href="@ModHref(m)"><i class="@Icon(m)"></i><span class="menu-label">@m.PluralLabel</span>@Html.Raw(BadgeHtml(mark))</a></li>
+                            }
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/kb")" href="/App/kb"><i class="fi fi-rr-book-alt"></i><span class="menu-label">پایگاه دانش</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/portal-users")" href="/App/portal-users"><i class="fi fi-rr-users"></i><span class="menu-label">کاربران پورتال</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(activeCat == "work" ? "show active" : "")" id="nx-work">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">کارها</span></li>
+                            @if (!Group("projects").Any(m => m.Name == "projects"))
+                            {
+                                <li class="menu-item"><a class="menu-link @OnPath("/App/projects")" href="/App/projects"><i class="fi fi-rr-briefcase"></i><span class="menu-label">پروژه‌ها</span></a></li>
+                            }
+                            @foreach (var m in Group("projects").Concat(modules.Where(m => m.Name is "tasks" or "events" or "documents")))
+                            {
+                                var mark = m.Name == "tasks" ? badges.Tasks : m.Name == "project_tasks" ? badges.ProjectTasks : 0;
+                                <li class="menu-item"><a class="menu-link @(IsActiveMod(m) ? "active" : "")" href="@ModHref(m)"><i class="@Icon(m)"></i><span class="menu-label">@m.PluralLabel</span>@Html.Raw(BadgeHtml(mark))</a></li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(activeCat == "settings" ? "show active" : "")" id="nx-settings">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">تنظیمات</span></li>
+                            @if (Tenant.IsTenantAdmin)
+                            {
+                                <li class="menu-item"><a class="menu-link @OnPath("/App/customize")" href="/App/customize"><i class="fi fi-rr-settings-sliders"></i><span class="menu-label">سفارشی‌سازی</span></a></li>
+                                <li class="menu-item"><a class="menu-link @OnPath("/App/print-templates")" href="/App/print-templates"><i class="fi fi-rr-print"></i><span class="menu-label">قالب‌های چاپ</span></a></li>
+                                <li class="menu-item"><a class="menu-link @OnPath("/App/access")" href="/App/access"><i class="fi fi-rr-users"></i><span class="menu-label">مدیریت کاربر</span></a></li>
+                            }
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/integrations")" href="/App/integrations"><i class="fi fi-rr-plug"></i><span class="menu-label">یکپارچگی و API</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/subscription")" href="/App/subscription"><i class="fi fi-rr-badge"></i><span class="menu-label">اشتراک</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/help")" href="/App/help"><i class="fi fi-rr-book-alt"></i><span class="menu-label">آموزش</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/workflows")" href="/App/workflows"><i class="fi fi-rr-workflow"></i><span class="menu-label">گردش‌کار</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/recycle-bin")" href="/App/recycle-bin"><i class="fi fi-rr-trash"></i><span class="menu-label">سطل بازیابی</span></a></li>
+                            @foreach (var m in Group("tools").Where(m => m.Name is not ("tasks" or "events" or "documents")))
+                            {
+                                <li class="menu-item"><a class="menu-link @(IsActiveMod(m) ? "active" : "")" href="@ModHref(m)"><i class="@Icon(m)"></i><span class="menu-label">@m.PluralLabel</span></a></li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>

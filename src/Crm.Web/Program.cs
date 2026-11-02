@@ -49,6 +49,7 @@ builder.Services.AddDbContext<CrmDbContext>(options =>
 
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<MetadataService>();
+builder.Services.AddScoped<Crm.Web.Services.MenuBadgeService>();
 builder.Services.AddScoped<ListColumnService>();
 builder.Services.AddScoped<RecordAccessService>();
 builder.Services.AddScoped<AuditService>();

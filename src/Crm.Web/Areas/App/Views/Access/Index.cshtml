@@ -1,6 +1,9 @@
 @model Crm.Web.Areas.App.Models.AccessHubModel
 @{
     ViewData["PanelTitle"] = "تنظیمات";
+    ViewData["NxTitle"] = "مدیریت کاربر";
+    ViewData["NxParent"] = "تنظیمات";
+    ViewData["NxParentUrl"] = "/App/dashboard";
     var tab = Model.Tab;
     string TabUrl(string t) => $"/App/access?tab={t}";
     string UsersFilterUrl(string status, int? roleId = null, bool? admin = null, string? q = null)

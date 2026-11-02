@@ -251,3 +251,85 @@
     min-height: 5rem;
   }
 }
+
+[data-bs-theme="dark"] .crm-calendar {
+  --crm-cal-border: rgba(255, 255, 255, 0.1);
+  --crm-cal-muted: #8f8f8f;
+  --crm-cal-text: #d2d2d2;
+  --crm-cal-today: rgba(89, 85, 209, 0.22);
+  --fc-border-color: rgba(255, 255, 255, 0.1);
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: rgba(255, 255, 255, 0.04);
+  --fc-today-bg-color: rgba(89, 85, 209, 0.22);
+  --fc-neutral-text-color: #bdbdbd;
+  --fc-list-event-hover-bg-color: rgba(89, 85, 209, 0.16);
+}
+
+[data-bs-theme="dark"] .crm-cal-legend,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-toolbar-title,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-col-header-cell-cushion,
+[data-bs-theme="dark"] .crm-calendar .crm-cal-daynum,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-timegrid-slot-label-cushion,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-timegrid-axis-cushion,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-list-event-title a,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-list-day-cushion {
+  color: var(--crm-cal-text) !important;
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-scrollgrid,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-scrollgrid td,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-scrollgrid th,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-timegrid-slot,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-timegrid-col,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-list,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-list-event td {
+  border-color: var(--crm-cal-border) !important;
+  background-color: transparent;
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-col-header-cell,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-list-day-cushion,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-timegrid-axis,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-timegrid-slot-label {
+  background: #2a2a2a !important;
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-day-today {
+  background: var(--crm-cal-today) !important;
+}
+
+[data-bs-theme="dark"] .crm-calendar .crm-cal-other-month {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-list-event:hover td {
+  background: rgba(89, 85, 209, 0.16);
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-more-popover {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: var(--crm-cal-border);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-more-popover .fc-popover-header {
+  background: #323232;
+  color: #f0f0f0;
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-daygrid-more-link {
+  color: #b7b4f3;
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-button-primary {
+  background: #5955D1;
+  border-color: #5955D1;
+}
+
+[data-bs-theme="dark"] .crm-calendar .fc .fc-button-primary:not(:disabled).fc-button-active,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-button-primary:not(:disabled):active,
+[data-bs-theme="dark"] .crm-calendar .fc .fc-button-primary:hover {
+  background: #6d69dc;
+  border-color: #6d69dc;
+}

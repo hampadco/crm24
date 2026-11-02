@@ -1,225 +1,169 @@
 @{
     var panelArea = ViewContext.RouteData.Values["area"]?.ToString();
-    var useModernPanelSkin = panelArea is "Admin" or "App";
-    var useAppTopNav = panelArea == "App";
+    var displayName = User.FindFirst("crm:full_name")?.Value ?? User.Identity?.Name ?? "کاربر";
 }
 <!DOCTYPE html>
-<html lang="fa" class="light-style layout-navbar-fixed layout-menu-fixed@(useAppTopNav ? " crm-app-topnav" : "")" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="@(useAppTopNav ? "horizontal-menu-template" : "vertical-menu-template")">
+<html lang="fa" dir="rtl" data-bs-theme="light" data-app-sidebar="full">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] | @(ViewData["PanelTitle"] ?? BrandingAccessor.Value.LatinName)</title>
-    <link rel="icon" type="image/x-icon" href="~/panel-assets/img/favicon/favicon.ico" />
-
+    <link rel="icon" type="image/png" href="~/nexlink/images/favicon.png" />
+    <link rel="stylesheet" href="~/lib/vazirmatn/vazirmatn.css" />
+    <link rel="stylesheet" href="~/nexlink/libs/flaticon/css/all/all.css" />
+    <link rel="stylesheet" href="~/nexlink/libs/lucide/lucide.css" />
+    <link rel="stylesheet" href="~/nexlink/libs/simplebar/simplebar.css" />
+    <link rel="stylesheet" href="~/nexlink/libs/node-waves/waves.css" />
+    <link rel="stylesheet" href="~/nexlink/css/styles.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/fonts/boxicons.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/fontawesome.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/flag-icons.css" />
-
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/core.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/theme-default.css" />
-    <link rel="stylesheet" href="~/panel-assets/css/demo.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/rtl.css" />
-    <link rel="stylesheet" href="~/css/panel-layout-fix.css" asp-append-version="true" />
-    @if (useModernPanelSkin)
-    {
-        <link rel="stylesheet" href="~/css/panel-theme.css" asp-append-version="true" />
-    }
-    @if (useAppTopNav)
-    {
-        <link rel="stylesheet" href="~/css/crm-app-topnav.css" asp-append-version="true" />
-    }
-
-    <link rel="stylesheet" href="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/flatpickr/flatpickr.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/sweetalert2/sweetalert2.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/libs/select2/select2.css" />
-
-    <script src="~/panel-assets/vendor/js/helpers.js"></script>
-    <script src="~/panel-assets/js/config.js"></script>
-
-    @if (ViewContext.RouteData.Values["area"]?.ToString() == "Admin")
-    {
-        <link rel="stylesheet" href="~/css/admin-frest-compat.css" asp-append-version="true" />
-    }
-    <link rel="stylesheet" href="~/css/panel-mobile.css" asp-append-version="true" />
-
+    <link rel="stylesheet" href="~/css/nexlink-rtl.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body dir="rtl" class="@(useModernPanelSkin ? "panel-skin" : "")">
-    <div class="layout-wrapper layout-content-navbar">
-        <div class="layout-container">
-            @if (!string.IsNullOrEmpty(panelArea))
-            {
-                @await Html.PartialAsync($"~/Areas/{panelArea}/Views/Shared/_PanelMenu.cshtml")
-            }
-
-            <div class="layout-page">
-                <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme" id="layout-navbar">
-                    <div class="container-fluid">
-                        @if (useAppTopNav)
-                        {
-                            <div class="d-flex align-items-center me-auto">
-                                <button type="button" id="crmTopnavToggle" class="crm-topnav-toggle" aria-expanded="false" aria-controls="crm-topnav-panel">
-                                    <i class="bx bx-menu"></i>
-                                    <span>منو</span>
-                                </button>
-                                <a href="/App/dashboard" class="crm-topnav-brand">
-                                    <i class="bx bxs-analyse"></i>
-                                    <span>@BrandingAccessor.Value.LatinName</span>
-                                </a>
-                                <a href="/App/dashboard" class="btn btn-sm btn-text-secondary d-none d-md-inline-flex ms-2">
-                                    <i class="bx bx-home-circle me-1"></i> داشبورد
-                                </a>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
-                                <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
-                                    <i class="bx bx-menu bx-sm"></i>
-                                </a>
-                            </div>
-                        }
-
-                        <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-                            <ul class="navbar-nav flex-row align-items-center ms-auto">
-                                <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2">
-                                    <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                        <i class="bx bx-bell bx-sm"></i>
-                                    </a>
-                                    <ul class="dropdown-menu dropdown-menu-end py-0">
-                                        <li class="dropdown-menu-header border-bottom">
-                                            <div class="dropdown-header d-flex align-items-center py-3">
-                                                <h5 class="text-body mb-0 me-auto secondary-font">اعلان‌ها</h5>
-                                            </div>
-                                        </li>
-                                        <li class="border-top">
-                                            <div class="d-grid p-4">
-                                                <span class="text-muted text-center">اعلان جدیدی ندارید.</span>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </li>
-
-                                <li class="nav-item navbar-dropdown dropdown-user dropdown">
-                                    <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
-                                        <div class="avatar avatar-online">
-                                            <span class="avatar-initial rounded-circle bg-label-primary"><i class="bx bx-user"></i></span>
-                                        </div>
-                                    </a>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <a class="dropdown-item" href="javascript:void(0);">
-                                                <span class="fw-semibold d-block">@(User.FindFirst("crm:full_name")?.Value ?? User.Identity?.Name ?? "کاربر مهمان")</span>
-                                            </a>
-                                        </li>
-                                        <li><div class="dropdown-divider"></div></li>
-                                        <li>
-                                            <a class="dropdown-item" asp-area="" asp-controller="Home" asp-action="Index">
-                                                <i class="bx bx-home-alt me-2"></i>
-                                                <span class="align-middle">بازگشت به سایت</span>
-                                            </a>
-                                        </li>
-                                        @if (ViewContext.RouteData.Values["area"]?.ToString() == "App")
-                                        {
-                                            <li>
-                                                <form asp-area="App" asp-controller="Account" asp-action="Logout" method="post">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="bx bx-power-off me-2"></i>
-                                                        <span class="align-middle">خروج</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        }
-                                        else if (ViewContext.RouteData.Values["area"]?.ToString() == "Owner")
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" href="/Admin/Account/Logout">
-                                                    <i class="bx bx-power-off me-2"></i>
-                                                    <span class="align-middle">خروج</span>
-                                                </a>
-                                            </li>
-                                        }
-                                        else if (ViewContext.RouteData.Values["area"]?.ToString() == "Admin")
-                                        {
-                                            <li>
-                                                <a class="dropdown-item" href="/Admin/Account/ChangePassword">
-                                                    <i class="bx bx-key me-2"></i>
-                                                    <span class="align-middle">تغییر رمز عبور</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item" href="/Admin/Account/Logout">
-                                                    <i class="bx bx-power-off me-2"></i>
-                                                    <span class="align-middle">خروج</span>
-                                                </a>
-                                            </li>
-                                        }
-                                        else if (ViewContext.RouteData.Values["area"]?.ToString() == "Portal")
-                                        {
-                                            <li>
-                                                <form asp-area="Portal" asp-controller="Account" asp-action="Logout" method="post">
-                                                    <button type="submit" class="dropdown-item">
-                                                        <i class="bx bx-power-off me-2"></i>
-                                                        <span class="align-middle">خروج</span>
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        }
-                                    </ul>
-                                </li>
-                            </ul>
-                        </div>
+<body>
+    <div class="page-layout">
+        <header class="app-header">
+            <div class="app-header-inner">
+                <button class="app-toggler" type="button" aria-label="باز و بسته کردن منو">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7.667 12.667 3.667 8l4-4.667" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                        <path opacity="0.5" d="M12.667 12.667 8.667 8l4-4.667" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <div class="app-header-start d-none d-md-flex">
+                    <button type="button" class="btn btn-sm border-0" data-bs-toggle="modal" data-bs-target="#nxSearchModal" aria-label="جستجو">
+                        <i class="fi fi-rr-search"></i>
+                    </button>
+                </div>
+                <div class="app-header-end">
+                    <div class="px-lg-4 px-2 d-flex align-items-center">
+                        <button type="button" class="theme-btn" id="nxThemeBtn" aria-label="تغییر تم">
+                            <svg class="icon-light" width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M14.1663 10.5002C14.1663 12.8013 12.3008 14.6668 9.99967 14.6668C7.69849 14.6668 5.83301 12.8013 5.83301 10.5002C5.83301 8.19898 7.69849 6.3335 9.99967 6.3335C12.3008 6.3335 14.1663 8.19898 14.1663 10.5002Z" fill="var(--bs-heading-color)" />
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M10.0003 1.5415C10.3455 1.5415 10.6253 1.82133 10.6253 2.1665V3.83317C10.6253 4.17834 10.3455 4.45817 10.0003 4.45817C9.65516 4.45817 9.37532 4.17834 9.37532 3.83317V2.1665C9.37532 1.82133 9.65516 1.5415 10.0003 1.5415ZM1.04199 10.4998C1.04199 10.1547 1.32182 9.87484 1.66699 9.87484H3.33366C3.67883 9.87484 3.95866 10.1547 3.95866 10.4998C3.95866 10.845 3.67883 11.1248 3.33366 11.1248H1.66699C1.32182 11.1248 1.04199 10.845 1.04199 10.4998ZM16.042 10.4998C16.042 10.1547 16.3218 9.87484 16.667 9.87484H18.3337C18.6788 9.87484 18.9587 10.1547 18.9587 10.4998C18.9587 10.845 18.6788 11.1248 18.3337 11.1248H16.667C16.3218 11.1248 16.042 10.845 16.042 10.4998ZM10.0003 16.5415C10.3455 16.5415 10.6253 16.8213 10.6253 17.1665V18.8332C10.6253 19.1783 10.3455 19.4582 10.0003 19.4582C9.65516 19.4582 9.37532 19.1783 9.37532 18.8332V17.1665C9.37532 16.8213 9.65516 16.5415 10.0003 16.5415Z" fill="var(--bs-heading-color)" />
+                                <g opacity="0.5">
+                                    <path d="M3.05729 3.59633C3.29021 3.34158 3.68554 3.32389 3.94029 3.55681L5.79198 5.24979C6.04673 5.48271 6.06442 5.87804 5.8315 6.13279C5.59858 6.38754 5.20325 6.40524 4.94851 6.17232L3.09683 4.47933C2.84208 4.24642 2.82438 3.85108 3.05729 3.59633Z" fill="var(--bs-heading-color)" />
+                                    <path d="M16.9428 3.59633C17.1758 3.85108 17.1581 4.24642 16.9033 4.47933L15.0516 6.17232C14.7968 6.40524 14.4015 6.38754 14.1686 6.13279C13.9357 5.87804 13.9534 5.48271 14.2082 5.24979L16.0598 3.55681C16.3146 3.32389 16.7099 3.34158 16.9428 3.59633Z" fill="var(--bs-heading-color)" />
+                                    <path d="M14.188 14.6874C14.4321 14.4433 14.8277 14.4434 15.0718 14.6875L16.9235 16.5394C17.1676 16.7835 17.1676 17.1792 16.9235 17.4232C16.6794 17.6673 16.2837 17.6673 16.0396 17.4232L14.1879 15.5713C13.9438 15.3272 13.9439 14.9315 14.188 14.6874Z" fill="var(--bs-heading-color)" />
+                                    <path d="M5.81235 14.6875C6.05643 14.9315 6.05643 15.3272 5.81235 15.5713L3.9605 17.4231C3.71642 17.6672 3.32069 17.6672 3.07662 17.4231C2.83253 17.179 2.83253 16.7834 3.07662 16.5393L4.92847 14.6874C5.17254 14.4434 5.56828 14.4434 5.81235 14.6875Z" fill="var(--bs-heading-color)" />
+                                </g>
+                            </svg>
+                            <span class="theme-toggle"></span>
+                            <svg class="icon-dark" width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M16.5835 2.4225C16.4495 2.08117 15.9681 2.08117 15.834 2.4225L15.4754 3.33523C15.4345 3.43944 15.3523 3.52193 15.2485 3.56303L14.339 3.92301C13.999 4.05762 13.999 4.54067 14.339 4.67529L15.2485 5.03527C15.3523 5.07637 15.4345 5.15886 15.4754 5.26306L15.834 6.1758C15.9681 6.51712 16.4495 6.51712 16.5835 6.17581L16.9422 5.26306C16.9831 5.15886 17.0653 5.07637 17.1691 5.03527L18.0785 4.67529C18.4186 4.54067 18.4186 4.05762 18.0785 3.92301L17.1691 3.56303C17.0653 3.52193 16.9831 3.43944 16.9422 3.33523L16.5835 2.4225Z" fill="var(--bs-heading-color)" />
+                                <path d="M13.3609 7.27454C13.2267 6.93323 12.7455 6.93323 12.6113 7.27454L12.4806 7.60733C12.4396 7.71154 12.3575 7.79403 12.2536 7.83513L11.9221 7.96638C11.582 8.10099 11.582 8.58404 11.9221 8.71866L12.2536 8.8499C12.3575 8.89098 12.4396 8.97348 12.4806 9.07773L12.6113 9.41048C12.7455 9.75182 13.2267 9.75182 13.3609 9.41048L13.4916 9.07773C13.5326 8.97348 13.6147 8.89098 13.7186 8.8499L14.0501 8.71866C14.3902 8.58404 14.3902 8.10099 14.0501 7.96638L13.7186 7.83513C13.6147 7.79403 13.5326 7.71154 13.4916 7.60733L13.3609 7.27454Z" fill="var(--bs-heading-color)" />
+                                <path opacity="0.5" d="M10.0003 18.8332C14.6027 18.8332 18.3337 15.1022 18.3337 10.4998C18.3337 10.1143 17.7557 10.0505 17.5563 10.3805C16.6077 11.9503 14.8849 12.9998 12.917 12.9998C9.92541 12.9998 7.50032 10.5748 7.50032 7.58317C7.50032 5.61521 8.54982 3.89238 10.1197 2.9438C10.4497 2.7444 10.3859 2.1665 10.0003 2.1665C5.39795 2.1665 1.66699 5.89746 1.66699 10.4998C1.66699 15.1022 5.39795 18.8332 10.0003 18.8332Z" fill="var(--bs-heading-color)" />
+                            </svg>
+                        </button>
                     </div>
-                </nav>
-
-                <div class="content-wrapper">
-                    <div class="container-fluid flex-grow-1 container-p-y">
-                        @if (User.FindFirst("crm:impersonated_by") is { } imp)
-                        {
-                            <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
-                                <span>
-                                    <i class="bx bx-shield-quarter me-1"></i>
-                                    حالت پشتیبانی: شما به‌عنوان مالک (<strong>@imp.Value</strong>) وارد پنل این مشتری شده‌اید.
-                                </span>
-                                <form asp-area="App" asp-controller="Account" asp-action="StopImpersonation" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-warning">خروج و بازگشت به پنل مالک</button>
-                                </form>
+                    <div class="vr my-3"></div>
+                    <div class="dropdown text-end ms-lg-4 ms-3">
+                        <a href="#" class="d-flex align-items-center gap-3 py-2" data-bs-toggle="dropdown">
+                            <div class="text-end d-none d-lg-inline-block">
+                                <div class="fw-bold text-dark">@displayName</div>
                             </div>
-                        }
-                        @await Component.InvokeAsync("PageHelpLink")
-                        @RenderBody()
+                            <div class="avatar avatar-sm rounded-circle bg-primary-subtle text-primary">
+                                <span class="avatar-initial rounded-circle"><i class="fi fi-rr-user"></i></span>
+                            </div>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end mt-1">
+                            <li class="px-3 py-2 fw-bold">@displayName</li>
+                            <li><div class="dropdown-divider my-1"></div></li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center gap-2" asp-area="" asp-controller="Home" asp-action="Index">
+                                    <i class="fi fi-rr-home"></i> بازگشت به سایت
+                                </a>
+                            </li>
+                            @if (panelArea == "App")
+                            {
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2" href="/App/subscription">
+                                        <i class="fi fi-rr-badge"></i> اشتراک
+                                    </a>
+                                </li>
+                                <li>
+                                    <form asp-area="App" asp-controller="Account" asp-action="Logout" method="post">
+                                        <button type="submit" class="dropdown-item d-flex align-items-center gap-2">
+                                            <i class="fi fi-rr-exit"></i> خروج
+                                        </button>
+                                    </form>
+                                </li>
+                            }
+                            else if (panelArea == "Admin")
+                            {
+                                <li><a class="dropdown-item" href="/Admin/Account/ChangePassword"><i class="fi fi-rr-key me-1"></i> تغییر رمز</a></li>
+                                <li><a class="dropdown-item" href="/Admin/Account/Logout"><i class="fi fi-rr-exit me-1"></i> خروج</a></li>
+                            }
+                            else if (panelArea == "Owner")
+                            {
+                                <li><a class="dropdown-item" href="/Admin/Account/Logout"><i class="fi fi-rr-exit me-1"></i> خروج</a></li>
+                            }
+                            else if (panelArea == "Portal")
+                            {
+                                <li>
+                                    <form asp-area="Portal" asp-controller="Account" asp-action="Logout" method="post">
+                                        <button type="submit" class="dropdown-item"><i class="fi fi-rr-exit me-1"></i> خروج</button>
+                                    </form>
+                                </li>
+                            }
+                        </ul>
                     </div>
+                </div>
+            </div>
+        </header>
 
-                    <footer class="content-footer footer bg-footer-theme">
-                        <div class="container-fluid d-flex flex-wrap justify-content-between py-3 flex-md-row flex-column">
-                            <div class="mb-2 mb-md-0">
-                                @BrandingAccessor.Value.CopyrightLineShort()
-                            </div>
-                        </div>
-                    </footer>
+        @if (!string.IsNullOrEmpty(panelArea))
+        {
+            @await Html.PartialAsync($"~/Areas/{panelArea}/Views/Shared/_PanelMenu.cshtml")
+        }
 
-                    <div class="content-backdrop fade"></div>
+        <main class="app-wrapper">
+            <div class="container-fluid">
+                @if (User.FindFirst("crm:impersonated_by") is { } imp)
+                {
+                    <div class="alert alert-warning nx-impersonation d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+                        <span>حالت پشتیبانی: ورود با مالک <strong>@imp.Value</strong></span>
+                        <form asp-area="App" asp-controller="Account" asp-action="StopImpersonation" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-warning">خروج و بازگشت به پنل مالک</button>
+                        </form>
+                    </div>
+                }
+                @await Component.InvokeAsync("PageHelpLink")
+                @if (ViewData["NxTitle"] is string nxTitle)
+                {
+                    <partial name="_NxPageHead" model="@(new NxPageHeadModel { Title = nxTitle, Parent = ViewData["NxParent"] as string, ParentUrl = ViewData["NxParentUrl"] as string })" />
+                }
+                @RenderBody()
+            </div>
+        </main>
+
+        <footer class="footer-wrapper bg-body">
+            <div class="container-fluid">
+                <p class="mb-0">@BrandingAccessor.Value.CopyrightLineShort()</p>
+            </div>
+        </footer>
+    </div>
+
+    <div class="modal fade" id="nxSearchModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">جستجو</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="search" class="form-control" placeholder="از منوی کناری بخش را انتخاب کنید" />
                 </div>
             </div>
         </div>
-
-        <div class="layout-overlay layout-menu-toggle"></div>
-        <div class="drag-target"></div>
     </div>
 
+    <script src="~/nexlink/libs/global/global.min.js"></script>
+    <script src="~/nexlink/js/appSettings.js" asp-append-version="true"></script>
+    <script src="~/nexlink/js/main.js" asp-append-version="true"></script>
     <script src="~/panel-assets/vendor/libs/jquery/jquery.js"></script>
-    <script src="~/panel-assets/vendor/libs/popper/popper.js"></script>
-    <script src="~/panel-assets/vendor/js/bootstrap.js"></script>
-    <script src="~/panel-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
-    <script src="~/panel-assets/vendor/libs/hammer/hammer.js"></script>
-    <script src="~/panel-assets/vendor/libs/i18n/i18n.js"></script>
-    <script src="~/panel-assets/vendor/js/menu.js"></script>
-    <script src="~/panel-assets/js/main.js"></script>
-    @if (useAppTopNav)
-    {
-        <script src="~/js/crm-app-topnav.js" asp-append-version="true"></script>
-    }
     <script src="~/panel-assets/vendor/libs/jdate/jdate.js"></script>
     <script src="~/panel-assets/vendor/libs/flatpickr/flatpickr-jdate.js"></script>
     <script src="~/panel-assets/vendor/libs/flatpickr/l10n/fa-jdate.js"></script>
@@ -227,13 +171,37 @@
     <script src="~/panel-assets/vendor/libs/sweetalert2/sweetalert2.js"></script>
     <script src="~/panel-assets/vendor/libs/select2/select2.js"></script>
     <script src="~/js/panel-ui.js" asp-append-version="true"></script>
-
-    @if (ViewContext.RouteData.Values["area"]?.ToString() == "Admin")
+    <script>
+        (function () {
+            var btn = document.getElementById('nxThemeBtn');
+            function readTheme() {
+                var match = document.cookie.match(/(?:^|; )theme=([^;]+)/);
+                return match && (match[1] === 'dark' || match[1] === 'light') ? match[1] : null;
+            }
+            function paint(theme) {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                if (btn) btn.classList.toggle('active', theme === 'dark');
+                if (window.setAppSettings) window.setAppSettings({ appTheme: theme });
+            }
+            document.addEventListener('DOMContentLoaded', function () {
+                paint(readTheme() || document.documentElement.getAttribute('data-bs-theme') || 'light');
+            });
+            if (!btn) return;
+            btn.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                var current = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
+                var next = current === 'dark' ? 'light' : 'dark';
+                document.cookie = 'theme=' + next + '; path=/; max-age=31536000';
+                paint(next);
+            });
+        })();
+    </script>
+    @if (panelArea == "Admin")
     {
         <script src="~/js/admin.js" asp-append-version="true"></script>
     }
-
-    @if (ViewContext.RouteData.Values["area"]?.ToString() == "App" && User.Identity?.IsAuthenticated == true)
+    @if (panelArea == "App" && User.Identity?.IsAuthenticated == true)
     {
         <script>
             (function () {
@@ -245,41 +213,22 @@
                             .withUrl("/hubs/notifications")
                             .withAutomaticReconnect()
                             .build();
-
                         connection.on("incomingCall", function (data) {
                             var name = data.contactTitle || data.leadTitle || data.caller || 'شماره ناشناس';
                             var phone = data.caller || '';
                             var links = '';
-                            if (data.contactId) {
-                                links += '<a href="/App/m/contacts/' + data.contactId + '" class="btn btn-sm btn-primary me-1">مخاطب</a>';
-                            } else if (data.leadId) {
-                                links += '<a href="/App/m/leads/' + data.leadId + '" class="btn btn-sm btn-primary me-1">سرنخ</a>';
-                            } else if (phone) {
-                                links += '<a href="/App/m/contacts/create?mobile=' + encodeURIComponent(phone) + '" class="btn btn-sm btn-outline-primary me-1">ثبت مخاطب</a>';
-                            }
-                            if (data.callRecordId) {
-                                links += '<a href="/App/m/calls/' + data.callRecordId + '" class="btn btn-sm btn-outline-secondary">پرونده تماس</a>';
-                            }
+                            if (data.contactId) links += '<a href="/App/m/contacts/' + data.contactId + '" class="btn btn-sm btn-primary me-1">مخاطب</a>';
+                            else if (data.leadId) links += '<a href="/App/m/leads/' + data.leadId + '" class="btn btn-sm btn-primary me-1">سرنخ</a>';
+                            else if (phone) links += '<a href="/App/m/contacts/create?mobile=' + encodeURIComponent(phone) + '" class="btn btn-sm btn-outline-primary me-1">ثبت مخاطب</a>';
+                            if (data.callRecordId) links += '<a href="/App/m/calls/' + data.callRecordId + '" class="btn btn-sm btn-outline-secondary">پرونده تماس</a>';
                             var header = (data.direction === 'outgoing' ? 'تماس خروجی' : 'تماس ورودی');
                             var wrapper = document.createElement("div");
                             wrapper.className = "position-fixed bottom-0 start-0 p-3";
                             wrapper.style.zIndex = "9999";
-                            wrapper.innerHTML =
-                                '<div class="toast show" role="alert">' +
-                                '  <div class="toast-header bg-success text-white">' +
-                                '    <i class="bx bx-phone-incoming me-2"></i>' +
-                                '    <strong class="me-auto">' + header + '</strong>' +
-                                '    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>' +
-                                '  </div>' +
-                                '  <div class="toast-body">' +
-                                '    <div class="mb-2">' + name + ' <span dir="ltr">(' + phone + ')</span></div>' +
-                                '    ' + links +
-                                '  </div>' +
-                                '</div>';
+                            wrapper.innerHTML = '<div class="toast show" role="alert"><div class="toast-header"><strong class="me-auto">' + header + '</strong></div><div class="toast-body"><div class="mb-2">' + name + ' <span dir="ltr">(' + phone + ')</span></div>' + links + '</div></div>';
                             document.body.appendChild(wrapper);
                             setTimeout(function () { wrapper.remove(); }, 30000);
                         });
-
                         connection.on("callStatus", function (data) {
                             if (!data || !data.message) return;
                             var note = document.createElement("div");
@@ -289,20 +238,15 @@
                             document.body.appendChild(note);
                             setTimeout(function () { note.remove(); }, 8000);
                         });
-
-                        connection.start().catch(function () { /* اتصال لحظه‌ای در دسترس نیست */ });
+                        connection.start().catch(function () { });
                     };
                     document.body.appendChild(s);
                 }
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(bootSignalR, { timeout: 4000 });
-                } else {
-                    setTimeout(bootSignalR, 1500);
-                }
+                if ('requestIdleCallback' in window) requestIdleCallback(bootSignalR, { timeout: 4000 });
+                else setTimeout(bootSignalR, 1500);
             })();
         </script>
     }
-
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

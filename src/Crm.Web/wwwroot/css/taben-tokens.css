@@ -1,10 +1,10 @@
 :root {
-    --taben-primary: #1a56db;
-    --taben-primary-hover: #1648b8;
-    --taben-primary-dark: #1e429f;
-    --taben-primary-light: #e8f0fe;
-    --taben-primary-soft: #eef4ff;
-    --taben-primary-rgb: 26, 86, 219;
+    --taben-primary: #5955D1;
+    --taben-primary-hover: #4844b8;
+    --taben-primary-dark: #29294B;
+    --taben-primary-light: #eeeefe;
+    --taben-primary-soft: #f4f4ff;
+    --taben-primary-rgb: 89, 85, 209;
     --taben-accent: #10b981;
     --taben-bg: #ffffff;
     --taben-bg-muted: #f8fafc;

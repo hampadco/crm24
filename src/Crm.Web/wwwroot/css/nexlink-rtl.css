@@ -1,0 +1,620 @@
+/* NexLink shell, RTL. Logical overrides for the compiled LTR layout. */
+html[dir="rtl"] {
+  --bs-body-font-family: "Vazirmatn", Tahoma, sans-serif;
+}
+
+html[dir="rtl"] body,
+html[dir="rtl"] .page-layout {
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+}
+
+html[dir="rtl"] .app-menubar-tabs {
+  left: auto;
+  right: 0;
+  transition-property: width, right;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-tab-content {
+  left: auto;
+  right: 80px;
+}
+
+html[dir="rtl"] .app-navbar-tabs {
+  border-right: 0;
+  border-left: 1px solid var(--bs-border-color);
+}
+
+html[dir="rtl"] :has(.app-menubar-tabs) .app-wrapper,
+html[dir="rtl"] :has(.app-menubar-tabs) .footer-wrapper {
+  margin-left: 0;
+  margin-right: var(--app-menubar-tabs);
+}
+
+html[dir="rtl"] :has(.app-menubar-tabs) .app-header {
+  padding-left: 0;
+  padding-right: var(--app-menubar-tabs);
+}
+
+html[dir="rtl"] .app-wrapper {
+  margin-left: 0;
+  transition-property: margin-right;
+}
+
+@media (max-width: 1199.98px) {
+  html[dir="rtl"] .app-menubar-tabs {
+    left: auto;
+    right: calc(-1 * var(--app-menubar-tabs));
+  }
+
+  html[dir="rtl"] .app-menubar-tabs .app-tab-content {
+    left: auto;
+    right: -200px;
+  }
+
+  html[dir="rtl"] .app-menubar-tabs.open {
+    right: 0;
+    left: auto;
+  }
+
+  html[dir="rtl"] .app-menubar-tabs.open .app-tab-content {
+    left: auto;
+    right: 70px;
+  }
+
+  html[dir="rtl"] :has(.app-menubar-tabs) .app-wrapper,
+  html[dir="rtl"] :has(.app-menubar-tabs) .footer-wrapper {
+    margin-right: 0;
+  }
+
+  html[dir="rtl"] :has(.app-menubar-tabs) .app-header {
+    padding-right: 0;
+  }
+}
+
+html[dir="rtl"][data-app-sidebar="mini"],
+html[dir="rtl"][data-app-sidebar="mini-hover"] {
+  --app-menubar-tabs: 80px;
+}
+
+html[dir="rtl"][data-app-sidebar="mini"] .app-menubar-tabs .app-tab-content,
+html[dir="rtl"][data-app-sidebar="mini-hover"] .app-menubar-tabs .app-tab-content {
+  left: auto;
+  width: 240px;
+}
+
+html[dir="rtl"][data-app-sidebar="mini"] .app-menubar-tabs .app-tab-content {
+  right: -240px;
+}
+
+html[dir="rtl"][data-app-sidebar="mini-hover"] .app-menubar-tabs .app-tab-content {
+  right: 80px;
+}
+
+html[dir="rtl"][data-app-sidebar="mini"] :has(.app-menubar-tabs) .app-wrapper,
+html[dir="rtl"][data-app-sidebar="mini"] :has(.app-menubar-tabs) .footer-wrapper,
+html[dir="rtl"][data-app-sidebar="mini-hover"] :has(.app-menubar-tabs) .app-wrapper,
+html[dir="rtl"][data-app-sidebar="mini-hover"] :has(.app-menubar-tabs) .footer-wrapper {
+  margin-left: 0;
+  margin-right: 80px;
+}
+
+html[dir="rtl"][data-app-sidebar="mini"] :has(.app-menubar-tabs) .app-header,
+html[dir="rtl"][data-app-sidebar="mini-hover"] :has(.app-menubar-tabs) .app-header {
+  padding-left: 0;
+  padding-right: 80px;
+}
+
+/* Sneat class names still used inside existing pages. */
+.bg-label-primary { background: var(--bs-primary-bg-subtle); color: var(--bs-primary); }
+.bg-label-success { background: var(--bs-success-bg-subtle); color: var(--bs-success); }
+.bg-label-warning { background: var(--bs-warning-bg-subtle); color: var(--bs-warning); }
+.bg-label-danger { background: var(--bs-danger-bg-subtle); color: var(--bs-danger); }
+.bg-label-info { background: var(--bs-info-bg-subtle); color: var(--bs-info); }
+.bg-label-secondary { background: var(--bs-secondary-bg); color: var(--bs-secondary-color); }
+
+.avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.nx-impersonation {
+  margin-bottom: 1rem;
+}
+
+.crm-rd { --rd-accent: #5955D1; }
+.crm-rf { --rf-accent: #5955D1; }
+
+.crm-kanban-col {
+  background: var(--bs-primary-bg-subtle);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.crm-kanban-card {
+  border-radius: 12px;
+  box-shadow: none;
+  border: 1px solid var(--bs-border-color);
+}
+
+.app-page-head .breadcrumb {
+  margin-bottom: 0;
+}
+
+.auth-nx-pane .card {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.auth-nx-pane .card-body {
+  padding: 0;
+}
+
+.auth-nx-pane .app-brand {
+  display: none;
+}
+
+/* Below 1480px the template parks the submenu off-canvas. Keep it open until the user collapses it. */
+@media (max-width: 1480px) and (min-width: 1200px) {
+  html[dir="rtl"]:not([data-app-sidebar="mini"]):not([data-app-sidebar="mini-hover"]) {
+    --app-menubar-tabs: 320px;
+  }
+
+  html[dir="rtl"]:not([data-app-sidebar="mini"]):not([data-app-sidebar="mini-hover"]) .app-menubar-tabs .app-tab-content {
+    right: 80px;
+    left: auto;
+    width: 240px;
+  }
+
+  html[dir="rtl"]:not([data-app-sidebar="mini"]):not([data-app-sidebar="mini-hover"]) :has(.app-menubar-tabs) .app-wrapper,
+  html[dir="rtl"]:not([data-app-sidebar="mini"]):not([data-app-sidebar="mini-hover"]) :has(.app-menubar-tabs) .footer-wrapper {
+    margin-left: 0;
+    margin-right: 320px;
+  }
+
+  html[dir="rtl"]:not([data-app-sidebar="mini"]):not([data-app-sidebar="mini-hover"]) :has(.app-menubar-tabs) .app-header {
+    padding-left: 0;
+    padding-right: 320px;
+  }
+
+  html[dir="rtl"] .app-toggler.active::after {
+    display: none;
+  }
+}
+
+button.theme-btn {
+  border: 0;
+  padding: 0;
+  direction: ltr;
+  cursor: pointer;
+}
+
+html[dir="rtl"] .app-header {
+  z-index: 1020;
+}
+
+/* Two columns inside the rail: icons on the right, labels on the left. Neither covers the other. */
+html[dir="rtl"] .app-menubar-tabs {
+  z-index: 1030;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  overflow: hidden;
+  background: var(--app-sidebar-bg);
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-brand {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: auto;
+  width: 80px;
+  min-width: 80px;
+  height: var(--app-header-height);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: var(--app-sidebar-bg);
+  border-right: 0;
+  border-left: 1px solid var(--bs-border-color);
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs {
+  position: relative !important;
+  order: 0;
+  flex: 0 0 80px;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  height: 100vh;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
+  margin: 0;
+  padding: var(--app-header-height) 0 16px;
+  overflow: hidden;
+  z-index: 2;
+  background: var(--app-sidebar-bg);
+  border-right: 0;
+  border-left: 1px solid var(--bs-border-color);
+  box-shadow: none;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .simplebar-wrapper,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .simplebar-mask,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .simplebar-offset,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .simplebar-content-wrapper,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .simplebar-content,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link:hover,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link:focus,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link.active {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 48px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible;
+  background: transparent !important;
+  color: var(--bs-heading-color);
+  border-radius: 12px;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link > i {
+  direction: ltr;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 46px;
+  width: 46px !important;
+  height: 46px !important;
+  margin: 0 !important;
+  border-radius: 12px;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  text-align: center;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link > i::before {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+  text-align: center;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link:hover > i {
+  color: var(--bs-primary);
+  background: var(--bs-primary-bg-subtle);
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link.active > i,
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link.active > i::before {
+  color: #fff !important;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-navbar-tabs .nav-item .menu-link.active > i {
+  background: #5955D1 !important;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-tab-content {
+  position: relative !important;
+  order: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+  height: 100vh;
+  top: auto !important;
+  right: auto !important;
+  left: auto !important;
+  z-index: 1;
+  margin: 0;
+  background: var(--bs-body-bg);
+  overflow: hidden;
+  border-left: 1px solid var(--bs-border-color);
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-side-brands {
+  height: var(--app-header-height);
+  margin: 0;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  background: var(--bs-body-bg);
+  border-bottom: 1px solid var(--bs-border-color);
+  position: relative;
+  z-index: 2;
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-content-inner,
+html[dir="rtl"] .app-menubar-tabs .tab-content,
+html[dir="rtl"] .app-menubar-tabs .tab-pane.active,
+html[dir="rtl"] .app-menubar-tabs .app-tab-content .app-navbar {
+  height: calc(100vh - var(--app-header-height));
+}
+
+html[dir="rtl"] .app-menubar-tabs .app-tab-content .app-navbar {
+  width: 100%;
+  padding: 12px 18px 28px;
+}
+
+html[dir="rtl"] .app-menubar-tabs .side-menubar .menu-item .menu-link {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 6px;
+}
+
+html[dir="rtl"] .app-menubar-tabs .side-menubar .menu-item .menu-link > i {
+  width: 1.35rem;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+html[dir="rtl"][data-app-sidebar="mini-hover"] .app-menubar-tabs {
+  overflow: visible;
+}
+
+html[dir="rtl"][data-app-sidebar="mini-hover"] .app-menubar-tabs .app-tab-content {
+  position: absolute !important;
+  top: 0 !important;
+  right: 80px !important;
+  left: auto !important;
+  width: 240px !important;
+  flex: none;
+  box-shadow: -12px 0 28px rgba(41, 41, 75, 0.08);
+}
+
+html[dir="rtl"] .app-header-inner {
+  padding-left: 16px;
+  padding-right: 12px;
+}
+
+html[dir="rtl"] .app-header-start,
+html[dir="rtl"] .app-header-end {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+html[dir="rtl"] .app-header-start {
+  order: 2;
+  margin-inline-start: auto;
+}
+
+html[dir="rtl"] .app-header-end {
+  order: 3;
+}
+
+html[dir="rtl"] .app-toggler {
+  background: var(--bs-body-bg);
+  color: var(--bs-body-color);
+  position: relative;
+  z-index: 1;
+}
+
+html[dir="rtl"] .app-wrapper,
+html[dir="rtl"] .app-wrapper > .container-fluid {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.page-help-link-bar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.page-help-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 50rem;
+  font-weight: 500;
+}
+
+.page-help-link-label::before {
+  content: "—";
+  margin-inline: 0.25rem;
+  opacity: 0.65;
+}
+
+html[dir="rtl"] .app-navbar-tabs .nx-menu-badge {
+  top: 2px;
+  left: calc(50% - 30px);
+  right: auto;
+}
+
+html[dir="rtl"] .app-menubar-tabs .side-menubar .menu-heading {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 16px 8px 8px;
+}
+
+html[dir="rtl"] .app-menubar-tabs .side-menubar .menu-item .menu-link {
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-height: 42px;
+}
+
+html[dir="rtl"] .app-menubar-tabs .side-menubar .menu-item .menu-link:hover,
+html[dir="rtl"] .app-menubar-tabs .side-menubar .menu-item .menu-link.active {
+  background: var(--bs-primary-bg-subtle);
+  color: var(--bs-primary);
+}
+
+.nx-menu-badge {
+  position: absolute;
+  top: 4px;
+  left: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+html[dir="rtl"] .side-menubar .nx-menu-badge {
+  position: static;
+  margin-inline-start: auto;
+  top: auto;
+  left: auto;
+}
+
+@media (max-width: 1199.98px) {
+  html[dir="rtl"] .app-menubar-tabs {
+    --app-menubar-tabs: 320px;
+    width: 320px;
+    right: -320px;
+    left: auto;
+  }
+
+  html[dir="rtl"] .app-menubar-tabs.open {
+    right: 0;
+  }
+
+  html[dir="rtl"] :has(.app-menubar-tabs) .app-wrapper,
+  html[dir="rtl"] :has(.app-menubar-tabs) .footer-wrapper {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  html[dir="rtl"] :has(.app-menubar-tabs) .app-header {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  html[dir="rtl"] .app-menubar-tabs .app-tab-content {
+    position: relative !important;
+    right: auto !important;
+    left: auto !important;
+    width: auto !important;
+  }
+}
+
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--bs-secondary-bg) !important;
+  color: var(--bs-emphasis-color);
+}
+
+[data-bs-theme="dark"] .table {
+  --bs-table-color: var(--bs-emphasis-color);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--bs-border-color);
+  color: var(--bs-emphasis-color);
+}
+
+[data-bs-theme="dark"] .select2-dropdown,
+[data-bs-theme="dark"] .select2-container--default .select2-selection--single,
+[data-bs-theme="dark"] .select2-container--default .select2-selection--multiple,
+[data-bs-theme="dark"] .select2-container--default .select2-search--dropdown .select2-search__field {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-bs-theme="dark"] .select2-container--default .select2-selection__rendered,
+[data-bs-theme="dark"] .select2-container--default .select2-results__option {
+  color: #e8e8e8;
+}
+
+[data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected],
+[data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+  background: #5955D1;
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .flatpickr-calendar,
+[data-bs-theme="dark"] .flatpickr-months,
+[data-bs-theme="dark"] .flatpickr-month,
+[data-bs-theme="dark"] .flatpickr-days,
+[data-bs-theme="dark"] .flatpickr-time {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.45);
+}
+
+[data-bs-theme="dark"] .flatpickr-day,
+[data-bs-theme="dark"] .flatpickr-weekday,
+[data-bs-theme="dark"] .flatpickr-current-month,
+[data-bs-theme="dark"] .flatpickr-current-month input.cur-year,
+[data-bs-theme="dark"] .flatpickr-monthDropdown-months {
+  color: #e4e4e4;
+  background: transparent;
+}
+
+[data-bs-theme="dark"] .flatpickr-day:hover,
+[data-bs-theme="dark"] .flatpickr-day:focus {
+  background: rgba(89, 85, 209, 0.28);
+  border-color: transparent;
+}
+
+[data-bs-theme="dark"] .flatpickr-day.selected,
+[data-bs-theme="dark"] .flatpickr-day.startRange,
+[data-bs-theme="dark"] .flatpickr-day.endRange {
+  background: #5955D1;
+  border-color: #5955D1;
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .swal2-popup {
+  background: #2a2a2a;
+  color: #e8e8e8;
+}
+
+[data-bs-theme="dark"] .swal2-title,
+[data-bs-theme="dark"] .swal2-html-container {
+  color: #f0f0f0;
+}

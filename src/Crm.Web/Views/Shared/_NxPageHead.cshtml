@@ -1,0 +1,22 @@
+@model Crm.Web.Models.NxPageHeadModel
+<div class="app-page-head d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                @if (!string.IsNullOrWhiteSpace(Model.ParentUrl))
+                {
+                    <a href="@Model.ParentUrl"><i class="fi fi-rr-home"></i> @(Model.Parent ?? "خانه")</a>
+                }
+                else
+                {
+                    <span>@(Model.Parent ?? "خانه")</span>
+                }
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">@Model.Title</li>
+        </ol>
+    </nav>
+    @if (!string.IsNullOrWhiteSpace(Model.ActionUrl) && !string.IsNullOrWhiteSpace(Model.ActionText))
+    {
+        <a class="btn btn-primary waves-effect waves-light" href="@Model.ActionUrl">@Model.ActionText</a>
+    }
+</div>

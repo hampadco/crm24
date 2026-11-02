@@ -3,6 +3,9 @@
 @model PagedList<TenantListItem>
 @{
     ViewData["Title"] = "مشتریان";
+    ViewData["NxTitle"] = "مشتریان";
+    ViewData["NxParent"] = "پلتفرم";
+    ViewData["NxParentUrl"] = "/Admin";
     var listQuery = ViewBag.TenantListQuery as TenantListQuery ?? new TenantListQuery();
     var allowDemo = ViewBag.AllowDemoTenant as bool? ?? false;
     var demoExists = ViewBag.DemoExists as bool? ?? false;

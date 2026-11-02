@@ -1,0 +1,44 @@
+.nx-price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.nx-price-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--taben-border);
+  border-radius: 16px;
+  padding: 2rem 1.5rem;
+}
+
+.nx-price-card.is-featured {
+  border-color: var(--taben-primary);
+}
+
+.nx-price-badge {
+  position: absolute;
+  top: -12px;
+  right: 50%;
+  transform: translateX(50%);
+  background: var(--taben-primary);
+  color: #fff;
+  padding: 2px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.taben-hcard--article {
+  border: 1px solid var(--taben-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.taben-page-home .taben-btn-primary,
+.taben-header .taben-btn-primary {
+  background: var(--taben-primary);
+}

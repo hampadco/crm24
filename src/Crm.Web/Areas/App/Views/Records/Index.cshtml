@@ -1,6 +1,9 @@
 @model Crm.Web.Areas.App.Models.RecordListViewModel
 @{
     ViewData["PanelTitle"] = Model.Module.PluralLabel;
+    ViewData["NxTitle"] = Model.Module.PluralLabel;
+    ViewData["NxParent"] = "داشبورد";
+    ViewData["NxParentUrl"] = "/App/dashboard";
 }
 
 @section Styles {

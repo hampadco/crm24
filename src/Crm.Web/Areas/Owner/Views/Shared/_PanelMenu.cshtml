@@ -1,77 +1,63 @@
 @{
-    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var path = Context.Request.Path.Value ?? "";
+    string Tab()
+    {
+        if (path.StartsWith("/Admin/Articles", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/Admin/Faqs", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/Admin/SitePages", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/Admin/Categories", StringComparison.OrdinalIgnoreCase))
+            return "content";
+        return "platform";
+    }
+    var tab = Tab();
+    string On(string href) => path.Equals(href, StringComparison.OrdinalIgnoreCase) || path.StartsWith(href + "/", StringComparison.OrdinalIgnoreCase) ? "active" : "";
 }
-<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
-    <div class="app-brand demo">
-        <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
-            <span class="app-brand-logo demo">
-                <i class="bx bxs-crown fs-3 text-primary"></i>
-            </span>
-            <span class="app-brand-text demo menu-text fw-bold ms-2">@BrandingAccessor.Value.LatinName مالک</span>
-        </a>
-
-        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
-            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
-            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
-        </a>
+<aside class="app-menubar-tabs" id="appMenubar">
+    <div class="app-navbar-brand">
+        <a class="navbar-brand-logo" href="/Admin"><img src="~/nexlink/images/logo.svg" alt="" /></a>
     </div>
-
-    <div class="menu-divider mt-0"></div>
-
-    <div class="menu-inner-shadow"></div>
-
-    <ul class="menu-inner py-1">
-        <li class="menu-item @(controller == "Dashboard" ? "active" : "")">
-            <a asp-area="Admin" asp-controller="Dashboard" asp-action="Index" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-home-circle"></i>
-                <div>داشبورد</div>
-            </a>
-        </li>
-
-        <li class="menu-header small text-uppercase"><span class="menu-header-text">مشتریان</span></li>
-        <li class="menu-item @(controller == "Tenants" ? "active" : "")">
-            <a asp-area="Admin" asp-controller="Tenants" asp-action="Index" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-buildings"></i>
-                <div>Tenant ها</div>
-            </a>
-        </li>
-        <li class="menu-item @(controller == "Plans" ? "active" : "")">
-            <a asp-area="Admin" asp-controller="Plans" asp-action="Index" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-purchase-tag"></i>
-                <div>پلن‌ها و تعرفه</div>
-            </a>
-        </li>
-        <li class="menu-item @(controller == "Subscriptions" ? "active" : "")">
-            <a asp-area="Admin" asp-controller="Subscriptions" asp-action="Index" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-receipt"></i>
-                <div>اشتراک‌ها</div>
-            </a>
-        </li>
-
-        <li class="menu-header small text-uppercase"><span class="menu-header-text">محتوای سایت</span></li>
-        <li class="menu-item">
-            <a href="/Admin/Articles" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-news"></i>
-                <div>مقالات وبلاگ</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/Admin/SitePages" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-layout"></i>
-                <div>صفحات سایت</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/Admin/Faq" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-help-circle"></i>
-                <div>سوالات متداول</div>
-            </a>
-        </li>
-        <li class="menu-item">
-            <a href="/Admin" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-cog"></i>
-                <div>پنل کامل محتوا</div>
-            </a>
-        </li>
-    </ul>
+    <div class="app-navbar-tabs" data-simplebar>
+        <ul class="nav" role="tablist">
+            <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="پلتفرم">
+                <a class="menu-link @(tab == "platform" ? "active" : "")" href="#nx-owner-platform" data-bs-toggle="tab"><i class="fi fi-br-crown"></i></a>
+            </li>
+            <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="محتوا">
+                <a class="menu-link @(tab == "content" ? "active" : "")" href="#nx-owner-content" data-bs-toggle="tab"><i class="fi fi-br-newspaper"></i></a>
+            </li>
+            <li class="nav-item-hr"></li>
+            <li class="nav-item mt-auto">
+                <a class="menu-link @On("/Admin/Tenants")" href="/Admin/Tenants" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="مستاجرها">
+                    <i class="fi fi-br-building"></i>
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="app-tab-content">
+        <div class="app-side-brands"><a class="navbar-brand-text" href="/Admin">مالک</a></div>
+        <div class="app-content-inner">
+            <div class="tab-content">
+                <div class="tab-pane fade @(tab == "platform" ? "show active" : "")" id="nx-owner-platform">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">پلتفرم</span></li>
+                            <li class="menu-item"><a class="menu-link @(path.Equals("/Admin", StringComparison.OrdinalIgnoreCase) || path.Equals("/Admin/", StringComparison.OrdinalIgnoreCase) ? "active" : "")" href="/Admin"><i class="fi fi-rr-house-blank"></i><span class="menu-label">داشبورد</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Admin/Tenants")" href="/Admin/Tenants"><i class="fi fi-rr-building"></i><span class="menu-label">مستاجرها</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Admin/Plans")" href="/Admin/Plans"><i class="fi fi-rr-tags"></i><span class="menu-label">پلن‌ها</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Admin/Subscriptions")" href="/Admin/Subscriptions"><i class="fi fi-rr-id-badge"></i><span class="menu-label">اشتراک‌ها</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+                <div class="tab-pane fade @(tab == "content" ? "show active" : "")" id="nx-owner-content">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">محتوا</span></li>
+                            <li class="menu-item"><a class="menu-link @On("/Admin/Articles")" href="/Admin/Articles"><i class="fi fi-rr-newspaper"></i><span class="menu-label">مقالات</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Admin/SitePages")" href="/Admin/SitePages"><i class="fi fi-rr-document"></i><span class="menu-label">صفحات سایت</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Admin/Faqs")" href="/Admin/Faqs"><i class="fi fi-rr-interrogation"></i><span class="menu-label">سؤالات</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 </aside>

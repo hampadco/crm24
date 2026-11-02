@@ -1,8 +1,1 @@
-@if (TempData["Success"] is string success)
-{
-    <div class="d-none" data-crm-flash="success">@success</div>
-}
-@if (TempData["Error"] is string error)
-{
-    <div class="d-none" data-crm-flash="error" style="white-space: pre-line">@error</div>
-}
+<partial name="_NxAlerts" />

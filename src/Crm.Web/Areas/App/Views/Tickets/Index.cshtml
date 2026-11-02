@@ -5,6 +5,9 @@
 @model List<Ticket>
 @{
     ViewData["PanelTitle"] = "پشتیبانی";
+    ViewData["NxTitle"] = "تیکت‌ها";
+    ViewData["NxParent"] = "پشتیبانی";
+    ViewData["NxParentUrl"] = "/App/dashboard";
     var currentStatus = ViewBag.Status as string ?? "";
 
     string PriorityBadge(TicketPriority p)

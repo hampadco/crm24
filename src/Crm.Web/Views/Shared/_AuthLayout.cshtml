@@ -1,39 +1,41 @@
 <!DOCTYPE html>
-<html lang="fa" class="light-style" dir="rtl" data-theme="theme-default" data-assets-path="/panel-assets/" data-template="vertical-menu-template">
+<html lang="fa" dir="rtl" data-bs-theme="light">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] | @BrandingAccessor.Value.LatinName</title>
-    <link rel="icon" type="image/x-icon" href="~/panel-assets/img/favicon/favicon.ico" />
-
+    <link rel="icon" type="image/png" href="~/nexlink/images/favicon.png" />
+    <link rel="stylesheet" href="~/lib/vazirmatn/vazirmatn.css" />
+    <link rel="stylesheet" href="~/nexlink/libs/flaticon/css/all/all.css" />
+    <link rel="stylesheet" href="~/nexlink/css/styles.css" />
     <link rel="stylesheet" href="~/panel-assets/vendor/fonts/boxicons.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/fonts/fontawesome.css" />
-
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/core.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/theme-default.css" />
-    <link rel="stylesheet" href="~/panel-assets/css/demo.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/rtl/rtl.css" />
-    <link rel="stylesheet" href="~/panel-assets/vendor/css/pages/page-auth.css" />
-
-    <script src="~/panel-assets/vendor/js/helpers.js"></script>
-    <script src="~/panel-assets/js/config.js"></script>
-
+    <link rel="stylesheet" href="~/css/nexlink-rtl.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <div class="container-xxl">
-        <div class="authentication-wrapper authentication-basic container-p-y">
-            <div class="authentication-inner py-4">
-                @RenderBody()
+    <div class="page-layout">
+        <div class="auth-frame-wrapper">
+            <div class="row g-0 h-100">
+                <div class="col-xl-8 col-lg-7 col-md-6 d-none d-md-block">
+                    <div class="auth-frame" style="background-image: url('/nexlink/images/auth/auth-frame.webp');"></div>
+                </div>
+                <div class="col-xl-4 col-lg-5 col-md-6 align-self-center">
+                    <div class="p-4 p-sm-5 maxw-450px m-auto auth-nx-pane">
+                        <div class="mb-4 text-center">
+                            <a asp-area="" asp-controller="Home" asp-action="Index" aria-label="@BrandingAccessor.Value.LatinName">
+                                <img class="visible-light" src="~/nexlink/images/logo-full.svg" alt="@BrandingAccessor.Value.LatinName" style="max-height:42px" />
+                            </a>
+                        </div>
+                        @RenderBody()
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
+    <script src="~/nexlink/libs/global/global.min.js"></script>
     <script src="~/panel-assets/vendor/libs/jquery/jquery.js"></script>
-    <script src="~/panel-assets/vendor/libs/popper/popper.js"></script>
-    <script src="~/panel-assets/vendor/js/bootstrap.js"></script>
-    <script src="~/panel-assets/js/main.js"></script>
-
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/dist/jquery.validate.unobtrusive.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

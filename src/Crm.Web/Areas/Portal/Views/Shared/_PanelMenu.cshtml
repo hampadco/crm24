@@ -1,63 +1,36 @@
 @{
     var currentPath = Context.Request.Path.Value ?? "";
+    string On(string prefix) => currentPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? "active" : "";
 }
-<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
-    <div class="app-brand demo">
-        <a asp-area="Portal" asp-controller="Dashboard" asp-action="Index" class="app-brand-link">
-            <span class="app-brand-logo demo">
-                <i class="bx bxs-user-circle fs-3 text-primary"></i>
-            </span>
-            <span class="app-brand-text demo menu-text fw-bold ms-2">پورتال مشتری</span>
-        </a>
-
-        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
-            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
-            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
-        </a>
+<aside class="app-menubar-tabs" id="appMenubar">
+    <div class="app-navbar-brand">
+        <a class="navbar-brand-logo" href="/Portal"><img src="~/nexlink/images/logo.svg" alt="" /></a>
     </div>
-
-    <div class="menu-divider mt-0"></div>
-
-    <div class="menu-inner-shadow"></div>
-
-    <ul class="menu-inner py-1">
-        <li class="menu-item @(currentPath == "/Portal" || currentPath.StartsWith("/Portal/Dashboard") ? "active" : "")">
-            <a asp-area="Portal" asp-controller="Dashboard" asp-action="Index" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-home-circle"></i>
-                <div>داشبورد</div>
-            </a>
-        </li>
-
-        <li class="menu-header small text-uppercase"><span class="menu-header-text">خدمات</span></li>
-        <li class="menu-item @(currentPath.StartsWith("/Portal/tickets") ? "active" : "")">
-            <a href="/Portal/tickets" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-support"></i>
-                <div>تیکت‌های من</div>
-            </a>
-        </li>
-        <li class="menu-item @(currentPath.StartsWith("/Portal/projects") ? "active" : "")">
-            <a href="/Portal/projects" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-briefcase-alt-2"></i>
-                <div>پروژه‌های من</div>
-            </a>
-        </li>
-        <li class="menu-item @(currentPath.StartsWith("/Portal/invoices") ? "active" : "")">
-            <a href="/Portal/invoices" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-receipt"></i>
-                <div>فاکتورهای من</div>
-            </a>
-        </li>
-        <li class="menu-item @(currentPath.StartsWith("/Portal/kb") ? "active" : "")">
-            <a href="/Portal/kb" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-book-open"></i>
-                <div>پایگاه دانش</div>
-            </a>
-        </li>
-        <li class="menu-item @(currentPath.StartsWith("/Portal/help") ? "active" : "")">
-            <a href="/Portal/help" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-book-reader"></i>
-                <div>راهنمای پورتال</div>
-            </a>
-        </li>
-    </ul>
+    <div class="app-navbar-tabs" data-simplebar>
+        <ul class="nav" role="tablist">
+            <li class="nav-item" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="پورتال">
+                <a class="menu-link active" href="#nx-portal" data-bs-toggle="tab"><i class="fi fi-br-user"></i></a>
+            </li>
+        </ul>
+    </div>
+    <div class="app-tab-content">
+        <div class="app-side-brands"><a class="navbar-brand-text" href="/Portal">پورتال</a></div>
+        <div class="app-content-inner">
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="nx-portal">
+                    <nav class="app-navbar" data-simplebar>
+                        <ul class="side-menubar">
+                            <li class="menu-heading"><span class="menu-label">خدمات</span></li>
+                            <li class="menu-item"><a class="menu-link @(currentPath == "/Portal" || currentPath.StartsWith("/Portal/Dashboard") ? "active" : "")" href="/Portal"><i class="fi fi-rr-house-blank"></i><span class="menu-label">داشبورد</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Portal/tickets")" href="/Portal/tickets"><i class="fi fi-rr-headset"></i><span class="menu-label">تیکت‌های من</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Portal/projects")" href="/Portal/projects"><i class="fi fi-rr-briefcase"></i><span class="menu-label">پروژه‌های من</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Portal/invoices")" href="/Portal/invoices"><i class="fi fi-rr-receipt"></i><span class="menu-label">فاکتورهای من</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Portal/kb")" href="/Portal/kb"><i class="fi fi-rr-book-alt"></i><span class="menu-label">پایگاه دانش</span></a></li>
+                            <li class="menu-item"><a class="menu-link @On("/Portal/help")" href="/Portal/help"><i class="fi fi-rr-book-alt"></i><span class="menu-label">راهنما</span></a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
 </aside>

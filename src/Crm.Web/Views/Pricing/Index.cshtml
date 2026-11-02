@@ -19,13 +19,13 @@
         }
         else
         {
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1.5rem; margin-top:2rem">
+            <div class="nx-price-grid">
                 @foreach (var plan in Model)
                 {
-                    <div style="border:1px solid @(plan.IsFeatured ? "var(--taben-primary)" : "var(--taben-border)"); border-radius:16px; padding:2rem 1.5rem; background:#fff; position:relative; display:flex; flex-direction:column">
+                    <div class="nx-price-card @(plan.IsFeatured ? "is-featured" : "")">
                         @if (plan.IsFeatured)
                         {
-                            <span style="position:absolute; top:-12px; right:50%; transform:translateX(50%); background:var(--taben-primary); color:#fff; padding:2px 14px; border-radius:999px; font-size:0.8rem">پیشنهادی</span>
+                            <span class="nx-price-badge">پیشنهادی</span>
                         }
                         <h3 style="margin:0 0 0.25rem">@plan.Name</h3>
                         <p style="color:var(--taben-muted); min-height:2.5em; margin:0 0 1rem">@plan.Description</p>

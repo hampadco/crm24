@@ -8,6 +8,9 @@
     string kindSlug = ViewBag.KindSlug;
     var kindLabel = FinanceController.KindLabel(kind);
     ViewData["PanelTitle"] = "مالی";
+    ViewData["NxTitle"] = kindLabel;
+    ViewData["NxParent"] = "مالی";
+    ViewData["NxParentUrl"] = "/App/finance";
 
     var filters = ViewBag.ColumnFilters as Dictionary<string, (string Op, string? Value)>
                   ?? new Dictionary<string, (string Op, string? Value)>(StringComparer.OrdinalIgnoreCase);

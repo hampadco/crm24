@@ -1021,3 +1021,29 @@
   .crm-dash-trial { margin-inline-start: 0; }
   .crm-chart-split { flex-direction: column; align-items: stretch; }
 }
+
+[data-bs-theme="dark"] .crm-dash {
+  --dash-ink: #e8e8e8;
+  --dash-muted: #a3a3a3;
+  --dash-line: rgba(255, 255, 255, 0.08);
+  --dash-card: #242424;
+  color: var(--dash-ink);
+}
+
+[data-bs-theme="dark"] .crm-dash-panel,
+[data-bs-theme="dark"] .crm-dash-tile,
+[data-bs-theme="dark"] .crm-dash-card,
+[data-bs-theme="dark"] .crm-dash-new-group,
+[data-bs-theme="dark"] .crm-dash-trial,
+[data-bs-theme="dark"] .crm-dash-types button.is-on,
+[data-bs-theme="dark"] .crm-dash-group-head h2:focus {
+  background: var(--dash-card);
+  color: var(--dash-ink);
+  border-color: var(--dash-line);
+}
+
+[data-bs-theme="dark"] .crm-dash-panel :is(p, h2, h3, small, label, li, td, th),
+[data-bs-theme="dark"] .crm-dash-tile :is(p, h2, h3, small, label),
+[data-bs-theme="dark"] .crm-dash-card :is(p, h2, h3, small, label, li) {
+  color: inherit;
+}

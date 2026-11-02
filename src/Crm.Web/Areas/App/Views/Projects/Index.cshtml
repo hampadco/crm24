@@ -5,6 +5,9 @@
 @model List<Project>
 @{
     var wonOpportunities = (Dictionary<int, string>)ViewBag.WonOpportunities;
+    ViewData["NxTitle"] = "پروژه‌ها";
+    ViewData["NxParent"] = "پروژه‌ها";
+    ViewData["NxParentUrl"] = "/App/dashboard";
 
     string StatusBadge(ProjectStatus status)
     {
@@ -63,7 +66,6 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/crm-datatable.css" asp-append-version="true" />
 }
-
 <div class="crm-list-page">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0"><i class="bx bx-briefcase-alt-2 text-primary me-1"></i> پروژه‌ها</h4>

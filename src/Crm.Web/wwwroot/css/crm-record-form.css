@@ -4,7 +4,7 @@
   --rf-border: #e2e8f0;
   --rf-muted: #64748b;
   --rf-text: #0f172a;
-  --rf-accent: #2f6fed;
+  --rf-accent: #5955D1;
   --rf-soft: #f8fafc;
   --rf-radius: 0.9rem;
   --rf-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
@@ -395,4 +395,27 @@
 
 .crm-phone-row .crm-rf-control {
   direction: ltr;
+}
+
+[data-bs-theme="dark"] .crm-rf {
+  --rf-border: rgba(255, 255, 255, 0.1);
+  --rf-muted: #a3a3a3;
+  --rf-text: #e8e8e8;
+  --rf-soft: #2a2a2a;
+  color: var(--rf-text);
+}
+
+[data-bs-theme="dark"] .crm-rf-block,
+[data-bs-theme="dark"] .crm-rf .crm-rf-control,
+[data-bs-theme="dark"] .crm-rf .crm-rf-control:focus,
+[data-bs-theme="dark"] .crm-dup-resolve-item {
+  background: #242424;
+  color: var(--rf-text);
+  border-color: var(--rf-border);
+}
+
+[data-bs-theme="dark"] .crm-dup-resolve {
+  background: #3a2e12;
+  color: #f6e7c1;
+  border-color: #8a6a20;
 }

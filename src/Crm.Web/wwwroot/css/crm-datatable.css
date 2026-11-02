@@ -724,3 +724,79 @@
   0%, 100% { transform: scaleX(0.45); }
   50% { transform: scaleX(1); }
 }
+
+[data-bs-theme="dark"] .crm-dt {
+  --crm-dt-border: rgba(255, 255, 255, 0.08);
+  --crm-dt-head-bg: #262626;
+  --crm-dt-row-alt: rgba(255, 255, 255, 0.035);
+  --crm-dt-hover: rgba(89, 85, 209, 0.18);
+  --crm-dt-accent: #b7b4f3;
+  --crm-dt-accent-soft: rgba(89, 85, 209, 0.22);
+  --crm-dt-muted: #a3a3a3;
+  --crm-dt-text: #e8e8e8;
+  --crm-dt-input-border: rgba(255, 255, 255, 0.14);
+  background: #242424;
+  color: var(--crm-dt-text);
+}
+
+[data-bs-theme="dark"] .crm-dt-filterbar,
+[data-bs-theme="dark"] .crm-dt-gear-btn,
+[data-bs-theme="dark"] .crm-dt-clear-btn,
+[data-bs-theme="dark"] .crm-dt-filter-shell,
+[data-bs-theme="dark"] .crm-dt-filter-shell.is-labelonly,
+[data-bs-theme="dark"] .crm-dt-footer .card-footer,
+[data-bs-theme="dark"] .crm-dt-loader-card {
+  background: #2a2a2a;
+  color: var(--crm-dt-text);
+}
+
+[data-bs-theme="dark"] .crm-dt-filter-shell.is-novalue,
+[data-bs-theme="dark"] .crm-dt-filter-actions {
+  background: #222;
+}
+
+[data-bs-theme="dark"] .crm-dt-filter-input::placeholder,
+[data-bs-theme="dark"] .crm-dt-filter-shell .select2-selection__placeholder {
+  color: #8d8d8d;
+}
+
+[data-bs-theme="dark"] .crm-dt-empty {
+  background: transparent !important;
+}
+
+[data-bs-theme="dark"] .crm-dt-op-panel {
+  background: #2c2c2c;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+[data-bs-theme="dark"] .crm-dt-op-panel .crm-dt-op-menu-head {
+  color: #f2f2f2;
+  background: #262626;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .crm-dt-op-panel .crm-dt-op-menu-search {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .crm-dt-op-panel .crm-dt-op-pick {
+  color: #e4e4e4;
+}
+
+[data-bs-theme="dark"] .crm-dt-op-panel .crm-dt-op-pick:hover {
+  background: rgba(89, 85, 209, 0.22);
+}
+
+[data-bs-theme="dark"] .crm-dt-op-panel .crm-dt-op-pick.active {
+  background: #5955D1;
+  color: #fff;
+}
+
+[data-bs-theme="dark"] .crm-dt-loader-card h2 {
+  color: #f3f3f3;
+}
+
+[data-bs-theme="dark"] .crm-dt-loader-card p {
+  color: #b0b0b0;
+}

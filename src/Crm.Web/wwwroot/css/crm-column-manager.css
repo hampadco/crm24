@@ -125,3 +125,31 @@
   align-items: center;
   justify-content: center;
 }
+
+[data-bs-theme="dark"] .crm-colmgr-pane,
+[data-bs-theme="dark"] .crm-colmgr-selected-item {
+  background: #2a2a2a;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e8e8e8;
+}
+
+[data-bs-theme="dark"] .crm-colmgr-pane-head {
+  background: #262626;
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  color: #e8e8e8;
+}
+
+[data-bs-theme="dark"] .crm-colmgr-item {
+  background: #333;
+  color: #e4e4e4;
+}
+
+[data-bs-theme="dark"] .crm-colmgr-item:hover {
+  background: rgba(89, 85, 209, 0.22);
+  border-color: rgba(89, 85, 209, 0.45);
+}
+
+[data-bs-theme="dark"] .crm-colmgr-group-title,
+[data-bs-theme="dark"] .crm-colmgr-handle {
+  color: #a3a3a3;
+}
