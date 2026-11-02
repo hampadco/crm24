@@ -847,10 +847,11 @@ public class RecordsController : AppControllerBase
         foreach (var a in auditLogs)
             if (a.UserId is int uid) userIds.Add(uid);
 
+        var tenantId = HttpContext.RequestServices.GetRequiredService<Crm.Core.Abstractions.ITenantContext>().TenantId;
         var userNames = userIds.Count == 0
             ? new Dictionary<int, string>()
             : await _db.Users.AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => u.TenantId == tenantId && userIds.Contains(u.Id))
                 .ToDictionaryAsync(
                     u => u.Id,
                     u => !string.IsNullOrWhiteSpace(u.FullName) ? u.FullName!

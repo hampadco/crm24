@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
@@ -21,11 +22,13 @@ public class ProjectsController : AppControllerBase
 
     private readonly CrmDbContext _db;
     private readonly MetadataService _metadata;
+    private readonly ITenantContext _tenant;
 
-    public ProjectsController(CrmDbContext db, MetadataService metadata)
+    public ProjectsController(CrmDbContext db, MetadataService metadata, ITenantContext tenant)
     {
         _db = db;
         _metadata = metadata;
+        _tenant = tenant;
     }
 
     [HttpGet("/App/projects")]
@@ -172,6 +175,8 @@ public class ProjectsController : AppControllerBase
             return NotFound();
 
         ViewBag.Users = await _db.Users.AsNoTracking()
+            .Where(u => u.TenantId == _tenant.TenantId && u.IsActive)
+            .OrderBy(u => u.FullName)
             .ToDictionaryAsync(u => u.Id, u => u.FullName);
 
         ViewData["Title"] = project.Name;
@@ -202,6 +207,13 @@ public class ProjectsController : AppControllerBase
         DateTime startUtc, DateTime endUtc)
     {
         var project = await _db.Projects.Include(p => p.Tasks).FirstOrDefaultAsync(p => p.Id == id);
+        if (assignedUserId is int userId &&
+            !await _db.Users.AnyAsync(u => u.Id == userId && u.TenantId == _tenant.TenantId))
+        {
+            TempData["Error"] = "مسئول انتخاب‌شده برای این سازمان نیست.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         if (project is not null && !string.IsNullOrWhiteSpace(name) && endUtc >= startUtc)
         {
             project.Tasks.Add(new ProjectTask

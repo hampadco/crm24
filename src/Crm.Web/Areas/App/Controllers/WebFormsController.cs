@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 using Crm.Infrastructure.Services;
@@ -20,11 +21,13 @@ public class WebFormsController : AppControllerBase
 
     private readonly CrmDbContext _db;
     private readonly MetadataService _metadata;
+    private readonly ITenantContext _tenant;
 
-    public WebFormsController(CrmDbContext db, MetadataService metadata)
+    public WebFormsController(CrmDbContext db, MetadataService metadata, ITenantContext tenant)
     {
         _db = db;
         _metadata = metadata;
+        _tenant = tenant;
     }
 
     [HttpGet("/App/webforms")]
@@ -60,6 +63,9 @@ public class WebFormsController : AppControllerBase
     [HttpGet("/App/webforms/module-fields/{moduleId:int}")]
     public async Task<IActionResult> ModuleFields(int moduleId)
     {
+        if (!await _db.Modules.AnyAsync(m => m.Id == moduleId))
+            return Json(Array.Empty<object>());
+
         var fields = await _metadata.GetFieldsAsync(moduleId);
         return Json(fields.Select(f => new { name = f.Name, label = f.Label, required = f.IsRequired }));
     }
@@ -72,6 +78,19 @@ public class WebFormsController : AppControllerBase
         if (string.IsNullOrWhiteSpace(name) || moduleId == 0)
         {
             TempData["Error"] = "نام فرم و ماژول الزامی است.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!await _db.Modules.AnyAsync(m => m.Id == moduleId))
+        {
+            TempData["Error"] = "ماژول انتخاب‌شده برای این سازمان نیست.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (assignToUserId is int userId &&
+            !await _db.Users.AnyAsync(u => u.Id == userId && u.TenantId == _tenant.TenantId))
+        {
+            TempData["Error"] = "کاربر ارجاع برای این سازمان نیست.";
             return RedirectToAction(nameof(Index));
         }
 
@@ -120,6 +139,9 @@ public class WebFormsController : AppControllerBase
     private async Task FillModulesAsync()
     {
         ViewBag.Modules = await _metadata.GetActiveModulesAsync();
-        ViewBag.Users = await _db.Users.AsNoTracking().ToDictionaryAsync(u => u.Id, u => u.FullName);
+        ViewBag.Users = await _db.Users.AsNoTracking()
+            .Where(u => u.TenantId == _tenant.TenantId && u.IsActive)
+            .OrderBy(u => u.FullName)
+            .ToDictionaryAsync(u => u.Id, u => u.FullName);
     }
 }

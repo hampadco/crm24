@@ -499,7 +499,7 @@ public class DashboardController : AppControllerBase
         if (userIds.Count > 0)
         {
             var userRows = await _db.Users.AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => u.TenantId == _tenant.TenantId && userIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.FullName, u.Email })
                 .ToListAsync();
             users = userRows.ToDictionary(

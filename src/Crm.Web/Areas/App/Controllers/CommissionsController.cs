@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
 
@@ -54,8 +55,13 @@ public class CommissionsController : AppControllerBase
 {
     private const int PageSize = 20;
     private readonly CrmDbContext _db;
+    private readonly ITenantContext _tenant;
 
-    public CommissionsController(CrmDbContext db) => _db = db;
+    public CommissionsController(CrmDbContext db, ITenantContext tenant)
+    {
+        _db = db;
+        _tenant = tenant;
+    }
 
     [HttpGet("/App/commissions")]
     public async Task<IActionResult> Index(string? q, int page = 1)
@@ -93,7 +99,7 @@ public class CommissionsController : AppControllerBase
         var users = userIds.Count == 0
             ? new Dictionary<int, string>()
             : await _db.Users.AsNoTracking()
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => u.TenantId == _tenant.TenantId && userIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName);
 
         var report = reportAgg

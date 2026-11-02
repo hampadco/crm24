@@ -40,7 +40,7 @@ public class LeavesController : AppControllerBase
 
         var userIds = requests.Select(r => r.UserId).Distinct().ToList();
         ViewBag.Users = await _db.Users.AsNoTracking()
-            .Where(u => userIds.Contains(u.Id))
+            .Where(u => u.TenantId == _tenant.TenantId && userIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.FullName);
         ViewBag.IsAdmin = isAdmin;
         AppPaging.SetViewBag(ViewBag, total, p, pageSize);
