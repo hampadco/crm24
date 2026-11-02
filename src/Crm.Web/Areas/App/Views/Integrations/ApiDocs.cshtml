@@ -1,0 +1,116 @@
+@using Crm.Core.Entities
+@{
+    var schemas = (List<(ModuleDef Module, IReadOnlyList<FieldDef> Fields)>)ViewBag.Schemas;
+    var origin = (string)ViewBag.Origin;
+    var sampleModule = schemas.FirstOrDefault(s => s.Module.Name == "leads").Module?.Name ?? schemas.FirstOrDefault().Module?.Name ?? "leads";
+}
+
+<h4 class="mb-3"><i class="bx bx-book-open text-primary me-1"></i> اتصال وب‌سایت به CRM</h4>
+<p class="text-muted">پایهٔ آدرس: <code dir="ltr">@origin/api/v1</code></p>
+<p>
+    <a href="/App/integrations/swagger" class="btn btn-sm btn-primary">Swagger این سازمان</a>
+    <a href="/App/integrations" class="btn btn-sm btn-outline-secondary">بازگشت به یکپارچگی‌ها</a>
+</p>
+
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">کلیدها</h5></div>
+    <div class="card-body">
+        <p>کلید محرمانه (<code dir="ltr">crm_sk_…</code>) روی سرور سایت استفاده می‌شود و به ماژول‌هایی که انتخاب کرده‌اید محدود است.</p>
+        <p class="mb-0">کلید عمومی (<code dir="ltr">crm_pk_…</code>) فقط از دامنه‌های مجاز و فقط برای ساختن رکورد (معمولاً سرنخ) در مرورگر است. هدر <code dir="ltr">X-Api-Key</code> یا <code dir="ltr">Authorization: Bearer</code>.</p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">مسیرها</h5></div>
+    <div class="card-body">
+        <ul class="mb-0" dir="ltr">
+            <li>GET /api/v1/me</li>
+            <li>GET /api/v1/modules</li>
+            <li>GET /api/v1/modules/{module}/schema</li>
+            <li>GET /api/v1/{module}?search&amp;page&amp;pageSize&amp;sort&amp;dir&amp;updatedSince&amp;expand=lookups&amp;filter[field][op]=value</li>
+            <li>GET/PUT/PATCH/DELETE /api/v1/{module}/{id}</li>
+            <li>POST /api/v1/{module}</li>
+            <li>POST /api/v1/{module}/upsert?match=email</li>
+            <li>POST /api/v1/{module}/batch</li>
+            <li>POST /api/v1/leads/{id}/convert</li>
+            <li>POST /api/v1/{module}/{id}/notes</li>
+            <li>POST /api/v1/public/{module}</li>
+        </ul>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>curl</h5>
+        <pre class="mb-4" dir="ltr">curl -H "X-Api-Key: crm_sk_..." "@origin/api/v1/@sampleModule"</pre>
+        <h5>PHP / وردپرس</h5>
+        <pre class="mb-4" dir="ltr">$response = wp_remote_post('@origin/api/v1/@sampleModule', [
+    'headers' => [
+        'X-Api-Key' => 'crm_sk_...',
+        'Content-Type' => 'application/json',
+        'Idempotency-Key' => wp_generate_uuid4(),
+    ],
+    'body' => wp_json_encode([
+        'name' => 'مشتری سایت',
+        'phone' => '09120000000',
+    ]),
+]);</pre>
+        <h5>C#</h5>
+        <pre class="mb-4" dir="ltr">using var client = new HttpClient();
+client.DefaultRequestHeaders.Add("X-Api-Key", "crm_sk_...");
+var body = new StringContent("{\"name\":\"مشتری سایت\"}", Encoding.UTF8, "application/json");
+var response = await client.PostAsync("@origin/api/v1/@sampleModule", body);</pre>
+        <h5>فرم سرنخ با کلید عمومی</h5>
+        <pre class="mb-0" dir="ltr">&lt;form id="crm-lead"&gt;
+  &lt;input name="name" required&gt;
+  &lt;input name="phone"&gt;
+  &lt;input name="_hp" style="display:none" tabindex="-1" autocomplete="off"&gt;
+  &lt;button&gt;ارسال&lt;/button&gt;
+&lt;/form&gt;
+&lt;script&gt;
+document.getElementById('crm-lead').onsubmit = async (e) =&gt; {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+  await fetch('@origin/api/v1/public/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'crm_pk_...' },
+    body: JSON.stringify(data)
+  });
+};
+&lt;/script&gt;</pre>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">امضای وب‌هوک</h5></div>
+    <div class="card-body">
+        <p>هر ارسال هدر <code dir="ltr">X-Crm-Event</code> و <code dir="ltr">X-Crm-Signature</code> دارد. امضا HMAC-SHA256 بدنه با رمزی است که هنگام ساخت وب‌هوک دیدید و به شکل <code dir="ltr">sha256=...</code> می‌آید.</p>
+        <pre class="mb-0" dir="ltr">$expected = 'sha256=' . hash_hmac('sha256', $rawBody, $secret);
+hash_equals($expected, $_SERVER['HTTP_X_CRM_SIGNATURE'] ?? '');</pre>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><h5 class="mb-0">ماژول‌ها و فیلدها</h5></div>
+    <div class="card-body">
+        @foreach (var (module, fields) in schemas)
+        {
+            <h6 class="mt-3">@module.PluralLabel <code dir="ltr">@module.Name</code></h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>فیلد</th><th>نوع</th><th>الزامی</th></tr></thead>
+                    <tbody>
+                    @foreach (var field in fields.Where(f => f.IsVisible))
+                    {
+                        <tr>
+                            <td><code dir="ltr">@field.Name</code> — @field.Label</td>
+                            <td dir="ltr">@field.Type@(string.IsNullOrWhiteSpace(field.LookupModule) ? "" : " → " + field.LookupModule)</td>
+                            <td>@(field.IsRequired ? "بله" : "")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

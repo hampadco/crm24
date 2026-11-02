@@ -22,6 +22,44 @@ namespace Crm.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Crm.Core.Entities.ApiIdempotency", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApiKeyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("ApiKeyId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("ApiIdempotencies");
+                });
+
             modelBuilder.Entity("Crm.Core.Entities.ApiKey", b =>
                 {
                     b.Property<int>("Id")
@@ -29,6 +67,12 @@ namespace Crm.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActAsUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("AllowedOrigins")
+                        .HasColumnType("text");
 
                     b.Property<bool>("CanRead")
                         .HasColumnType("boolean");
@@ -48,6 +92,9 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<int?>("DeletedByUserId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -55,6 +102,18 @@ namespace Crm.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("KeyHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("KeyPrefix")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Kind")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -68,6 +127,10 @@ namespace Crm.Infrastructure.Migrations
                     b.Property<long>("RequestCount")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ScopesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("TenantId")
                         .HasColumnType("integer");
 
@@ -79,10 +142,76 @@ namespace Crm.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Key")
+                    b.HasIndex("KeyHash")
                         .IsUnique();
 
                     b.ToTable("ApiKeys");
+                });
+
+            modelBuilder.Entity("Crm.Core.Entities.ApiWebhook", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Events")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("FailCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("LastAttemptUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastStatus")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModuleNames")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Secret")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ApiWebhooks");
                 });
 
             modelBuilder.Entity("Crm.Core.Entities.ApprovalRequest", b =>

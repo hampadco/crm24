@@ -83,6 +83,8 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<PrintTemplate> PrintTemplates => Set<PrintTemplate>();
     public DbSet<PrintTemplateRole> PrintTemplateRoles => Set<PrintTemplateRole>();
     public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+    public DbSet<ApiWebhook> ApiWebhooks => Set<ApiWebhook>();
+    public DbSet<ApiIdempotency> ApiIdempotencies => Set<ApiIdempotency>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -390,7 +392,22 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
 
         builder.Entity<Survey>(e => e.HasIndex(s => s.PublicKey).IsUnique());
 
-        builder.Entity<ApiKey>(e => e.HasIndex(k => k.Key).IsUnique());
+        builder.Entity<ApiKey>(e =>
+        {
+            e.HasIndex(k => k.KeyHash).IsUnique();
+        });
+
+        builder.Entity<ApiWebhook>(e =>
+        {
+            e.Property(e => e.Url).HasMaxLength(2000);
+        });
+
+        builder.Entity<ApiIdempotency>(e =>
+        {
+            e.HasIndex(x => new { x.ApiKeyId, x.Key }).IsUnique();
+            e.HasIndex(x => x.CreatedAtUtc);
+            e.Property(x => x.ResponseJson).HasColumnType("jsonb");
+        });
 
         builder.Entity<PaymentTransaction>(e =>
         {

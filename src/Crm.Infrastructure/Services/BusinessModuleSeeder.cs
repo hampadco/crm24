@@ -83,6 +83,84 @@ public class BusinessModuleSeeder
 
         // فیلد Lookup دفترچه روی پیش‌فاکتور/سفارش/فاکتور — همیشه تضمین شود
         await EnsureDocumentPriceBookFieldAsync(tenantId);
+
+        await EnsureProductCategoriesAsync(tenantId);
+    }
+
+    /// <summary>دسته‌بندی درختی محصول و فیلد category روی محصولات. برای tenantهای فعلی هم تکرار نمی‌شود.</summary>
+    private async Task EnsureProductCategoriesAsync(int tenantId)
+    {
+        var cacheKey = $"product-categories-v1:{tenantId}";
+        if (_cache.TryGetValue(cacheKey, out bool done) && done)
+            return;
+
+        await EnsureAsync(tenantId, "product_categories", "دسته‌بندی محصول", "دسته‌بندی محصولات", "bx-category", "inventory", 40,
+        [
+            F("name", "نام", FieldType.Text, required: true),
+            F("parent", "دستهٔ والد", FieldType.Lookup, lookupModule: "product_categories"),
+            F("slug", "نامک", FieldType.Text, unique: true),
+            F("description", "توضیحات", FieldType.MultilineText, showInList: false),
+            F("sortOrder", "ترتیب", FieldType.Number, defaultValue: "0"),
+            F("isActive", "فعال", FieldType.Checkbox, defaultValue: "true")
+        ]);
+
+        var categories = await _db.Modules.FirstAsync(m => m.TenantId == tenantId && m.Name == "product_categories");
+        var products = await _db.Modules.FirstOrDefaultAsync(m => m.TenantId == tenantId && m.Name == "products");
+        if (products is null)
+            return;
+
+        await EnsureLookupFieldAsync(tenantId, categories.Id, "parent", "دستهٔ والد", "product_categories");
+        await EnsureLookupFieldAsync(tenantId, products.Id, "category", "دسته‌بندی", "product_categories");
+
+        var hasRelation = await _db.Relations.AnyAsync(r =>
+            r.TenantId == tenantId && r.SourceModuleId == categories.Id && r.TargetModuleId == products.Id && r.LinkFieldName == "category");
+        if (!hasRelation)
+        {
+            _db.Relations.Add(new RelationDef
+            {
+                TenantId = tenantId,
+                SourceModuleId = categories.Id,
+                TargetModuleId = products.Id,
+                Label = "محصولات",
+                RelatedFieldLabel = "دسته‌بندی",
+                Kind = RelationKind.OneToMany,
+                LinkFieldName = "category"
+            });
+            await _db.SaveChangesAsync();
+        }
+
+        await _rolePerms.EnsureModulePermissionRowsAsync(tenantId, categories.Id);
+        _cache.Remove($"modules:{tenantId}");
+        _cache.Set(cacheKey, true, TimeSpan.FromHours(12));
+    }
+
+    private async Task EnsureLookupFieldAsync(int tenantId, int moduleId, string name, string label, string lookupModule)
+    {
+        var exists = await _db.Fields.AnyAsync(f => f.ModuleId == moduleId && f.Name == name && !f.IsDeleted);
+        if (exists)
+            return;
+
+        var blockId = await _db.FieldBlocks
+            .Where(b => b.ModuleId == moduleId)
+            .OrderBy(b => b.SortOrder)
+            .Select(b => (int?)b.Id)
+            .FirstOrDefaultAsync();
+        var sort = await _db.Fields.Where(f => f.ModuleId == moduleId).Select(f => (int?)f.SortOrder).MaxAsync() ?? 0;
+        _db.Fields.Add(new FieldDef
+        {
+            TenantId = tenantId,
+            ModuleId = moduleId,
+            BlockId = blockId,
+            Name = name,
+            Label = label,
+            Type = FieldType.Lookup,
+            LookupModule = lookupModule,
+            IsCustom = false,
+            ShowInList = true,
+            SortOrder = sort + 1
+        });
+        await _db.SaveChangesAsync();
+        _cache.Remove($"fields:{tenantId}:{moduleId}");
     }
 
     /// <summary>ماژول pricebook_entries + بلاک LineItems روی pricebooks + منو.</summary>

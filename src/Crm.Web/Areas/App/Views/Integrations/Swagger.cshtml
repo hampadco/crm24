@@ -1,0 +1,56 @@
+@{
+    Layout = null;
+    var tenantName = (string)ViewBag.TenantName;
+}
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Swagger — @tenantName</title>
+    <link rel="stylesheet" href="/lib/swagger-ui/swagger-ui.css" />
+    <style>
+        html { box-sizing: border-box; }
+        body { margin: 0; background: #fafafa; }
+        .crm-swagger-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1.25rem;
+            background: #0f766e;
+            color: #fff;
+            font-family: Tahoma, sans-serif;
+        }
+        .crm-swagger-bar a { color: #fff; }
+        .crm-swagger-bar p { margin: 0.2rem 0 0; font-size: 0.85rem; opacity: 0.9; }
+        #swagger-ui { direction: ltr; }
+    </style>
+</head>
+<body>
+    <div class="crm-swagger-bar">
+        <div>
+            <strong>Swagger سازمان @tenantName</strong>
+            <p>فقط دادهٔ همین سازمان. کلید را از یکپارچگی‌ها بردارید و در Authorize بگذارید.</p>
+        </div>
+        <a href="/App/integrations">بازگشت به یکپارچگی‌ها</a>
+    </div>
+    <div id="swagger-ui"></div>
+    <script src="/lib/swagger-ui/swagger-ui-bundle.js"></script>
+    <script>
+        window.ui = SwaggerUIBundle({
+            url: "/App/integrations/openapi.json",
+            dom_id: "#swagger-ui",
+            persistAuthorization: false,
+            tryItOutEnabled: true,
+            filter: true,
+            docExpansion: "list",
+            defaultModelsExpandDepth: 0,
+            requestInterceptor: function (req) {
+                req.credentials = "include";
+                return req;
+            }
+        });
+    </script>
+</body>
+</html>

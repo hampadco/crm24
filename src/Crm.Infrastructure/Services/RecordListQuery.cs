@@ -9,6 +9,9 @@ public class RecordListQuery
     public string? SortField { get; set; }
     public string SortDir { get; set; } = "desc";
     public List<ColumnFilter> Filters { get; set; } = [];
+
+    /// <summary>فقط رکوردهایی که بعد از این زمان ساخته یا ویرایش شده‌اند.</summary>
+    public DateTime? UpdatedSinceUtc { get; set; }
 }
 
 public class ColumnFilter

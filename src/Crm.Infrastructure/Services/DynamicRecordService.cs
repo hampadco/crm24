@@ -81,6 +81,12 @@ public class DynamicRecordService
                 engine.ExecuteForRecordAsync(tenantId, moduleId, recordId, trigger));
     }
 
+    private void EnqueueWebhooks(int moduleId, int recordId, string eventName)
+    {
+        if (_tenant.TenantId is int tenantId)
+            _jobs.Enqueue<ApiWebhookJob>(job => job.DeliverAsync(tenantId, moduleId, recordId, eventName));
+    }
+
     public Task<(IReadOnlyList<DynamicRecord> Items, int TotalCount)> ListAsync(
         int moduleId, string? search, int page, int pageSize, bool includeTotal = true) =>
         ListAsync(moduleId, new RecordListQuery
@@ -124,7 +130,8 @@ public class DynamicRecordService
         }
 
         var filters = listQuery.Filters
-            .Where(f => IsSafeFieldName(f.Field) && !string.IsNullOrWhiteSpace(f.Value))
+            .Where(f => IsSafeFieldName(f.Field) &&
+                        (f.Op is "isempty" or "isnotempty" || !string.IsNullOrWhiteSpace(f.Value)))
             .ToList();
 
         HashSet<int>? filteredIds = null;
@@ -135,6 +142,9 @@ public class DynamicRecordService
                 return ([], 0);
             query = query.Where(r => filteredIds.Contains(r.Id));
         }
+
+        if (listQuery.UpdatedSinceUtc is DateTime since)
+            query = query.Where(r => (r.UpdatedAtUtc ?? r.CreatedAtUtc) >= since);
 
         var sortField = listQuery.SortField?.Trim();
         var useJsonSort = IsSafeFieldName(sortField) && !IsTitleField(sortField!);
@@ -578,6 +588,7 @@ public class DynamicRecordService
         await _db.SaveChangesAsync();
 
         EnqueueWorkflows(moduleId, record.Id, WorkflowTrigger.RecordCreated);
+        EnqueueWebhooks(moduleId, record.Id, "record.created");
         if (!skipPartyPropagate && PartyLinkService.HasPartyLookupValue(fields, data))
             await _partyLinks.PropagateFromAsync(module.Name, record.Id);
         return record;
@@ -622,7 +633,10 @@ public class DynamicRecordService
         await _db.SaveChangesAsync();
 
         if (changes.Count > 0)
+        {
             EnqueueWorkflows(moduleId, id, WorkflowTrigger.RecordUpdated);
+            EnqueueWebhooks(moduleId, id, "record.updated");
+        }
         if (!skipPartyPropagate && PartyLinkService.PartyLookupsChanged(fields, oldData, data))
             await _partyLinks.PropagateFromAsync(module.Name, id);
     }
@@ -717,7 +731,10 @@ public class DynamicRecordService
         await _db.SaveChangesAsync();
 
         if (old != value)
+        {
             EnqueueWorkflows(moduleId, id, WorkflowTrigger.RecordUpdated);
+            EnqueueWebhooks(moduleId, id, "record.updated");
+        }
         if (PartyLinkService.PartyLookupsChanged(fields, oldData, data))
             await _partyLinks.PropagateFromAsync(module.Name, id);
     }
@@ -734,6 +751,7 @@ public class DynamicRecordService
         _db.Records.Remove(record); // به حذف نرم تبدیل می‌شود
         _audit.Log(module.Name, record.Id, "Delete");
         await _db.SaveChangesAsync();
+        EnqueueWebhooks(moduleId, id, "record.deleted");
     }
 
     /// <summary>سطل بازیابی: رکوردهای حذف‌شده Tenant جاری، صفحه‌بندی‌شده.</summary>

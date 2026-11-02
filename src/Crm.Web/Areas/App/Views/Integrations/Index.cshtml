@@ -13,8 +13,18 @@
 @if (TempData["NewApiKey"] is string newKey)
 {
     <div class="alert alert-warning">
-        <strong>کلید جدید (فقط همین یک بار نمایش داده می‌شود):</strong>
-        <code dir="ltr" class="user-select-all d-block mt-2 fs-5">@newKey</code>
+        <strong>کلید را کپی کنید:</strong>
+        <div class="input-group mt-2" dir="ltr">
+            <input id="crm-new-api-key" type="text" class="form-control font-monospace" readonly value="@newKey" />
+            <button type="button" class="btn btn-warning" data-crm-copy="#crm-new-api-key">کپی</button>
+        </div>
+    </div>
+}
+@if (TempData["NewWebhookSecret"] is string newSecret)
+{
+    <div class="alert alert-warning">
+        <strong>رمز امضای وب‌هوک (فقط همین یک بار):</strong>
+        <code dir="ltr" class="user-select-all d-block mt-2 fs-5">@newSecret</code>
     </div>
 }
 
@@ -212,50 +222,206 @@
         <div class="card">
             <div class="card-header"><h5 class="mb-0"><i class="bx bx-key me-1"></i> کلیدهای API</h5></div>
             <div class="card-body">
-                <p class="text-muted small">
-                    مستندات: <code dir="ltr">GET/POST/PUT/DELETE /api/v1/{module}</code> با هدر <code dir="ltr">X-Api-Key</code>
-                    — OpenAPI: <a href="/openapi/v1.json" target="_blank" dir="ltr">/openapi/v1.json</a>
+                <p class="text-muted small mb-2">
+                    هدر <code dir="ltr">X-Api-Key</code> یا <code dir="ltr">Authorization: Bearer</code>.
+                    <a href="/App/integrations/swagger">Swagger این سازمان</a>
+                    —
+                    <a href="/App/integrations/api-docs">راهنمای اتصال سایت</a>
                 </p>
-                <form asp-action="CreateApiKey" method="post" class="d-flex gap-2 mb-3">
-                    @Html.AntiForgeryToken()
-                    <input type="text" name="name" class="form-control form-control-sm" placeholder="نام کلید (مثلاً وب‌سایت)" />
-                    <label class="form-check text-nowrap mb-0 align-self-center">
-                        <input type="checkbox" name="canWrite" value="true" class="form-check-input" />
-                        <span class="form-check-label small">نوشتن</span>
-                    </label>
-                    <button type="submit" class="btn btn-sm btn-primary text-nowrap"><i class="bx bx-plus"></i></button>
-                </form>
+                <p class="text-muted small mb-0">ساخت کلید و وب‌هوک پایین همین صفحه است.</p>
             </div>
             <ul class="list-group list-group-flush">
                 @foreach (var key in apiKeys)
                 {
+                    var fullKey = key.Key ?? "";
+                    var hasFullKey = fullKey.StartsWith("crm_", StringComparison.Ordinal);
                     <li class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="flex-grow-1" style="min-width:0">
                                 <strong>@key.Name</strong>
                                 <span class="badge @(key.IsActive ? "bg-label-success" : "bg-label-secondary") ms-1">@(key.IsActive ? "فعال" : "غیرفعال")</span>
-                                <span class="badge bg-label-info ms-1">@(key.CanWrite ? "خواندن/نوشتن" : "فقط خواندن")</span>
+                                <span class="badge bg-label-info ms-1">@(key.Kind == "public" ? "عمومی" : "محرمانه")</span>
+                                @if (hasFullKey)
+                                {
+                                    <div class="input-group input-group-sm mt-2" dir="ltr">
+                                        <input id="crm-api-key-@key.Id" type="text" class="form-control font-monospace" readonly value="@fullKey" />
+                                        <button type="button" class="btn btn-outline-primary" data-crm-copy="#crm-api-key-@key.Id">کپی</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted mt-2">متن کامل این کلید ذخیره نشده و قابل کپی نیست.</div>
+                                    <form asp-action="ReissueApiKey" asp-route-id="@key.Id" method="post" class="mt-2" onsubmit="return confirm('کلید قبلی از کار می‌افتد و یک کلید تازهٔ قابل کپی ساخته می‌شود. ادامه می‌دهید؟');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">صدور کلید جدید قابل کپی</button>
+                                    </form>
+                                }
                                 <div class="text-muted small mt-1">
-                                    <code dir="ltr">@(key.Key[..12])…</code>
-                                    — @key.RequestCount درخواست
+                                    @key.RequestCount درخواست
                                     @if (key.LastUsedAtUtc is DateTime lastUsed)
                                     {
                                         <span> — آخرین استفاده @PersianDateHelper.ToJalaliDate(lastUsed)</span>
                                     }
                                 </div>
                             </div>
-                            <form asp-action="ToggleApiKey" asp-route-id="@key.Id" method="post">
-                                @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-sm @(key.IsActive ? "btn-outline-danger" : "btn-outline-success")">
-                                    @(key.IsActive ? "غیرفعال" : "فعال")
-                                </button>
-                            </form>
+                            <div class="d-flex gap-1">
+                                <form asp-action="ToggleApiKey" asp-route-id="@key.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm @(key.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                        @(key.IsActive ? "ابطال" : "فعال")
+                                    </button>
+                                </form>
+                                <form asp-action="DeleteApiKey" asp-route-id="@key.Id" method="post" onsubmit="return confirm('کلید حذف شود؟');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">حذف</button>
+                                </form>
+                            </div>
                         </div>
                     </li>
                 }
                 @if (apiKeys.Count == 0)
                 {
                     <li class="list-group-item text-muted text-center py-3">کلیدی ساخته نشده است.</li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@{
+    var apiModules = ViewBag.ApiModules as System.Collections.IEnumerable;
+    var apiUsers = ViewBag.ApiUsers as System.Collections.IEnumerable;
+    var webhooks = (List<ApiWebhook>)(ViewBag.ApiWebhooks ?? new List<ApiWebhook>());
+}
+
+<div class="row g-4 mt-1">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">کلید تازه</h5></div>
+            <div class="card-body">
+                <form asp-action="CreateApiKey" method="post" class="row g-3">
+                    @Html.AntiForgeryToken()
+                    <div class="col-md-6">
+                        <label class="form-label">نام</label>
+                        <input type="text" name="name" class="form-control" placeholder="مثلاً فروشگاه" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">نوع</label>
+                        <select name="kind" class="form-select" id="api-key-kind">
+                            <option value="secret">محرمانه — سرور سایت</option>
+                            <option value="public">عمومی — فرم داخل مرورگر</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">مالک رکوردها</label>
+                        <select name="actAsUserId" class="form-select">
+                            <option value="">کاربر فعلی</option>
+                            @if (apiUsers is not null)
+                            {
+                                foreach (dynamic user in apiUsers)
+                                {
+                                    <option value="@user.Id">@user.FullName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">انقضا</label>
+                        <input type="date" name="expiresAt" class="form-control" dir="ltr" />
+                    </div>
+                    <div class="col-12" id="api-key-origins">
+                        <label class="form-label">دامنه‌های مجاز کلید عمومی</label>
+                        <textarea name="origins" class="form-control" rows="2" dir="ltr" placeholder="https://shop.example.com"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-check">
+                            <input type="checkbox" name="fullAccess" value="true" class="form-check-input" checked />
+                            <span class="form-check-label">دسترسی کامل به همهٔ ماژول‌ها (فقط کلید محرمانه)</span>
+                        </label>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-label">یا انتخاب ماژول</div>
+                        <div class="row g-2">
+                            @if (apiModules is not null)
+                            {
+                                foreach (dynamic module in apiModules)
+                                {
+                                    <div class="col-md-4">
+                                        <label class="form-label small mb-1">@module.PluralLabel</label>
+                                        <select name="scopes" class="form-select form-select-sm">
+                                            <option value="">بدون دسترسی</option>
+                                            <option value="@(module.Name):r">فقط خواندن</option>
+                                            <option value="@(module.Name):rw">خواندن و نوشتن</option>
+                                        </select>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">ساخت کلید</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">وب‌هوک خروجی</h5></div>
+            <div class="card-body">
+                <form asp-action="CreateWebhook" method="post" class="row g-2">
+                    @Html.AntiForgeryToken()
+                    <div class="col-12">
+                        <label class="form-label">آدرس</label>
+                        <input type="url" name="url" class="form-control" dir="ltr" placeholder="https://shop.example.com/crm-hook" required />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">ماژول‌ها</label>
+                        <input type="text" name="modules" class="form-control" dir="ltr" placeholder="* یا leads,products" />
+                    </div>
+                    <div class="col-12 d-flex flex-wrap gap-3">
+                        <label class="form-check"><input class="form-check-input" type="checkbox" name="events" value="record.created" checked /> <span class="form-check-label">ساخته شد</span></label>
+                        <label class="form-check"><input class="form-check-input" type="checkbox" name="events" value="record.updated" checked /> <span class="form-check-label">ویرایش شد</span></label>
+                        <label class="form-check"><input class="form-check-input" type="checkbox" name="events" value="record.deleted" checked /> <span class="form-check-label">حذف شد</span></label>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">افزودن وب‌هوک</button>
+                    </div>
+                </form>
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var hook in webhooks)
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between gap-2">
+                            <div>
+                                <div dir="ltr" class="small text-break">@hook.Url</div>
+                                <div class="text-muted small mt-1">
+                                    @(hook.IsActive ? "فعال" : "غیرفعال")
+                                    — آخرین وضعیت: @(hook.LastStatus ?? "—")
+                                    — خطاهای پیاپی: @hook.FailCount
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-1">
+                                <form asp-action="TestWebhook" asp-route-id="@hook.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">تست</button>
+                                </form>
+                                <form asp-action="ToggleWebhook" asp-route-id="@hook.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-outline-secondary" type="submit">@(hook.IsActive ? "خاموش" : "روشن")</button>
+                                </form>
+                                <form asp-action="DeleteWebhook" asp-route-id="@hook.Id" method="post">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">حذف</button>
+                                </form>
+                            </div>
+                        </div>
+                    </li>
+                }
+                @if (webhooks.Count == 0)
+                {
+                    <li class="list-group-item text-muted text-center">وب‌هوکی ثبت نشده است.</li>
                 }
             </ul>
         </div>
@@ -274,5 +440,31 @@
         }
         radios.forEach(r => r.addEventListener('change', sync));
         sync();
+
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-crm-copy]');
+            if (!button) return;
+            const input = document.querySelector(button.getAttribute('data-crm-copy'));
+            if (!input) return;
+            const text = input.value;
+            const mark = function () {
+                const previous = button.textContent;
+                button.textContent = 'کپی شد';
+                setTimeout(function () { button.textContent = previous; }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(mark).catch(function () {
+                    input.focus();
+                    input.select();
+                    document.execCommand('copy');
+                    mark();
+                });
+            } else {
+                input.focus();
+                input.select();
+                document.execCommand('copy');
+                mark();
+            }
+        });
     })();
 </script>

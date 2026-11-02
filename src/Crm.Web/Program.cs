@@ -1,8 +1,11 @@
 using ElementorBuilder.Extensions;
 using Hangfire;
 using Hangfire.PostgreSql;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Crm.Core;
 using Crm.Core.Abstractions;
@@ -50,6 +53,10 @@ builder.Services.AddScoped<ListColumnService>();
 builder.Services.AddScoped<RecordAccessService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<DynamicRecordService>();
+builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddScoped<Crm.Web.Services.TenantOpenApiBuilder>();
+builder.Services.AddScoped<ApiWebhookJob>();
+builder.Services.AddScoped<Crm.Web.Security.ApiScopeFilter>();
 builder.Services.AddScoped<RecordImportExportService>();
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<TenantLifecycleService>();
@@ -96,6 +103,10 @@ builder.Services.AddHttpClient("ippanel", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(60);
 });
+builder.Services.AddHttpClient("api-webhook", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 
 builder.Services.AddIdentityCore<CrmUser>(options =>
     {
@@ -124,6 +135,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Portal/Account/Login";
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
     })
+    .AddScheme<AuthenticationSchemeOptions, Crm.Web.Security.ApiKeyAuthenticationHandler>(
+        Crm.Web.Security.ApiKeyAuthenticationHandler.SchemeName, _ => { })
     .AddIdentityCookies();
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -136,6 +149,28 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddCors();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Cors.Infrastructure.ICorsPolicyProvider, Crm.Web.Security.ApiCorsPolicyProvider>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("api", httpContext =>
+    {
+        var kind = httpContext.User.FindFirst("crm:api_kind")?.Value;
+        var keyId = httpContext.User.FindFirst("crm:api_key_id")?.Value;
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "ip";
+        var isPublic = string.Equals(kind, "public", StringComparison.OrdinalIgnoreCase)
+                       || httpContext.Request.Path.StartsWithSegments("/api/v1/public");
+        var permit = isPublic ? 20 : 120;
+        var partition = isPublic ? $"p:{ip}:{keyId}" : $"k:{keyId ?? ip}";
+        return RateLimitPartition.GetFixedWindowLimiter(partition, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+});
 
 // ---------- Hangfire (جاب‌های پس‌زمینه) ----------
 builder.Services.AddHangfire(config => config
@@ -215,10 +250,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseStaticFiles();
 app.UseRouting();
+app.UseCors();
 app.UseAuthentication();
 app.UseMiddleware<TenantContextMiddleware>();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapHub<Crm.Web.Hubs.NotificationHub>("/hubs/notifications");

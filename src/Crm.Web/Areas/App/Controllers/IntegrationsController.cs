@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Crm.Core.Abstractions;
 using Crm.Core.Entities;
 using Crm.Infrastructure.Data;
+using Crm.Infrastructure.Identity;
 using Crm.Infrastructure.Services;
+using Crm.Web.Services;
 
 namespace Crm.Web.Areas.App.Controllers;
 
@@ -16,16 +18,23 @@ public class IntegrationsController : AppControllerBase
     private readonly TenantIntegrationService _integrations;
     private readonly TelefonchyClient _telefonchy;
     private readonly SmsService _sms;
+    private readonly MetadataService _metadata;
+    private readonly ApiWebhookJob _webhooks;
+    private readonly TenantOpenApiBuilder _openApi;
 
     public IntegrationsController(
         CrmDbContext db, ITenantContext tenant, TenantIntegrationService integrations,
-        TelefonchyClient telefonchy, SmsService sms)
+        TelefonchyClient telefonchy, SmsService sms, MetadataService metadata, ApiWebhookJob webhooks,
+        TenantOpenApiBuilder openApi)
     {
         _db = db;
         _tenant = tenant;
         _integrations = integrations;
         _telefonchy = telefonchy;
         _sms = sms;
+        _metadata = metadata;
+        _webhooks = webhooks;
+        _openApi = openApi;
     }
 
     [HttpGet("/App/integrations")]
@@ -44,6 +53,18 @@ public class IntegrationsController : AppControllerBase
         ViewBag.Config = config;
         ViewBag.ApiKeys = await _db.ApiKeys.AsNoTracking()
             .OrderByDescending(k => k.Id).ToListAsync();
+        ViewBag.ApiWebhooks = await _db.ApiWebhooks.AsNoTracking()
+            .OrderByDescending(h => h.Id).ToListAsync();
+        ViewBag.ApiModules = (await _metadata.GetActiveModulesAsync())
+            .Where(m => !m.IsChildModule)
+            .OrderBy(m => m.PluralLabel)
+            .Select(m => new { m.Name, m.PluralLabel })
+            .ToList();
+        ViewBag.ApiUsers = await _db.Users.AsNoTracking()
+            .Where(u => u.TenantId == _tenant.TenantId && u.IsActive)
+            .OrderBy(u => u.FullName)
+            .Select(u => new { u.Id, u.FullName, u.Email })
+            .ToListAsync();
         ViewBag.TelefonchyOrigin = TelefonchyPublicOrigin();
         ViewData["Title"] = "یکپارچگی‌ها و API";
         return View();
@@ -173,24 +194,215 @@ public class IntegrationsController : AppControllerBase
 
     [HttpPost("/App/integrations/api-keys/create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CreateApiKey(string name, bool canWrite)
+    public async Task<IActionResult> CreateApiKey(
+        string name, string kind, string? origins, int? actAsUserId, DateTime? expiresAt, bool fullAccess, string[]? scopes)
     {
         if (!_tenant.IsTenantAdmin)
             return Forbid("Identity.Application");
 
-        var rawKey = $"crm_{Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant()}";
+        var isPublic = string.Equals(kind, ApiKeyService.KindPublic, StringComparison.OrdinalIgnoreCase);
+        if (isPublic && string.IsNullOrWhiteSpace(origins))
+        {
+            TempData["Error"] = "برای کلید عمومی، دامنهٔ مجاز سایت را وارد کنید.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!isPublic && !fullAccess && (scopes is null || scopes.Length == 0))
+        {
+            TempData["Error"] = "برای کلید محرمانه یا دسترسی کامل را بزنید یا ماژول‌ها را انتخاب کنید.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var scopeList = fullAccess && !isPublic
+            ? ["*"]
+            : scopes ?? [];
+        var scopesJson = ApiKeyService.BuildScopes(isPublic ? ApiKeyService.KindPublic : ApiKeyService.KindSecret, scopeList);
+        var rawKey = ApiKeyService.NewRawKey(isPublic ? ApiKeyService.KindPublic : ApiKeyService.KindSecret);
         _db.ApiKeys.Add(new ApiKey
         {
             Name = string.IsNullOrWhiteSpace(name) ? "کلید API" : name.Trim(),
             Key = rawKey,
+            KeyHash = ApiKeyService.Hash(rawKey),
+            KeyPrefix = rawKey.Length > 12 ? rawKey[..12] : rawKey,
+            Kind = isPublic ? ApiKeyService.KindPublic : ApiKeyService.KindSecret,
+            ScopesJson = scopesJson,
+            AllowedOrigins = isPublic ? origins?.Trim() : null,
+            ActAsUserId = actAsUserId ?? _tenant.UserId,
+            ExpiresAtUtc = expiresAt is DateTime day ? DateTime.SpecifyKind(day.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc) : null,
             CanRead = true,
-            CanWrite = canWrite
+            CanWrite = scopesJson == "*" ? fullAccess || !isPublic : scopesJson.Contains('w', StringComparison.OrdinalIgnoreCase)
         });
         await _db.SaveChangesAsync();
 
-        TempData["Success"] = "کلید ساخته شد. آن را در جای امن نگه دارید.";
+        TempData["Success"] = "کلید ساخته شد. از دکمهٔ کپی بردارید.";
         TempData["NewApiKey"] = rawKey;
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/api-keys/{id:int}/reissue")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReissueApiKey(int id)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var key = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == id);
+        if (key is null)
+            return RedirectToAction(nameof(Index));
+
+        var rawKey = ApiKeyService.NewRawKey(key.Kind);
+        key.Key = rawKey;
+        key.KeyHash = ApiKeyService.Hash(rawKey);
+        key.KeyPrefix = rawKey.Length > 12 ? rawKey[..12] : rawKey;
+        await _db.SaveChangesAsync();
+
+        TempData["Success"] = "کلید جدید صادر شد. کلید قبلی دیگر کار نمی‌کند.";
+        TempData["NewApiKey"] = rawKey;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/api-keys/{id:int}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteApiKey(int id)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var key = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == id);
+        if (key is not null)
+        {
+            _db.ApiKeys.Remove(key);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "کلید حذف شد.";
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/webhooks/create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateWebhook(string url, string? modules, string[]? events)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
+        {
+            TempData["Error"] = "آدرس وب‌هوک معتبر نیست.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        var eventList = events is { Length: > 0 }
+            ? string.Join(',', events)
+            : "record.created,record.updated,record.deleted";
+        _db.ApiWebhooks.Add(new ApiWebhook
+        {
+            Url = uri.ToString(),
+            Secret = secret,
+            Events = eventList,
+            ModuleNames = string.IsNullOrWhiteSpace(modules) ? "*" : modules.Trim()
+        });
+        await _db.SaveChangesAsync();
+        TempData["Success"] = "وب‌هوک ساخته شد. رمز امضا را همین حالا ذخیره کنید.";
+        TempData["NewWebhookSecret"] = secret;
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/webhooks/{id:int}/toggle")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ToggleWebhook(int id)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var hook = await _db.ApiWebhooks.FirstOrDefaultAsync(h => h.Id == id);
+        if (hook is not null)
+        {
+            hook.IsActive = !hook.IsActive;
+            if (hook.IsActive)
+                hook.FailCount = 0;
+            await _db.SaveChangesAsync();
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/webhooks/{id:int}/delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteWebhook(int id)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var hook = await _db.ApiWebhooks.FirstOrDefaultAsync(h => h.Id == id);
+        if (hook is not null)
+        {
+            _db.ApiWebhooks.Remove(hook);
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "وب‌هوک حذف شد.";
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost("/App/integrations/webhooks/{id:int}/test")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TestWebhook(int id)
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var status = await _webhooks.SendTestAsync(id);
+        TempData["Success"] = $"ارسال آزمایشی انجام شد. وضعیت: {status}";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet("/App/integrations/api-docs")]
+    public async Task<IActionResult> ApiDocs()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var modules = await _metadata.GetActiveModulesAsync();
+        var schemas = new List<(ModuleDef Module, IReadOnlyList<FieldDef> Fields)>();
+        foreach (var module in modules.Where(m => !m.IsChildModule).OrderBy(m => m.PluralLabel))
+            schemas.Add((module, await _metadata.GetFieldsAsync(module.Id)));
+
+        ViewBag.Schemas = schemas;
+        ViewBag.Origin = TelefonchyPublicOrigin();
+        ViewData["Title"] = "مستندات API";
+        return View();
+    }
+
+    [HttpGet("/App/integrations/swagger")]
+    public async Task<IActionResult> Swagger()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        ViewBag.TenantName = await CurrentTenantNameAsync();
+        return View();
+    }
+
+    [HttpGet("/App/integrations/openapi.json")]
+    public async Task<IActionResult> OpenApiSpec()
+    {
+        if (!_tenant.IsTenantAdmin)
+            return Forbid("Identity.Application");
+
+        var json = await _openApi.BuildJsonAsync(await CurrentTenantNameAsync(), TelefonchyPublicOrigin());
+        return Content(json, "application/json; charset=utf-8");
+    }
+
+    private async Task<string> CurrentTenantNameAsync()
+    {
+        if (_tenant.TenantId is not int tenantId)
+            return "CRM";
+        return await _db.Tenants.AsNoTracking()
+            .Where(t => t.Id == tenantId)
+            .Select(t => t.Name)
+            .FirstOrDefaultAsync() ?? "CRM";
     }
 
     [HttpPost("/App/integrations/api-keys/{id:int}/toggle")]

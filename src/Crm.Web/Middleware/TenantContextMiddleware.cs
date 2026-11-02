@@ -20,6 +20,27 @@ public class TenantContextMiddleware
 
     public async Task InvokeAsync(HttpContext context, ITenantContext tenantContext)
     {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            if (tenantContext is TenantContext apiTenant)
+            {
+                var api = await context.AuthenticateAsync(Crm.Web.Security.ApiKeyAuthenticationHandler.SchemeName);
+                if (api.Succeeded && api.Principal is not null)
+                {
+                    var principal = api.Principal;
+                    if (int.TryParse(principal.FindFirst(CrmClaimTypes.TenantId)?.Value, out var apiTenantId))
+                        apiTenant.TenantId = apiTenantId;
+                    if (int.TryParse(principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out var actAs))
+                        apiTenant.UserId = actAs;
+                    apiTenant.IsTenantAdmin = false;
+                    context.User = principal;
+                }
+            }
+
+            await _next(context);
+            return;
+        }
+
         var result = await context.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         if (result.Succeeded && result.Principal is not null && tenantContext is TenantContext mutable)
         {

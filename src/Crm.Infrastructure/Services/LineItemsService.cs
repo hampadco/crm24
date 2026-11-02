@@ -108,6 +108,16 @@ public class LineItemsService
         await ReplaceLinesAsync(parentModuleId, parentRecordId, block, lineModule, rows);
     }
 
+    /// <summary>جایگزینی سطرهای سند از بدنه API (بدون فرم MVC).</summary>
+    public async Task SaveApiLinesAsync(int parentModuleId, int parentRecordId, List<Dictionary<string, string?>> rows)
+    {
+        var (block, lineModule, _) = await GetLineBlockAsync(parentModuleId);
+        if (block is null || lineModule is null || string.IsNullOrWhiteSpace(block.LineLinkField))
+            return;
+
+        await ReplaceLinesAsync(parentModuleId, parentRecordId, block, lineModule, rows);
+    }
+
     public async Task ReplaceLinesAsync(
         int parentModuleId,
         int parentRecordId,
