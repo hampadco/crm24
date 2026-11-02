@@ -146,7 +146,8 @@
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
+  contain: paint; /* عرض جدول نباید اسکرول افقی کل صفحه را باز کند */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
@@ -503,6 +504,8 @@
   border-top: 1px solid var(--crm-dt-border);
   background: #fff;
   border-radius: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .crm-list-page-head .crm-view-toggle .btn {
@@ -596,7 +599,31 @@
   text-decoration: underline;
 }
 
+@media (max-width: 1199.98px) {
+  .crm-list-page-head {
+    align-items: stretch !important;
+  }
+
+  .crm-list-page-head > div {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
+  .crm-list-page-head {
+    flex-direction: column;
+  }
+
+  .crm-list-page-head > div {
+    width: 100%;
+  }
+
+  .crm-list-page .form-select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
   .crm-dt-table thead th {
     min-width: 7.25rem;
   }

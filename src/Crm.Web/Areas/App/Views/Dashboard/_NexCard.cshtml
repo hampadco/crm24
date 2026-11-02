@@ -1,0 +1,287 @@
+@model Crm.Web.Areas.App.Controllers.NexCardVm
+@{
+    var n = Model.Nex;
+    var id = Model.Id;
+    string DeltaClass(bool up) => up ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger";
+    string Money(string value) => value + " تومان";
+}
+<div data-nx-slot="@id" data-nx-kind="@Model.Type">
+@switch (Model.Type)
+{
+    case "nx-contacts":
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-0">
+                <h6 class="mb-0">مخاطبان کل</h6>
+                <a class="btn btn-sm btn-icon btn-action-primary" href="/App/m/contacts"><i class="fi fi-rr-arrow-left"></i></a>
+            </div>
+            <div class="card-body py-0 d-flex align-items-start justify-content-between">
+                <div class="d-flex align-items-center gap-2">
+                    <h2 class="mb-0">@n.Contacts.ToFa()</h2>
+                    <span class="badge badge-sm @DeltaClass(n.ContactsUp)">@n.ContactsDelta</span>
+                </div>
+                <div id="c@(id)-contacts" class="mb-n4 mt-n3"></div>
+            </div>
+            <div class="card-footer border-0 pt-0 mt-n1"><p class="mb-0">ماه قبل: @n.ContactsPrev</p></div>
+        </div>
+        break;
+    case "nx-leads":
+        <div class="card overflow-hidden">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-0">
+                <h6 class="mb-0">تحلیل سرنخ</h6>
+                <a class="btn btn-sm btn-icon btn-action-primary" href="/App/m/leads"><i class="fi fi-rr-arrow-left"></i></a>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex align-items-center gap-2">
+                    <h2 class="mb-0">@n.Leads.ToFa()</h2>
+                    <span class="badge badge-sm @DeltaClass(n.LeadsUp)">@n.LeadsDelta</span>
+                </div>
+            </div>
+            <div class="card-footer border-0 p-0"><div id="c@(id)-leads"></div></div>
+        </div>
+        break;
+    case "nx-tasks":
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <h6 class="mb-0">نمای وظایف</h6>
+                        <span class="text-body-secondary small">انجام‌شده <span class="text-primary fw-semibold">@n.TasksDone.ToFa()</span></span>
+                    </div>
+                    <div class="progress progress-sm"><div class="progress-bar" style="width:@(n.TasksPercent)%"></div></div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-grid small">
+                        @for (var i = 0; i < n.TaskSlices.Count; i++)
+                        {
+                            var opacity = 0.25 + (i * 0.35);
+                            <div class="d-flex gap-2 align-items-center py-1">
+                                <span class="d-inline-block rounded-1" style="width:.7rem;height:.7rem;background:var(--bs-primary);opacity:@opacity.ToString(System.Globalization.CultureInfo.InvariantCulture)"></span>
+                                @n.TaskSlices[i].Label <strong class="ms-auto">@n.TaskSlices[i].Value.ToFa()</strong>
+                            </div>
+                        }
+                    </div>
+                    <div id="c@(id)-tasks" style="width:120px;height:120px"></div>
+                </div>
+            </div>
+        </div>
+        break;
+    case "nx-deals":
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-0">
+                <h6 class="mb-0">معاملات فعال</h6>
+                <a class="btn btn-sm btn-icon btn-action-primary" href="/App/m/opportunities"><i class="fi fi-rr-arrow-left"></i></a>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex align-items-center gap-2">
+                    <h2 class="mb-0">@n.ActiveDeals.ToFa()</h2>
+                    <span class="badge badge-sm @DeltaClass(n.DealsUp)">@n.DealsDelta</span>
+                </div>
+            </div>
+            <div class="card-footer border-0 pt-0"><p class="mb-0">ماه قبل: @n.DealsPrev</p></div>
+        </div>
+        break;
+    case "nx-revenue":
+        <div class="card">
+            <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between border-0 pb-2">
+                <h6 class="card-title mb-0">درآمد</h6>
+                <ul class="nav nav-pills nav-pills-custom p-1 bg-light rounded-5">
+                    <li class="nav-item"><button type="button" class="nav-link rounded-5" data-nx-revenue="today">امروز</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link rounded-5" data-nx-revenue="week">هفته</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link rounded-5 active" data-nx-revenue="month">ماه</button></li>
+                </ul>
+            </div>
+            <div class="card-body pt-0">
+                <h2 class="mb-2">@n.RevenueHint</h2>
+                <div id="c@(id)-revenue" class="revenue-chart"></div>
+            </div>
+        </div>
+        break;
+    case "nx-sources":
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-0">
+                <h6 class="card-title mb-0">منابع ورود</h6>
+                <a class="btn btn-sm btn-icon btn-action-primary" href="/App/m/leads"><i class="fi fi-rr-arrow-left"></i></a>
+            </div>
+            <div class="card-body pt-0">
+                <div id="c@(id)-sources" class="chart-rounded my-1"></div>
+                <div class="d-grid gap-1">
+                    @for (var i = 0; i < n.Sources.Count; i++)
+                    {
+                        var opacity = n.Sources.Count <= 1 ? 1 : 0.15 + (i * 0.8 / Math.Max(1, n.Sources.Count - 1));
+                        <div class="d-flex gap-2 align-items-center py-1">
+                            <span class="d-inline-block rounded-1" style="width:.7rem;height:.7rem;background:var(--bs-primary);opacity:@opacity.ToString(System.Globalization.CultureInfo.InvariantCulture)"></span>
+                            @n.Sources[i].Label <strong class="ms-auto">@n.Sources[i].Percent.ToFa()٪</strong>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        break;
+    case "nx-retention":
+        <div class="card">
+            <div class="card-header border-0 pb-0"><h6 class="card-title mb-0">نرخ برد معاملات</h6></div>
+            <div class="card-body pb-0 pt-0">
+                <div class="d-flex gap-2 align-items-center">
+                    <h2 class="mb-0">@n.Retention.ToFa()٪</h2>
+                    <span class="@DeltaClass(n.RetentionUp) badge">@n.RetentionDelta</span>
+                </div>
+            </div>
+            <div class="card-footer border-0 pb-0 pt-1 px-1"><div id="c@(id)-retention" class="retention-chart mt-n1"></div></div>
+        </div>
+        break;
+    case "nx-earning":
+        <div class="card overflow-hidden bg-primary border-0">
+            <div class="card-header pb-0 border-0"><h6 class="card-title mb-0 text-white">درآمد کل</h6></div>
+            <div class="card-body pt-0">
+                <div id="c@(id)-gauge"></div>
+                <div class="text-white text-center mt-n4 mb-3">@n.EarningOrders سفارش امسال</div>
+                <div class="d-flex justify-content-between text-white">
+                    <div><h3 class="mb-0 text-white">@n.EarningYear</h3><p class="text-white text-opacity-75 mb-0">امسال، تومان</p></div>
+                    <div class="text-end"><h3 class="mb-0 text-white">@n.EarningMonth</h3><p class="text-white text-opacity-75 mb-0">این ماه، تومان</p></div>
+                </div>
+            </div>
+        </div>
+        break;
+    case "nx-orders":
+        <div class="card bg-primary border-0 text-white">
+            <div class="card-header border-0"><h6 class="card-title mb-0 text-white">وضعیت سفارش</h6></div>
+            <div class="card-body">
+                <div class="progress-stacked bg-transparent mb-3">
+                    <div class="progress bg-transparent" style="width:@n.OrdersPaidPct%"><div class="progress-bar bg-white"></div></div>
+                    <div class="progress bg-transparent" style="width:@n.OrdersCanceledPct%"><div class="progress-bar bg-white bg-opacity-50"></div></div>
+                    <div class="progress bg-transparent" style="width:@n.OrdersRefundedPct%"><div class="progress-bar bg-white bg-opacity-25"></div></div>
+                </div>
+                <div class="d-flex justify-content-between mb-2"><span>پرداخت‌شده</span><strong>@n.OrdersPaidPct.ToFa()٪</strong></div>
+                <div class="d-flex justify-content-between mb-2"><span>لغو</span><strong>@n.OrdersCanceledPct.ToFa()٪</strong></div>
+                <div class="d-flex justify-content-between"><span>برگشت</span><strong>@n.OrdersRefundedPct.ToFa()٪</strong></div>
+            </div>
+        </div>
+        break;
+    case "nx-heatmap":
+        <div class="card">
+            <div class="card-header border-0 pb-0"><h6 class="card-title mb-0">سفارش بر اساس زمان</h6></div>
+            <div class="card-body p-0"><div id="c@(id)-heat" class="mt-n3 mb-n1"></div></div>
+        </div>
+        break;
+    case "nx-meetings":
+        <div class="card overflow-hidden">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-0">
+                <h6 class="card-title mb-0">جلسه‌های پیش‌رو</h6>
+                <a class="btn btn-sm btn-icon btn-action-primary" href="/App/m/events/create"><i class="fi fi-rr-plus"></i></a>
+            </div>
+            <div class="card-body">
+                @if (n.Meetings.Count == 0)
+                {
+                    <p class="text-body-secondary mb-0">جلسه‌ای در پیش نیست.</p>
+                }
+                @foreach (var meeting in n.Meetings)
+                {
+                    <a class="d-block p-3 bg-light bg-opacity-50 mb-2 rounded text-body" href="/App/m/events/@meeting.Id">
+                        <h6 class="mb-1">@meeting.Title</h6>
+                        <div class="small text-body-secondary">@meeting.Place</div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span class="badge bg-body-secondary text-body">@meeting.Kind</span>
+                            <span class="text-primary small"><i class="fi fi-rr-clock-three me-1"></i>@meeting.When</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+        break;
+    case "nx-dealview":
+        <div class="card overflow-hidden">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-2">
+                <h6 class="card-title mb-0">نمای معاملات</h6>
+                <span class="badge @DeltaClass(n.DealsTrendUp)">@n.DealsTrend</span>
+            </div>
+            <div class="card-body pt-0">
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><div class="text-body-secondary small">بسته‌شده</div><h4 class="mb-0">@n.ClosedDeals.ToFa()</h4></div>
+                    <div class="col-6"><div class="text-body-secondary small">ارزش پایپ‌لاین</div><h4 class="mb-0">@Money(n.PipelineValue)</h4></div>
+                </div>
+                <div id="c@(id)-deals"></div>
+            </div>
+        </div>
+        break;
+    case "nx-funnel":
+        <div class="card">
+            <div class="card-header border-0 pb-0"><h6 class="card-title mb-0">قیف فروش</h6></div>
+            <div class="card-body pt-2">
+                <div class="d-flex gap-2 align-items-center mb-4">
+                    <h2 class="mb-0">@Money(n.FunnelTotal)</h2>
+                    <span class="badge @DeltaClass(n.FunnelUp)">@n.FunnelDelta</span>
+                </div>
+                @{
+                    var tones = new[] { "progress-primary", "progress-success", "progress-info", "progress-danger" };
+                }
+                @for (var i = 0; i < n.Funnel.Count; i++)
+                {
+                    <div class="progress progress-overlap mb-1 @tones[i % tones.Length]">
+                        <div class="progress-label">@n.Funnel[i].Label</div>
+                        <div class="progress-value">@n.Funnel[i].Value.ToFa()</div>
+                        <div class="progress-bar" style="width:@(Math.Max(n.Funnel[i].Percent, n.Funnel[i].Value > 0 ? 8 : 0))%"></div>
+                    </div>
+                }
+            </div>
+        </div>
+        break;
+    case "nx-customers":
+        <div class="card overflow-hidden">
+            <div class="card-header d-flex flex-wrap gap-2 align-items-center justify-content-between border-0 pb-0">
+                <h6 class="card-title mb-0">مشتریان جدید</h6>
+                <div class="d-flex gap-2">
+                    <input data-nx-search type="search" class="form-control form-control-sm" placeholder="جستجو" style="width:8rem" />
+                    <a class="btn btn-sm btn-light" href="/App/m/contacts/create"><i class="fi fi-rr-plus me-1"></i> جدید</a>
+                </div>
+            </div>
+            <div class="card-body px-2 pt-2 pb-2">
+                <table class="table table-sm align-middle mb-0" data-nx-customers>
+                    <thead class="table-light"><tr><th>نام</th><th>تلفن</th><th>ایمیل</th><th>تاریخ</th></tr></thead>
+                    <tbody>
+                        @if (n.Customers.Count == 0)
+                        {
+                            <tr><td colspan="4" class="text-body-secondary">مخاطبی ثبت نشده است.</td></tr>
+                        }
+                        @foreach (var customer in n.Customers)
+                        {
+                            <tr>
+                                <td><a href="/App/m/contacts/@customer.Id">@customer.Name</a></td>
+                                <td dir="ltr">@customer.Phone</td>
+                                <td dir="ltr">@customer.Email</td>
+                                <td>@customer.When</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        break;
+    case "nx-tasklist":
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between border-0 pb-0">
+                <h6 class="card-title mb-0">به‌روزرسانی وظایف</h6>
+                <div class="d-flex gap-2">
+                    <a class="btn-link" href="/App/m/tasks">همه</a>
+                    <a class="btn btn-sm btn-light" href="/App/m/tasks/create"><i class="fi fi-rr-plus me-1"></i> وظیفه</a>
+                </div>
+            </div>
+            <div class="card-body px-2">
+                @if (n.Tasks.Count == 0)
+                {
+                    <p class="text-body-secondary px-2 mb-0">وظیفه‌ای نیست.</p>
+                }
+                <ul class="list-group list-group-flush">
+                    @foreach (var task in n.Tasks)
+                    {
+                        <li class="list-group-item d-flex gap-2 align-items-center">
+                            <input class="form-check-input" type="checkbox" disabled @(task.Done ? "checked" : "") />
+                            <a class="mb-0 @(task.Done ? "text-decoration-line-through text-body-secondary" : "")" href="/App/m/tasks/@task.Id">@task.Title</a>
+                            <span class="text-body-secondary small ms-auto">@task.When</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+        break;
+}
+</div>

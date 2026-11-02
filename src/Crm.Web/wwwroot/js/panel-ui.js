@@ -153,6 +153,18 @@
 
     window.initCrmSelect2 = initSelect2;
 
+    document.addEventListener('click', function (event) {
+        if (window.innerWidth >= 1200) return;
+        var menu = document.getElementById('appMenubar');
+        if (!menu || !menu.classList.contains('open')) return;
+        if (menu.contains(event.target)) return;
+        if (event.target.closest && event.target.closest('.app-toggler')) return;
+        menu.classList.remove('open');
+        document.querySelectorAll('.app-toggler.active').forEach(function (button) {
+            button.classList.remove('active');
+        });
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
         showFlashAlerts();
         bindConfirmForms();

@@ -258,6 +258,9 @@
     }
 
     function redrawCharts() {
+        document.querySelectorAll('[data-skin-host]').forEach(function (host) {
+            if (window.CrmNexSkins && window.CrmNexSkins.fit) window.CrmNexSkins.fit(host);
+        });
         document.querySelectorAll('.widget-chart').forEach(function (el) {
             if (!el._series) return;
             var range = document.querySelector('[data-widget-range="' + el.getAttribute('data-widget-id') + '"]');
@@ -445,6 +448,9 @@
     }
 
     function redrawCard(card) {
+        var host = card.querySelector('[data-skin-host]');
+        if (host && window.CrmNexSkins && window.CrmNexSkins.fit)
+            window.CrmNexSkins.fit(host);
         var el = card.querySelector('.widget-chart');
         if (!el || !el._series) return;
         var range = card.querySelector('[data-widget-range]');
@@ -567,7 +573,6 @@
     var boardDrag = null;
     var boardHover = null;
     var boardSaved = '';
-    var boardWide = window.matchMedia('(min-width: 992px)').matches;
 
     function boardAttr(card, name, fallback) {
         var n = parseInt(card.getAttribute(name), 10);
@@ -673,8 +678,9 @@
         var start = readBox(card);
         var origin = { x: event.clientX, y: event.clientY };
         var minW = boardAttr(card, 'data-min-w', 3);
+        var maxW = boardAttr(card, 'data-max-w', boardCols);
         var minH = boardAttr(card, 'data-min-h', 1);
-        var maxH = boardAttr(card, 'data-max-h', 3);
+        var maxH = boardAttr(card, 'data-max-h', 8);
         card.classList.add('is-resizing');
         handle.setPointerCapture(event.pointerId);
 
@@ -685,7 +691,7 @@
             var next = {
                 x: start.x,
                 y: start.y,
-                w: Math.max(minW, Math.min(boardCols - start.x + 1, start.w + Math.round(dx / metrics.stepX))),
+                w: Math.max(minW, Math.min(maxW, boardCols - start.x + 1, start.w + Math.round(dx / metrics.stepX))),
                 h: Math.max(minH, Math.min(maxH, start.h + Math.round(dy / metrics.stepY)))
             };
             var others = boardOthers(zone, card);
@@ -697,6 +703,12 @@
                 else return;
             }
             writeBox(card, next);
+            if (!card._fitTimer) {
+                card._fitTimer = setTimeout(function () {
+                    card._fitTimer = 0;
+                    redrawCard(card);
+                }, 50);
+            }
         }
 
         function up() {
@@ -704,7 +716,10 @@
             handle.removeEventListener('pointerup', up);
             card.classList.remove('is-resizing');
             saveBoard();
-            requestAnimationFrame(function () { redrawCard(card); });
+            requestAnimationFrame(function () {
+                redrawCard(card);
+                requestAnimationFrame(function () { redrawCard(card); });
+            });
         }
 
         handle.addEventListener('pointermove', move);
@@ -777,8 +792,10 @@
         }
     }
 
-    if (boardRoot && boardWide) {
+    if (boardRoot) {
         boardRoot.addEventListener('pointerdown', function (event) {
+            if (!document.querySelector('.crm-dash') || !document.querySelector('.crm-dash').classList.contains('is-editing')) return;
+            if (!window.matchMedia('(min-width: 992px)').matches) return;
             var groupGrip = event.target.closest('[data-group-grip]');
             if (groupGrip && boardRoot.contains(groupGrip)) {
                 startGroupDrag(groupGrip, event);
@@ -856,7 +873,24 @@
             boardDrag = null;
             boardHover = null;
             saveBoard();
-            requestAnimationFrame(function () { redrawCard(card); });
+            requestAnimationFrame(function () {
+                redrawCard(card);
+                requestAnimationFrame(function () { redrawCard(card); });
+            });
+        });
+    }
+
+    var dashEdit = document.getElementById('dashEdit');
+    if (dashEdit) {
+        dashEdit.addEventListener('click', function () {
+            var dash = document.querySelector('.crm-dash');
+            if (!dash) return;
+            var on = dash.classList.toggle('is-editing');
+            dashEdit.classList.toggle('is-on', on);
+            dashEdit.querySelector('i').className = on ? 'bx bx-check' : 'bx bx-pencil';
+            dash.querySelectorAll('[data-group-title]').forEach(function (el) {
+                el.contentEditable = on ? 'true' : 'false';
+            });
         });
     }
 

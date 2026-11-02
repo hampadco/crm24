@@ -101,6 +101,10 @@
   margin-inline-start: auto;
 }
 
+.crm-dash-group {
+  container-type: inline-size;
+}
+
 .crm-dash-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -131,7 +135,34 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
+  max-height: 100%;
+  align-self: stretch;
+  overflow: hidden;
   position: relative;
+}
+
+@container (max-width: 860px) {
+  .crm-dash-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .crm-dash-grid > [data-key] {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    height: clamp(14rem, calc(var(--gh, 4) * 3.4rem), 26rem);
+    min-height: 14rem;
+    max-height: 26rem;
+    flex: 0 0 auto;
+  }
+
+  .crm-dash-grid > .is-counter {
+    height: auto;
+    min-height: 4.6rem;
+    max-height: none;
+  }
 }
 
 .crm-dash-grid > .is-counter {
@@ -190,7 +221,7 @@
   box-shadow: 0 10px 26px rgba(22, 50, 79, 0.045);
   padding: 0.85rem 0.95rem 0.7rem;
   min-width: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .crm-dash-panel header {
@@ -555,6 +586,7 @@
   box-shadow: 0 8px 20px rgba(22, 50, 79, 0.04);
   padding: 0.55rem 0.7rem;
   min-width: 0;
+  overflow: hidden;
 }
 
 .crm-dash-card.is-counter {
@@ -955,17 +987,27 @@
   .crm-dash-grid {
     display: flex;
     flex-direction: column;
+    gap: 0.75rem;
   }
 
   .crm-dash-grid > [data-key] {
-    height: auto;
-    min-height: 4.6rem;
+    width: 100%;
+    height: clamp(14rem, calc(var(--gh, 4) * 3.4rem), 26rem);
+    min-height: 14rem;
+    max-height: 26rem;
+    flex: 0 0 auto;
   }
 
-  .crm-dash-grid > .is-chart,
-  .crm-dash-grid > .is-events,
-  .crm-dash-grid > .is-quick {
-    min-height: 16rem;
+  .crm-dash-grid > .is-counter {
+    height: auto;
+    min-height: 4.6rem;
+    max-height: none;
+  }
+
+  .crm-dash-grip,
+  .crm-dash-resize,
+  [data-group-grip] {
+    display: none !important;
   }
 
   .crm-dash-spot {
@@ -1030,6 +1072,24 @@
   color: var(--dash-ink);
 }
 
+[data-bs-theme="dark"] .crm-dash-hero {
+  background: var(--dash-card);
+  border-color: var(--dash-line);
+}
+
+[data-bs-theme="dark"] .crm-dash-hero p {
+  color: var(--dash-muted);
+}
+
+[data-bs-theme="dark"] .crm-dash-add {
+  background: var(--bs-primary);
+  box-shadow: none;
+}
+
+[data-bs-theme="dark"] .crm-dash-add:hover {
+  background: #6a66d8;
+}
+
 [data-bs-theme="dark"] .crm-dash-panel,
 [data-bs-theme="dark"] .crm-dash-tile,
 [data-bs-theme="dark"] .crm-dash-card,
@@ -1044,6 +1104,181 @@
 
 [data-bs-theme="dark"] .crm-dash-panel :is(p, h2, h3, small, label, li, td, th),
 [data-bs-theme="dark"] .crm-dash-tile :is(p, h2, h3, small, label),
-[data-bs-theme="dark"] .crm-dash-card :is(p, h2, h3, small, label, li) {
+[data-bs-theme="dark"] .crm-dash-card:not(.is-nex) :is(p, h2, h3, small, label, li) {
   color: inherit;
+}
+
+.crm-dash-card.is-nex {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.nx-edit {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .35rem;
+  background: var(--bs-tertiary-bg, #f4f4f8);
+  border-radius: .6rem .6rem 0 0;
+}
+
+.nx-edit span {
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+.nx-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.nx-body > [data-skin-host],
+.nx-body > [data-skin-host] > .card,
+.nx-body > .card {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+}
+
+.nx-body .card-header,
+.nx-body .card-footer {
+  flex: 0 0 auto;
+}
+
+.nx-body .card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nx-body .nx-plot {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  width: 100%;
+}
+
+.nx-body .nx-legend,
+#studioPreview .nx-legend {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+}
+
+.nx-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 0;
+}
+
+.nx-legend-name {
+  min-width: 0;
+}
+
+.nx-legend-row strong {
+  margin-inline-start: auto;
+}
+
+.nx-doughnut {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nx-doughnut .nx-legend {
+  flex: 1 1 auto;
+  margin-top: 0;
+  justify-content: center;
+}
+
+.nx-doughnut-plot {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+.nx-doughnut-plot canvas {
+  display: block;
+}
+
+.nx-body .apexcharts-canvas,
+.nx-body .apexcharts-svg {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.crm-funnel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: .35rem;
+  min-height: 0;
+}
+
+.crm-funnel-step {
+  flex: 1 1 0;
+  min-height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.crm-dash:not(.is-editing) .nx-edit,
+.crm-dash:not(.is-editing) .crm-dash-resize,
+.crm-dash:not(.is-editing) .crm-dash-group-head .crm-dash-grip,
+.crm-dash:not(.is-editing) [data-group-remove],
+.crm-dash:not(.is-editing) .crm-dash-board-hint,
+.crm-dash:not(.is-editing) .crm-dash-add {
+  display: none;
+}
+
+.crm-dash-actions {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  margin-inline-start: auto;
+}
+
+.crm-dash-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  border: 1px solid var(--dash-line);
+  background: var(--dash-card, #fff);
+  color: var(--dash-ink);
+  border-radius: .8rem;
+  padding: .45rem .75rem;
+  font-weight: 700;
+}
+
+.crm-dash-icon-btn.is-on {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
 }

@@ -2,6 +2,7 @@
 @using System.Globalization
 @{
     ViewData["Title"] = "داشبورد";
+    ViewData["NxTitle"] = "داشبورد";
     ViewData["PanelTitle"] = Model.Tenant.Name;
     var fa = CultureInfo.GetCultureInfo("fa-IR");
     string Fa(int n) => n.ToString("N0", fa);
@@ -15,7 +16,7 @@
 
 <partial name="_Alerts" />
 
-<div class="crm-dash" data-dash-live="@(Model.Widgets.Count > 0 ? "1" : "0")">
+<div class="crm-dash" data-dash-live="@(Model.Widgets.Any(w => !w.Widget.Type.StartsWith("nx-")) ? "1" : "0")">
     <form class="d-none">@Html.AntiForgeryToken()</form>
 
     <section class="crm-dash-hero app-page-head">
@@ -23,10 +24,20 @@
             <h1>@Model.Tenant.Name</h1>
             <p>ثبت‌شده‌های @Model.MonthLabel</p>
         </div>
-        <button type="button" class="crm-dash-add" data-bs-toggle="modal" data-bs-target="#widgetModal">
-            افزودن ویجت
-            <i class="bx bx-plus"></i>
-        </button>
+        <div class="crm-dash-actions">
+            <button type="button" class="crm-dash-icon-btn" id="dashEdit" title="ویرایش داشبورد">
+                <i class="bx bx-pencil"></i>
+                ویرایش
+            </button>
+            <form method="post" action="/App/dashboard/reset" data-confirm="ویجت‌های فعلی پاک شود و داشبورد پیش‌فرض بیاید؟">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="crm-dash-icon-btn" title="داشبورد پیش‌فرض">پیش‌فرض</button>
+            </form>
+            <button type="button" class="crm-dash-add" data-bs-toggle="modal" data-bs-target="#widgetModal">
+                افزودن ویجت
+                <i class="bx bx-plus"></i>
+            </button>
+        </div>
         @if (Model.TrialDaysLeft is int days)
         {
             <div class="crm-dash-trial">
@@ -37,23 +48,55 @@
     </section>
 
     <div class="crm-dash-board">
-        <p class="crm-dash-board-hint">دستگیره کارت را بکشید، حتی به گروه دیگر. گوشه اندازه را عوض می‌کند؛ کنار یک نمودار سه کارت عدد جا می‌شود. عنوان گروه را هم می‌توانید عوض کنید.</p>
+        <p class="crm-dash-board-hint">دستگیره کارت را بکشید، حتی به گروه دیگر. گوشه اندازه را عوض می‌کند. عنوان گروه را هم می‌توانید عوض کنید. مدل‌های NexLink از دکمه افزودن ویجت انتخاب می‌شوند.</p>
         <div id="dashGroups">
             @foreach (var group in Model.Groups)
             {
                 <section class="crm-dash-group">
                     <header class="crm-dash-group-head">
                         <button type="button" class="crm-dash-grip" data-group-grip title="جابه‌جایی گروه" aria-label="جابه‌جایی گروه"><i class="bx bx-grid-vertical"></i></button>
-                        <h2 contenteditable="true" spellcheck="false" data-group-title>@group.Title</h2>
+                        <h2 contenteditable="false" spellcheck="false" data-group-title>@group.Title</h2>
                         <button type="button" class="crm-dash-tool" data-group-remove title="حذف گروه" aria-label="حذف گروه"><i class="bx bx-x"></i></button>
                     </header>
                     <div class="crm-dash-grid" data-grid>
                         @foreach (var cell in group.Cells)
                         {
                             var box = $"--gx:{cell.X};--gy:{cell.Y};--gw:{cell.W};--gh:{cell.H}";
-                            if (cell.Kind == "chart" && cell.Widget is { } chart)
+                            if (cell.Kind == "studio" && cell.Widget is { } studio)
                             {
-                                <article class="crm-dash-card is-chart" data-key="w:@chart.Widget.Id" data-kind="chart" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-h="@cell.MaxH" style="@box">
+                                <article class="crm-dash-card is-nex" data-studio-widget="@studio.Widget.Id" data-key="w:@studio.Widget.Id" data-kind="studio" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
+                                    <div class="nx-edit">
+                                        <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
+                                        <span>@studio.Widget.Title</span>
+                                        <form class="ms-auto" action="/App/dashboard/widgets/@studio.Widget.Id/remove" method="post" data-confirm="این ویجت از داشبورد برداشته شود؟">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="crm-dash-tool" title="حذف ویجت" aria-label="حذف ویجت"><i class="bx bx-trash"></i></button>
+                                        </form>
+                                    </div>
+                                    <div class="nx-body"><div data-skin-host></div></div>
+                                    <button type="button" class="crm-dash-resize" aria-label="تغییر اندازه" title="تغییر اندازه"></button>
+                                </article>
+                            }
+                            else if (cell.Kind == "nex" && cell.Widget is { } nex)
+                            {
+                                <article class="crm-dash-card is-nex" data-key="w:@nex.Widget.Id" data-kind="nex" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
+                                    <div class="nx-edit">
+                                        <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
+                                        <span>@nex.Widget.Title</span>
+                                        <form class="ms-auto" action="/App/dashboard/widgets/@nex.Widget.Id/remove" method="post" data-confirm="این ویجت از داشبورد برداشته شود؟">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="crm-dash-tool" title="حذف ویجت" aria-label="حذف ویجت"><i class="bx bx-trash"></i></button>
+                                        </form>
+                                    </div>
+                                    <div class="nx-body">
+                                        <partial name="_NexCard" model="new Crm.Web.Areas.App.Controllers.NexCardVm { Id = nex.Widget.Id, Type = nex.Widget.Type, Nex = Model.Nex }" />
+                                    </div>
+                                    <button type="button" class="crm-dash-resize" aria-label="تغییر اندازه" title="تغییر اندازه"></button>
+                                </article>
+                            }
+                            else if (cell.Kind == "chart" && cell.Widget is { } chart)
+                            {
+                                <article class="crm-dash-card is-chart" data-key="w:@chart.Widget.Id" data-kind="chart" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
                                     <header class="crm-dash-card-head">
                                         <div class="crm-dash-card-title">
                                             <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
@@ -91,7 +134,7 @@
                             else if (cell.Kind == "counter" && cell.Widget is { } counter)
                             {
                                 var toneClass = "t" + (tone++ % 5);
-                                <article class="crm-dash-card is-counter" data-key="w:@counter.Widget.Id" data-kind="counter" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-h="@cell.MaxH" style="@box">
+                                <article class="crm-dash-card is-counter" data-key="w:@counter.Widget.Id" data-kind="counter" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
                                     <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
                                     <a class="crm-dash-counter-link" href="/App/m/@counter.Module?.Name">
                                         <div class="crm-dash-card-title">
@@ -109,7 +152,7 @@
                             }
                             else if (cell.Kind == "users")
                             {
-                                <article class="crm-dash-tile" data-key="u" data-kind="users" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-h="@cell.MaxH" style="@box">
+                                <article class="crm-dash-tile" data-key="u" data-kind="users" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
                                     <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
                                     <span class="crm-dash-tile-body">
                                         <i class="bx bx-group"></i>
@@ -120,7 +163,7 @@
                             }
                             else if (cell.Kind == "month" && cell.Month is { } item)
                             {
-                                <article class="crm-dash-tile" data-key="m:@item.Name" data-kind="month" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-h="@cell.MaxH" style="@box">
+                                <article class="crm-dash-tile" data-key="m:@item.Name" data-kind="month" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
                                     <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
                                     <a href="/App/m/@item.Name">
                                         <i class="bx @item.Icon"></i>
@@ -131,7 +174,7 @@
                             }
                             else if (cell.Kind == "quick")
                             {
-                                <article class="crm-dash-panel is-quick" data-key="q" data-kind="quick" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-h="@cell.MaxH" style="@box">
+                                <article class="crm-dash-panel is-quick" data-key="q" data-kind="quick" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
                                     <header>
                                         <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
                                         <h2>دسترسی سریع</h2>
@@ -148,7 +191,7 @@
                             }
                             else if (cell.Kind == "events")
                             {
-                                <article class="crm-dash-panel is-events" data-key="e" data-kind="events" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-h="@cell.MaxH" style="@box">
+                                <article class="crm-dash-panel is-events" data-key="e" data-kind="events" data-min-w="@cell.MinW" data-min-h="@cell.MinH" data-max-w="@cell.MaxW" data-max-h="@cell.MaxH" style="@box">
                                     <header>
                                         <button type="button" class="crm-dash-grip" title="جابه‌جایی" aria-label="جابه‌جایی"><i class="bx bx-grid-vertical"></i></button>
                                         <h2>آخرین رویدادها</h2>
@@ -192,85 +235,49 @@
     </template>
 </div>
 
+<script id="nexDash" type="application/json">@Html.Raw(Model.Nex.ChartJson)</script>
+
 <div class="modal fade" id="widgetModal" tabindex="-1">
     <div class="modal-dialog">
-        <form action="/App/dashboard/widgets/add" method="post" class="modal-content">
-            @Html.AntiForgeryToken()
+        <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">افزودن ویجت</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label">نوع ویجت</label>
-                    <select name="type" class="form-select" id="widgetType">
-                        <option value="counter">شمارنده رکوردها</option>
-                        <option value="pie">نمودار دایره‌ای (گروه‌بندی)</option>
-                        <option value="bar">نمودار میله‌ای (گروه‌بندی)</option>
-                        <option value="funnel">قیف فروش</option>
-                        <option value="monthly">روند ماهانه رکوردها</option>
-                    </select>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="form-label mb-0">قالب استودیو</span>
+                    <a href="/App/dashboard/studio">ساخت در استودیو</a>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">ماژول</label>
-                    <select name="moduleId" class="form-select" id="widgetModule">
-                        @foreach (var module in Model.AllModules)
-                        {
-                            <option value="@module.Id">@module.PluralLabel</option>
-                        }
-                    </select>
-                </div>
-                <div class="mb-3" id="widgetFieldBox" style="display:none">
-                    <label class="form-label">فیلد گروه‌بندی</label>
-                    <select name="fieldName" class="form-select" id="widgetField"></select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">عنوان (اختیاری)</label>
-                    <input type="text" name="title" class="form-control" />
-                </div>
+                @if (Model.Templates.Count > 0)
+                {
+                    <form action="/App/dashboard/studio/place" method="post" class="d-flex gap-2">
+                        @Html.AntiForgeryToken()
+                        <select name="templateId" class="form-select">
+                            @foreach (var template in Model.Templates)
+                            {
+                                <option value="@template.Id">@template.Title</option>
+                            }
+                        </select>
+                        <button class="btn btn-primary" type="submit">افزودن</button>
+                    </form>
+                }
+                else
+                {
+                    <p class="text-body-secondary mb-0">هنوز قالبی نیست. از استودیو بسازید.</p>
+                }
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">انصراف</button>
-                <button type="submit" class="btn btn-primary">افزودن</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">بستن</button>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
 @section Scripts {
+<script src="~/js/chart.js" asp-append-version="true"></script>
 <script src="~/panel-assets/vendor/libs/apex-charts/apexcharts.js"></script>
 <script src="~/js/crm-dashboard.js" asp-append-version="true"></script>
-<script>
-    let picklistFields = {};
-    let picklistLoaded = false;
-
-    function refreshWidgetFields() {
-        const type = document.getElementById('widgetType').value;
-        const moduleId = document.getElementById('widgetModule').value;
-        const box = document.getElementById('widgetFieldBox');
-        const needsField = type === 'pie' || type === 'bar' || type === 'funnel';
-        box.style.display = needsField ? '' : 'none';
-        if (needsField) {
-            const fields = picklistFields[moduleId] || [];
-            const preferred = type === 'funnel' ? 'stage' : null;
-            document.getElementById('widgetField').innerHTML =
-                fields.map(f => `<option value="${f.name}"${preferred && f.name === preferred ? ' selected' : ''}>${f.label}</option>`).join('');
-        }
-    }
-
-    async function ensurePicklistFields() {
-        if (picklistLoaded) return;
-        try {
-            const res = await fetch('/App/dashboard/picklist-fields');
-            picklistFields = await res.json();
-            picklistLoaded = true;
-            refreshWidgetFields();
-        } catch (_) { /* ignore */ }
-    }
-
-    document.getElementById('widgetType').addEventListener('change', refreshWidgetFields);
-    document.getElementById('widgetModule').addEventListener('change', refreshWidgetFields);
-    document.getElementById('widgetModal')?.addEventListener('show.bs.modal', ensurePicklistFields);
-    refreshWidgetFields();
-</script>
+<script src="~/js/crm-nex-skins.js" asp-append-version="true"></script>
+<script src="~/js/crm-nex-dashboard.js" asp-append-version="true"></script>
 }

@@ -85,6 +85,23 @@ public class DashboardWidget : TenantEntity
     public string? FieldName { get; set; }
 
     public int SortOrder { get; set; }
+
+    /// <summary>قالب ساخته‌شده در استودیو ویجت.</summary>
+    public int? TemplateId { get; set; }
+}
+
+/// <summary>قالب ویجت: پوست دمو به‌اضافهٔ اتصال به یک ماژول.</summary>
+public class WidgetTemplate : TenantEntity
+{
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>شناسهٔ پوست، مثل spark یا doughnut.</summary>
+    public string Skin { get; set; } = "kpi";
+
+    public int ModuleId { get; set; }
+
+    /// <summary>ترکیب داده: معیار، فیلد، بازه و ستون‌ها.</summary>
+    public string ConfigJson { get; set; } = "{}";
 }
 
 /// <summary>تعریف گزارش پویا: ماژول + ستون‌ها + فیلتر + گروه‌بندی/جمع.</summary>

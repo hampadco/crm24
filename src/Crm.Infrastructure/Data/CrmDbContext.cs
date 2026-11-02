@@ -55,6 +55,7 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
     public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
     public DbSet<WorkflowLog> WorkflowLogs => Set<WorkflowLog>();
     public DbSet<DashboardWidget> DashboardWidgets => Set<DashboardWidget>();
+    public DbSet<WidgetTemplate> WidgetTemplates => Set<WidgetTemplate>();
     public DbSet<ReportDef> Reports => Set<ReportDef>();
 
     public DbSet<Ticket> Tickets => Set<Ticket>();
@@ -299,6 +300,12 @@ public class CrmDbContext : IdentityDbContext<CrmUser, IdentityRole<int>, int>
         builder.Entity<WorkflowLog>(e => e.HasIndex(l => new { l.TenantId, l.RuleId }));
 
         builder.Entity<DashboardWidget>(e => e.HasIndex(w => new { w.TenantId, w.UserId }));
+
+        builder.Entity<WidgetTemplate>(e =>
+        {
+            e.Property(t => t.ConfigJson).HasColumnType("jsonb");
+            e.HasIndex(t => new { t.TenantId, t.Skin });
+        });
 
         builder.Entity<ReportDef>(e =>
         {

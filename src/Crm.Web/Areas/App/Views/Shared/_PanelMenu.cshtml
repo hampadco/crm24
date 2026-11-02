@@ -151,7 +151,8 @@
                     <nav class="app-navbar" data-simplebar>
                         <ul class="side-menubar">
                             <li class="menu-heading"><span class="menu-label">داشبورد</span></li>
-                            <li class="menu-item"><a class="menu-link @OnPath("/App/dashboard")" href="/App/dashboard"><i class="fi fi-rr-house-blank"></i><span class="menu-label">داشبورد اصلی</span></a></li>
+                            <li class="menu-item"><a class="menu-link @(currentPath.Equals("/App/dashboard", StringComparison.OrdinalIgnoreCase) ? "active" : "")" href="/App/dashboard"><i class="fi fi-rr-house-blank"></i><span class="menu-label">داشبورد اصلی</span></a></li>
+                            <li class="menu-item"><a class="menu-link @OnPath("/App/dashboard/studio")" href="/App/dashboard/studio"><i class="fi fi-rr-puzzle"></i><span class="menu-label">استودیو ویجت</span></a></li>
                             <li class="menu-item"><a class="menu-link @OnPath("/App/reports")" href="/App/reports"><i class="fi fi-rr-chart-histogram"></i><span class="menu-label">گزارش‌ها</span></a></li>
                         </ul>
                     </nav>

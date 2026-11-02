@@ -16,6 +16,7 @@ public class WidgetView
 
     /// <summary>counter: مقدار — pie/monthly: برچسب/مقدار سری.</summary>
     public int CounterValue { get; set; }
+    public string? StudioSkin { get; set; }
     public List<(string Label, int Value)> Series { get; set; } = [];
 
     public int GridX { get; set; } = 1;
@@ -35,6 +36,8 @@ public class DashboardViewModel
     public List<DashEventRow> RecentEvents { get; set; } = [];
     public List<DashGroupVm> Groups { get; set; } = [];
     public List<WidgetView> Widgets { get; set; } = [];
+    public List<WidgetTemplate> Templates { get; set; } = [];
+    public NexDashVm Nex { get; set; } = new();
     public List<ModuleDef> AllModules { get; set; } = [];
     public Dictionary<int, List<FieldDef>> PicklistFields { get; set; } = [];
     /// <summary>ویجت‌ها به‌صورت AJAX بعد از رندر اولیه لود می‌شوند.</summary>
@@ -75,6 +78,7 @@ public class DashCellVm
     public int W { get; set; } = 3;
     public int H { get; set; } = 1;
     public int MinW { get; set; } = 3;
+    public int MaxW { get; set; } = 12;
     public int MinH { get; set; } = 1;
     public int MaxH { get; set; } = 3;
     public bool Placed { get; set; }
@@ -103,7 +107,7 @@ public class BoardItemFile
     public int H { get; set; }
 }
 
-public class DashboardController : AppControllerBase
+public partial class DashboardController : AppControllerBase
 {
     private readonly CrmDbContext _db;
     private readonly ITenantContext _tenant;
@@ -183,31 +187,46 @@ public class DashboardController : AppControllerBase
             })
             .ToList();
 
-        // اسکلت ویجت‌ها بدون تجمیع سنگین — داده از /widgets-data می‌آید
+        await PrepareStudioWidgetsAsync(modules);
         var widgets = await _db.DashboardWidgets.AsNoTracking()
             .Where(w => w.UserId == _tenant.UserId)
             .OrderBy(w => w.SortOrder)
             .ToListAsync();
+        model.Templates = await _db.WidgetTemplates.AsNoTracking().OrderBy(t => t.Title).ToListAsync();
+        var templateById = model.Templates.ToDictionary(t => t.Id);
 
         foreach (var widget in widgets)
         {
-            if (widget.Type == "board") continue;
+            if (widget.Type == "board")
+                continue;
+            if (widget.Type == "studio")
+            {
+                if (widget.TemplateId is not int templateId || !templateById.TryGetValue(templateId, out var template))
+                    continue;
+                model.Widgets.Add(new WidgetView
+                {
+                    Widget = widget,
+                    StudioSkin = template.Skin
+                });
+                continue;
+            }
             var module = modules.FirstOrDefault(m => m.Id == widget.ModuleId);
-            if (module is null) continue;
+            if (module is null && !IsNexType(widget.Type))
+                continue;
             model.Widgets.Add(new WidgetView
             {
                 Widget = widget,
                 Module = module,
-                CounterValue = widget.Type == "counter" ? countByModule.GetValueOrDefault(module.Id) : 0
+                CounterValue = widget.Type == "counter" && module is not null
+                    ? countByModule.GetValueOrDefault(module.Id)
+                    : 0
             });
         }
 
         var board = widgets.FirstOrDefault(w => w.Type == "board");
         var stored = board?.FieldName;
         if (stored is not null && stored.TrimStart().StartsWith('{'))
-        {
             model.Groups = BuildBoard(model, stored, null);
-        }
         else
         {
             var (months, layout) = SplitBoard(stored);
@@ -216,7 +235,7 @@ public class DashboardController : AppControllerBase
         }
 
         model.RecentEvents = await LoadRecentEventsAsync(modules, zone);
-
+        model.Nex = await BuildNexAsync(modules, zone, pc, year, month);
         return View(model);
     }
 
@@ -335,13 +354,31 @@ public class DashboardController : AppControllerBase
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddWidget(string type, int moduleId, string? fieldName, string? title)
     {
-        var module = await _db.Modules.AsNoTracking().FirstOrDefaultAsync(m => m.Id == moduleId);
-        if (module is null || _tenant.UserId is not int userId)
+        if (_tenant.UserId is not int userId)
             return RedirectToAction(nameof(Index));
 
         var maxOrder = await _db.DashboardWidgets
             .Where(w => w.UserId == userId)
             .MaxAsync(w => (int?)w.SortOrder) ?? 0;
+
+        if (NexTitles.TryGetValue(type ?? "", out var nexTitle))
+        {
+            _db.DashboardWidgets.Add(new DashboardWidget
+            {
+                UserId = userId,
+                Type = type!,
+                Title = string.IsNullOrWhiteSpace(title) ? nexTitle : title.Trim(),
+                ModuleId = 0,
+                SortOrder = maxOrder + 1
+            });
+            await _db.SaveChangesAsync();
+            TempData["Success"] = "ویجت اضافه شد.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var module = await _db.Modules.AsNoTracking().FirstOrDefaultAsync(m => m.Id == moduleId);
+        if (module is null)
+            return RedirectToAction(nameof(Index));
 
         _db.DashboardWidgets.Add(new DashboardWidget
         {
@@ -570,7 +607,7 @@ public class DashboardController : AppControllerBase
         var widgetIds = widgets.Select(w => w.Id).ToHashSet();
         var widgetKind = widgets.ToDictionary(
             w => w.Id,
-            w => w.Type is "pie" or "bar" or "funnel" or "monthly" ? "chart" : "counter");
+            w => w.Type == "studio" ? "studio" : IsNexType(w.Type) ? "nex" : w.Type is "pie" or "bar" or "funnel" or "monthly" ? "chart" : "counter");
         var moduleNames = await _db.Modules.AsNoTracking()
             .Where(m => m.ShowInMenu && !m.IsChildModule)
             .Select(m => m.Name)
@@ -751,9 +788,12 @@ public class DashboardController : AppControllerBase
             groups.Add(new DashGroupVm { Title = "داشبورد" });
 
         var used = new HashSet<string>(groups.SelectMany(g => g.Cells.Select(c => c.Key)), StringComparer.OrdinalIgnoreCase);
+        var savedBoard = !string.IsNullOrWhiteSpace(json) && TryReadBoard(json, out _);
         foreach (var source in catalog)
         {
             if (used.Contains(source.Key))
+                continue;
+            if (savedBoard && source.Kind is "users" or "month" or "quick" or "events")
                 continue;
             HomeFor(groups, source.Kind, model.MonthLabel).Cells.Add(CloneCell(source));
         }
@@ -769,6 +809,18 @@ public class DashboardController : AppControllerBase
         var cells = new List<DashCellVm>();
         foreach (var widget in model.Widgets)
         {
+            if (widget.Widget.Type == "studio")
+            {
+                cells.Add(StudioCell(widget));
+                continue;
+            }
+
+            if (IsNexType(widget.Widget.Type))
+            {
+                cells.Add(NexCell(widget));
+                continue;
+            }
+
             var chart = widget.Widget.Type is "pie" or "bar" or "funnel" or "monthly";
             cells.Add(CellFromKey("w:" + widget.Widget.Id, widget, null, chart ? "chart" : "counter"));
         }
@@ -795,6 +847,7 @@ public class DashboardController : AppControllerBase
         var cell = kind switch
         {
             "chart" => new DashCellVm { W = 6, H = 3, MinW = 4, MinH = 3, MaxH = 9 },
+            "nex" or "studio" => new DashCellVm { W = 4, H = 3, MinW = 3, MinH = 3, MaxH = 9 },
             "counter" => new DashCellVm { W = 6, H = 1, MinW = 3, MinH = 1, MaxH = 3 },
             "quick" => new DashCellVm { W = 4, H = 3, MinW = 3, MinH = 2, MaxH = 9 },
             "events" => new DashCellVm { W = 8, H = 3, MinW = 4, MinH = 3, MaxH = 9 },
@@ -817,6 +870,7 @@ public class DashboardController : AppControllerBase
             W = source.W,
             H = source.H,
             MinW = source.MinW,
+            MaxW = source.MaxW,
             MinH = source.MinH,
             MaxH = source.MaxH,
             Widget = source.Widget,
@@ -836,7 +890,8 @@ public class DashboardController : AppControllerBase
 
     private static void ClampCell(DashCellVm cell)
     {
-        cell.W = Math.Clamp(cell.W, cell.MinW, 12);
+        var maxW = cell.MaxW <= 0 ? 12 : Math.Min(12, cell.MaxW);
+        cell.W = Math.Clamp(cell.W, cell.MinW, maxW);
         cell.H = Math.Clamp(cell.H, cell.MinH, cell.MaxH);
         cell.X = Math.Clamp(cell.X, 1, 12);
         cell.Y = Math.Clamp(cell.Y, 1, 40);
@@ -846,7 +901,7 @@ public class DashboardController : AppControllerBase
 
     private static string HomeTitle(string kind, string monthLabel) => kind switch
     {
-        "chart" => "نمودارها",
+        "chart" or "nex" or "studio" => "نمودارها",
         "counter" => "ویجت‌های شما",
         "month" or "users" => "ثبت‌شده‌های " + monthLabel,
         _ => "میانبر و رویداد"

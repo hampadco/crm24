@@ -5,7 +5,7 @@
             <li class="breadcrumb-item">
                 @if (!string.IsNullOrWhiteSpace(Model.ParentUrl))
                 {
-                    <a href="@Model.ParentUrl"><i class="fi fi-rr-home"></i> @(Model.Parent ?? "خانه")</a>
+                    <a href="@Model.ParentUrl"><svg class="nx-crumb-home" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2 3 11h2v9h5v-6h4v6h5v-9h2L12 3.2z"/></svg>@(Model.Parent ?? "خانه")</a>
                 }
                 else
                 {

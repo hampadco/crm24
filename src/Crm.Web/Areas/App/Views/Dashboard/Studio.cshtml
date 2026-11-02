@@ -1,0 +1,426 @@
+@model Crm.Web.Areas.App.Controllers.StudioPageVm
+@{
+    ViewData["Title"] = "استودیو ویجت";
+    ViewData["NxTitle"] = "استودیو ویجت";
+    var editing = Model.Editing;
+    var config = Model.Config;
+}
+@section Styles {
+    <link rel="stylesheet" href="~/panel-assets/vendor/libs/apex-charts/apex-charts.css" />
+}
+
+<partial name="_Alerts" />
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h4 class="mb-0">استودیو ویجت</h4>
+        <div class="text-body-secondary small">ظاهر را از اجزای دمو انتخاب کنید، به هر ماژول ببندید، بعد روی داشبورد بگذارید.</div>
+    </div>
+    <a class="btn btn-light" href="/App/dashboard">بازگشت به داشبورد</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">@(editing is null ? "قالب تازه" : "ویرایش قالب")</h6></div>
+            <div class="card-body">
+                <form method="post" action="/App/dashboard/studio/save" id="studioForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@(editing?.Id)" />
+                    <div class="mb-3">
+                        <label class="form-label">عنوان</label>
+                        <input class="form-control" name="title" value="@editing?.Title" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">پوست دمو</label>
+                        <select class="form-select" name="skin" id="studioSkin">
+                            @foreach (var skin in Crm.Web.Areas.App.Controllers.WidgetSkins.All)
+                            {
+                                if (editing?.Skin == skin.Id)
+                                {
+                                    <option value="@skin.Id" data-family="@skin.Family" selected>@skin.Title</option>
+                                }
+                                else
+                                {
+                                    <option value="@skin.Id" data-family="@skin.Family">@skin.Title</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ماژول</label>
+                        <select class="form-select" name="moduleId" id="studioModule">
+                            @foreach (var module in Model.Modules)
+                            {
+                                if (editing?.ModuleId == module.Id)
+                                {
+                                    <option value="@module.Id" selected>@module.PluralLabel</option>
+                                }
+                                else
+                                {
+                                    <option value="@module.Id">@module.PluralLabel</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3" data-family="series kpi ratio">
+                        <label class="form-label">معیار</label>
+                        <select class="form-select" name="measure" id="studioMeasure">
+                            @if (config.Measure == "sum")
+                            {
+                                <option value="count">شمارش رکورد</option>
+                                <option value="sum" selected>جمع فیلد عددی</option>
+                            }
+                            else
+                            {
+                                <option value="count" selected>شمارش رکورد</option>
+                                <option value="sum">جمع فیلد عددی</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3" data-family="series kpi" data-when="sum">
+                        <label class="form-label">فیلد جمع</label>
+                        <select class="form-select" name="field" data-kind="number"></select>
+                    </div>
+                    <div class="mb-3" data-family="group ratio rows">
+                        <label class="form-label">فیلد فهرست</label>
+                        <select class="form-select" name="field" data-kind="picklist"></select>
+                    </div>
+                    <div class="mb-3" data-family="series">
+                        <label class="form-label">تاریخ محور</label>
+                        <select class="form-select" name="dateField" data-kind="date">
+                            <option value="">تاریخ ثبت</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" data-family="line-only">
+                        <label class="form-label">سری دوم (عددی)</label>
+                        <select class="form-select" name="field2" data-kind="number2">
+                            <option value="">بدون سری دوم</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" data-family="ratio">
+                        <label class="form-label">نسبت گیج</label>
+                        <select class="form-select" name="ratio" id="studioRatio">
+                            @if (config.Ratio == "picklist")
+                            {
+                                <option value="monthYear">این ماه نسبت به امسال</option>
+                                <option value="picklist" selected>یک مقدار فهرست نسبت به کل</option>
+                            }
+                            else
+                            {
+                                <option value="monthYear" selected>این ماه نسبت به امسال</option>
+                                <option value="picklist">یک مقدار فهرست نسبت به کل</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3" data-family="ratio-part">
+                        <label class="form-label">مقدار بخش</label>
+                        <select class="form-select" name="partValue" id="studioPart"></select>
+                    </div>
+                    <div class="mb-3" data-family="rows">
+                        <label class="form-label">ستون‌ها (حداکثر سه تا)</label>
+                        <select class="form-select" id="studioColumns" multiple size="4"></select>
+                        <input type="hidden" name="columns" id="studioColumnsValue" value="@string.Join(",", config.Columns)" />
+                    </div>
+                    <div class="mb-3" data-family="check-only">
+                        <label class="form-label">مقدار انجام‌شده</label>
+                        <input class="form-control" name="doneValue" value="@config.DoneValue" placeholder="done" />
+                    </div>
+                    <div class="mb-3" data-family="series">
+                        <label class="form-label">دانهٔ زمان</label>
+                        <div class="row g-2">
+                            <div class="col-7">
+                                <select class="form-select" name="grain" id="studioGrain">
+                                    @foreach (var grain in new[] { ("hour", "ساعت"), ("weekday", "روز هفته"), ("day", "روز"), ("week", "هفته"), ("month", "ماه"), ("year", "سال") })
+                                    {
+                                        if (config.Grain == grain.Item1)
+                                        {
+                                            <option value="@grain.Item1" selected>@grain.Item2</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@grain.Item1">@grain.Item2</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-5">
+                                <input class="form-control" type="number" name="span" min="1" max="36" value="@config.Span" title="تعداد سطل" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">فیلتر</label>
+                            <button class="btn btn-sm btn-light" type="button" id="studioAddFilter">افزودن شرط</button>
+                        </div>
+                        <div id="studioFilters"></div>
+                        <input type="hidden" name="filtersJson" id="studioFiltersValue" />
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" type="submit">ذخیره</button>
+                        <button class="btn btn-light" type="button" id="studioPreviewBtn">پیش‌نمایش</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header"><h6 class="mb-0">قالب‌های ذخیره‌شده</h6></div>
+            <div class="list-group list-group-flush">
+                @if (Model.Templates.Count == 0)
+                {
+                    <div class="list-group-item text-body-secondary">هنوز قالبی نیست.</div>
+                }
+                @foreach (var template in Model.Templates)
+                {
+                    var skinTitle = Crm.Web.Areas.App.Controllers.WidgetSkins.Find(template.Skin)?.Title ?? template.Skin;
+                    <div class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+                        <div class="me-auto">
+                            <div class="fw-semibold">@template.Title</div>
+                            <div class="small text-body-secondary">@skinTitle</div>
+                        </div>
+                        <a class="btn btn-sm btn-light" href="/App/dashboard/studio?id=@template.Id">ویرایش</a>
+                        <form method="post" action="/App/dashboard/studio/place">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="templateId" value="@template.Id" />
+                            <button class="btn btn-sm btn-primary" type="submit">روی داشبورد</button>
+                        </form>
+                        <form method="post" action="/App/dashboard/studio/@template.Id/delete" data-confirm="این قالب حذف شود؟">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-outline-danger" type="submit">حذف</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header"><h6 class="mb-0">پیش‌نمایش</h6></div>
+            <div class="card-body" id="studioPreview" style="min-height:32rem"><p class="text-body-secondary mb-0">پوست و ماژول را انتخاب کنید.</p></div>
+        </div>
+    </div>
+</div>
+
+<script id="studioFields" type="application/json">@Html.Raw(Model.FieldsJson)</script>
+
+@section Scripts {
+    <script src="~/js/chart.js" asp-append-version="true"></script>
+    <script src="~/panel-assets/vendor/libs/apex-charts/apexcharts.js"></script>
+    <script src="~/js/crm-nex-skins.js" asp-append-version="true"></script>
+    <script>
+        const fields = JSON.parse(document.getElementById("studioFields").textContent || "{}");
+        const saved = {
+            field: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(config.Field)),
+            dateField: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(config.DateField)),
+            field2: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(config.Field2)),
+            part: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(config.PartValue)),
+            columns: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(config.Columns)),
+            filters: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(config.Filters ?? new List<Crm.Web.Areas.App.Controllers.WidgetFilter>(), new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }))
+        };
+
+        function moduleFields() {
+            return fields[document.getElementById("studioModule").value] || [];
+        }
+
+        function fillSelect(select, list, blank) {
+            if (!select) return;
+            const current = select.getAttribute("data-keep") || "";
+            select.innerHTML = (blank ? '<option value="">' + blank + "</option>" : "") +
+                list.map(f => '<option value="' + f.name + '">' + f.label + "</option>").join("");
+        }
+
+        function familyOf() {
+            const skin = document.getElementById("studioSkin");
+            return skin.selectedOptions[0]?.getAttribute("data-family") || "kpi";
+        }
+
+        function refreshForm() {
+            const family = familyOf();
+            const all = moduleFields();
+            const numbers = all.filter(f => f.type === "Number" || f.type === "Decimal" || f.type === "Currency" || f.type === "Percent");
+            const picks = all.filter(f => f.type === "Picklist");
+            const dates = all.filter(f => f.type === "Date" || f.type === "DateTime");
+            document.querySelectorAll("#studioForm [data-kind=number]").forEach(s => fillSelect(s, numbers));
+            document.querySelectorAll("#studioForm [data-kind=number2]").forEach(s => fillSelect(s, numbers, "بدون سری دوم"));
+            document.querySelectorAll("#studioForm [data-kind=picklist]").forEach(s => fillSelect(s, picks));
+            document.querySelectorAll("#studioForm [data-kind=date]").forEach(s => fillSelect(s, dates, "تاریخ ثبت"));
+            const columns = document.getElementById("studioColumns");
+            columns.innerHTML = all.map(f => '<option value="' + f.name + '">' + f.label + "</option>").join("");
+            (saved.columns || []).forEach(name => {
+                const option = columns.querySelector('option[value="' + name + '"]');
+                if (option) option.selected = true;
+            });
+            ["field", "dateField", "field2"].forEach(key => {
+                document.querySelectorAll('#studioForm [name="' + key + '"]').forEach(s => {
+                    if (saved[key]) s.value = saved[key];
+                });
+            });
+                const measure = document.getElementById("studioMeasure").value;
+            const ratio = document.getElementById("studioRatio").value;
+            const skin = document.getElementById("studioSkin").value;
+            document.querySelectorAll("#studioForm [data-family]").forEach(box => {
+                const tags = box.getAttribute("data-family").split(" ");
+                let show = tags.includes(family);
+                if (box.querySelector("[data-kind=picklist]") && family === "ratio") show = ratio === "picklist";
+                if (box.querySelector("[data-kind=picklist]") && family === "rows") show = skin === "check";
+                if (tags.includes("line-only")) show = skin === "line";
+                if (tags.includes("check-only")) show = skin === "check";
+                if (tags.includes("ratio-part")) show = family === "ratio" && ratio === "picklist";
+                if (box.getAttribute("data-when") === "sum") show = show && measure === "sum";
+                box.style.display = show ? "" : "none";
+                box.querySelectorAll("select, input").forEach(input => {
+                    if (input.id === "studioColumnsValue") return;
+                    input.disabled = !show;
+                });
+            });
+            const part = document.getElementById("studioPart");
+            const pick = picks.find(f => f.name === document.querySelector("#studioForm [data-kind=picklist]")?.value) || picks[0];
+            part.innerHTML = ((pick && pick.values) || []).map(v => '<option value="' + v.value + '">' + v.label + "</option>").join("");
+            if (saved.part) part.value = saved.part;
+        }
+
+        document.getElementById("studioSkin").addEventListener("change", refreshForm);
+        document.getElementById("studioModule").addEventListener("change", refreshForm);
+        document.getElementById("studioMeasure").addEventListener("change", refreshForm);
+        document.getElementById("studioRatio").addEventListener("change", refreshForm);
+        document.getElementById("studioForm").addEventListener("change", function (event) {
+            if (event.target.matches("[data-kind=picklist]")) refreshForm();
+        });
+        function esc(text) {
+            return String(text ?? "").replace(/[&<>"']/g, function (c) {
+                return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+            });
+        }
+
+        const filterOps = {
+            text: [["eq", "برابر"], ["neq", "مخالف"], ["contains", "شامل"], ["notContains", "شامل نباشد"], ["empty", "خالی است"], ["notEmpty", "خالی نیست"]],
+            number: [["numEq", "برابر"], ["numNeq", "مخالف"], ["gt", "بزرگ‌تر از"], ["gte", "بزرگ‌تر یا مساوی"], ["lt", "کوچک‌تر از"], ["lte", "کوچک‌تر یا مساوی"], ["empty", "خالی است"], ["notEmpty", "خالی نیست"]],
+            date: [["dateEq", "در این تاریخ"], ["dateGt", "بعد از"], ["dateLt", "قبل از"], ["empty", "خالی است"], ["notEmpty", "خالی نیست"]],
+            pick: [["eq", "همین گزینه"], ["neq", "غیر از این گزینه"], ["empty", "خالی است"], ["notEmpty", "خالی نیست"]],
+            multi: [["has", "شامل این گزینه"], ["notHas", "بدون این گزینه"], ["empty", "خالی است"], ["notEmpty", "خالی نیست"]],
+            check: [["check", "این وضعیت"], ["empty", "خالی است"], ["notEmpty", "خالی نیست"]]
+        };
+
+        function fieldKind(field) {
+            switch (field && field.type) {
+                case "Number":
+                case "Decimal":
+                case "Currency":
+                case "Percent": return "number";
+                case "Date":
+                case "DateTime": return "date";
+                case "Picklist": return "pick";
+                case "MultiPicklist": return "multi";
+                case "Checkbox": return "check";
+                default: return "text";
+            }
+        }
+
+        function readFilters() {
+            return Array.from(document.querySelectorAll("[data-filter-row]")).map(row => ({
+                field: row.querySelector("[data-filter-field]").value,
+                op: row.querySelector("[data-filter-op]").value,
+                value: (row.querySelector("[data-filter-value]") || {}).value || ""
+            })).filter(item => item.field);
+        }
+
+        function paintValue(box, field, op, value) {
+            const bare = op === "empty" || op === "notEmpty";
+            if (bare) {
+                box.innerHTML = "";
+                return;
+            }
+            const kind = fieldKind(field);
+            if (kind === "pick" || kind === "multi") {
+                const options = ((field && field.values) || []).map(v =>
+                    '<option value="' + esc(v.value) + '"' + (v.value === value ? " selected" : "") + ">" + esc(v.label) + "</option>").join("");
+                box.innerHTML = '<select class="form-select" data-filter-value>' + options + "</select>";
+                return;
+            }
+            if (kind === "check") {
+                box.innerHTML = '<select class="form-select" data-filter-value>' +
+                    '<option value="true"' + (value === "true" ? " selected" : "") + ">بله</option>" +
+                    '<option value="false"' + (value === "false" ? " selected" : "") + ">خیر</option></select>";
+                return;
+            }
+            const placeholder = kind === "date" ? "۱۴۰۴/۰۸/۱۱" : "مقدار";
+            const mode = kind === "number" ? ' inputmode="decimal"' : "";
+            box.innerHTML = '<input class="form-control" data-filter-value' + mode + ' value="' + esc(value) + '" placeholder="' + placeholder + '" />';
+        }
+
+        function bindFilterRow(row, filter) {
+            const all = moduleFields();
+            const fieldSelect = row.querySelector("[data-filter-field]");
+            const opSelect = row.querySelector("[data-filter-op]");
+            const valueBox = row.querySelector("[data-filter-value-box]");
+            fieldSelect.innerHTML = '<option value="">انتخاب فیلد</option>' +
+                all.map(f => '<option value="' + esc(f.name) + '">' + esc(f.label) + "</option>").join("");
+            if (filter.field) fieldSelect.value = filter.field;
+            function syncOps(keepValue) {
+                const field = all.find(f => f.name === fieldSelect.value);
+                const ops = filterOps[fieldKind(field)];
+                const current = opSelect.value || filter.op || ops[0][0];
+                opSelect.innerHTML = ops.map(pair => '<option value="' + pair[0] + '">' + pair[1] + "</option>").join("");
+                opSelect.value = ops.some(pair => pair[0] === current) ? current : ops[0][0];
+                const typed = (valueBox.querySelector("[data-filter-value]") || {}).value || "";
+                paintValue(valueBox, field, opSelect.value, keepValue ? (typed || filter.value || "") : "");
+            }
+            fieldSelect.addEventListener("change", function () { syncOps(false); });
+            opSelect.addEventListener("change", function () { syncOps(true); });
+            syncOps(true);
+        }
+
+        function addFilterRow(filter) {
+            const row = document.createElement("div");
+            row.className = "row g-2 mb-2 align-items-center";
+            row.setAttribute("data-filter-row", "");
+            row.innerHTML = '<div class="col-md-4"><select class="form-select" data-filter-field></select></div>' +
+                '<div class="col-md-3"><select class="form-select" data-filter-op></select></div>' +
+                '<div class="col-md-4" data-filter-value-box></div>' +
+                '<div class="col-md-1"><button class="btn btn-sm btn-outline-danger" type="button" data-filter-remove aria-label="حذف شرط">×</button></div>';
+            row.querySelector("[data-filter-remove]").addEventListener("click", function () { row.remove(); });
+            document.getElementById("studioFilters").appendChild(row);
+            bindFilterRow(row, filter || {});
+        }
+
+        let filtersReady = false;
+        function fillFilters() {
+            const current = filtersReady ? readFilters() : (saved.filters || []);
+            const host = document.getElementById("studioFilters");
+            host.innerHTML = "";
+            current.forEach(addFilterRow);
+            filtersReady = true;
+        }
+
+        function syncExtras() {
+            const selected = Array.from(document.getElementById("studioColumns").selectedOptions).slice(0, 3).map(o => o.value);
+            document.getElementById("studioColumnsValue").value = selected.join(",");
+            const filters = readFilters().filter(item => item.field && (item.op === "empty" || item.op === "notEmpty" || String(item.value).trim()));
+            document.getElementById("studioFiltersValue").value = JSON.stringify(filters);
+        }
+
+        const refreshBase = refreshForm;
+        refreshForm = function () {
+            refreshBase();
+            fillFilters();
+        };
+        document.getElementById("studioForm").addEventListener("submit", syncExtras);
+        document.getElementById("studioPreviewBtn").addEventListener("click", async function () {
+            syncExtras();
+            const body = new FormData(document.getElementById("studioForm"));
+            const res = await fetch("/App/dashboard/studio/preview", { method: "POST", body });
+            const item = await res.json();
+            const host = document.getElementById("studioPreview");
+            host.innerHTML = "";
+            const slot = document.createElement("div");
+            host.appendChild(slot);
+            window.CrmNexSkins.paint(slot, item);
+        });
+        document.getElementById("studioAddFilter").addEventListener("click", function () { addFilterRow({}); });
+        refreshForm();
+        if (@(editing is null ? "false" : "true"))
+            document.getElementById("studioPreviewBtn").click();
+    </script>
+}
